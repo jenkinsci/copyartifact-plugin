@@ -1,0 +1,24 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jvnet.hudson.plugins</groupId>
+        <artifactId>plugin</artifactId>
+        <version>1.326</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>copyartifact</artifactId>
+    <packaging>hpi</packaging>
+    <name>Copy Artifact Plugin</name>
+    <version>1.0-SNAPSHOT</version>
+    <url>http://wiki.hudson-ci.org/display/HUDSON/Copy+Artifact+Plugin</url>
+
+    <developers>
+      <developer>
+        <id>mindless</id>
+        <name>Alan Harder</name>
+        <email>alan.harder@sun.com</email>
+      </developer>
+    </developers>
+</project>
