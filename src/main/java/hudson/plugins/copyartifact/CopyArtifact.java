@@ -45,6 +45,7 @@ import hudson.util.FormValidation;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URL;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -110,6 +111,22 @@ public class CopyArtifact extends Builder {
         }
         String expandedFilter = filter;
         try {
+            // Workaround for HUDSON-5977.. this block can be removed whenever
+            // copyartifact plugin raises its minimum Hudson version to whatever
+            // release fixes #5977.
+            // Make a call to copy a small file, to get all class-loading to happen.
+            // When we copy the real stuff there won't be any classloader requests
+            // coming the other direction, which due to full-buffer-deadlock problem
+            // can cause slave to hang.
+            URL base = Hudson.getInstance().getPluginManager()
+                             .getPlugin("copyartifact").baseResourceURL;
+            if (base!=null && "file".equals(base.getProtocol())) {
+                FilePath tmp = targetDir.createTempDir("copyartifact", ".dir");
+                new FilePath(new File(base.getPath())).copyRecursiveTo("HUDSON-5977/**", tmp);
+                tmp.deleteRecursive();
+            }
+            // End workaround
+
             EnvVars env = build.getEnvironment(listener);
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = build.getEnvironment(listener).expand(filter);
