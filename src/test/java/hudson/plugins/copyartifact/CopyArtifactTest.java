@@ -25,7 +25,14 @@ package hudson.plugins.copyartifact;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.matrix.Axis;
+import hudson.matrix.AxisList;
+import hudson.matrix.Combination;
+import hudson.matrix.MatrixBuild;
+import hudson.matrix.MatrixProject;
+import hudson.matrix.MatrixRun;
 import hudson.model.AbstractBuild;
+import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleBuild;
@@ -37,6 +44,7 @@ import hudson.slaves.DumbSlave;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Builder;
 import java.io.IOException;
+import java.util.Collections;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.UnstableBuilder;
 
@@ -64,6 +72,9 @@ public class CopyArtifactTest extends HudsonTestCase {
             ws.child("subdir/subfoo.txt").touch(System.currentTimeMillis());
             ws.child("deepfoo/a/b").mkdirs();
             ws.child("deepfoo/a/b/c.log").touch(System.currentTimeMillis());
+            // For matrix tests write one more file:
+            String foo = build.getBuildVariables().get("FOO");
+            if (foo != null) ws.child(foo + ".txt").touch(System.currentTimeMillis());
             return true;
         }
     }
@@ -75,7 +86,15 @@ public class CopyArtifactTest extends HudsonTestCase {
         return p;
     }
 
-    private static void assertFile(boolean exists, String path, FreeStyleBuild b)
+    private MatrixProject createMatrixArtifactProject() throws IOException {
+        MatrixProject p = createMatrixProject();
+        p.setAxes(new AxisList(new Axis("FOO", "one", "two")));
+        p.getBuildersList().add(new ArtifactBuilder());
+        p.getPublishersList().add(new ArtifactArchiver("**", "", false));
+        return p;
+    }
+
+    private static void assertFile(boolean exists, String path, Build b)
             throws IOException, InterruptedException {
         if (b.getWorkspace().child(path).exists() != exists)
             assertEquals(path + ": " + getLog(b), exists, !exists);
@@ -150,13 +169,45 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testParameters() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject(other.getName(), "$BASE/*.txt", "$TARGET/bar", false);
+                         p = createProject("$PROJSRC", "$BASE/*.txt", "$TARGET/bar", false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
-                new ParametersAction(new StringParameterValue("BASE", "*r"),
+                new ParametersAction(new StringParameterValue("PROJSRC", other.getName()),
+                                     new StringParameterValue("BASE", "*r"),
                                      new StringParameterValue("TARGET", "foo"))).get();
         assertBuildStatusSuccess(b);
         assertFile(false, "foo/bar/foo.txt", b);
         assertFile(true, "foo/bar/subdir/subfoo.txt", b);
+    }
+
+    /** Test copying artifacts from a particluar configuration of a matrix job */
+    public void testMatrixJob() throws Exception {
+        MatrixProject other = createMatrixArtifactProject();
+        FreeStyleProject p = createProject(other.getName() + "/FOO=two", "", "", true);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "two.txt", b);
+        assertFile(true, "subdir/subfoo.txt", b);
+        assertFile(true, "deepfoo/a/b/c.log", b);
+    }
+
+    /** Test artfiact copy between matrix jobs, for artifact from matching axis */
+    public void testMatrixToMatrix() throws Exception {
+        MatrixProject other = createMatrixArtifactProject(),
+                      p = createMatrixProject();
+        p.setAxes(new AxisList(new Axis("FOO", "one", "two"))); // should match other job
+        p.getBuildersList().add(
+                new CopyArtifact(other.getName() + "/FOO=$FOO", "", "", true));
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        MatrixBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        MatrixRun r = b.getRun(new Combination(Collections.singletonMap("FOO", "one")));
+        assertFile(true, "one.txt", r);
+        assertFile(false, "two.txt", r);
+        r = b.getRun(new Combination(Collections.singletonMap("FOO", "two")));
+        assertFile(false, "one.txt", r);
+        assertFile(true, "two.txt", r);
     }
 }

@@ -92,25 +92,29 @@ public class CopyArtifact extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
         PrintStream console = listener.getLogger();
-        Job job = Hudson.getInstance().getItemByFullName(projectName, Job.class);
-        if (job == null) {
-            console.println(Messages.CopyArtifact_MissingProject(projectName));
-            return false;
-        }
-        Run run = stable != null && stable.booleanValue() ? job.getLastStableBuild()
-                                                          : job.getLastSuccessfulBuild();
-        if (run == null) {
-            console.println(Messages.CopyArtifact_MissingBuild(projectName));
-            return false;
-        }
-        File srcDir = run.getArtifactsDir();
-        FilePath targetDir = build.getWorkspace();
-        if (targetDir == null) {
-            console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
-            return false;
-        }
-        String expandedFilter = filter;
+        String expandedProject = projectName, expandedFilter = filter;
         try {
+            EnvVars env = build.getEnvironment(listener);
+            env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
+            expandedProject = env.expand(projectName);
+            Job job = Hudson.getInstance().getItemByFullName(expandedProject, Job.class);
+            if (job == null) {
+                console.println(Messages.CopyArtifact_MissingProject(expandedProject));
+                return false;
+            }
+            Run run = stable != null && stable.booleanValue() ? job.getLastStableBuild()
+                                                              : job.getLastSuccessfulBuild();
+            if (run == null) {
+                console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
+                return false;
+            }
+            File srcDir = run.getArtifactsDir();
+            FilePath targetDir = build.getWorkspace();
+            if (targetDir == null) {
+                console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
+                return false;
+            }
+
             // Workaround for HUDSON-5977.. this block can be removed whenever
             // copyartifact plugin raises its minimum Hudson version to whatever
             // release fixes #5977.
@@ -127,17 +131,17 @@ public class CopyArtifact extends Builder {
             }
             // End workaround
 
-            EnvVars env = build.getEnvironment(listener);
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
-            expandedFilter = build.getEnvironment(listener).expand(filter);
+            expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
             int cnt = new FilePath(srcDir).copyRecursiveTo(expandedFilter, targetDir);
-            listener.getLogger().println(Messages.CopyArtifact_Copied(cnt, projectName));
+            listener.getLogger().println(
+                    Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
         }
         catch (IOException ex) {
             Util.displayIOException(ex, listener);
             ex.printStackTrace(listener.error(
-                    Messages.CopyArtifact_FailedToCopy(projectName, expandedFilter)));
+                    Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
             return false;
         }
         return true;

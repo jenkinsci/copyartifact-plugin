@@ -1,3 +1,11 @@
 <div>
   Name of source project for copying of artifact(s).
+  May contain references to build parameters like <tt>$PARAM</tt>.
+  <br/>
+  To copy from a particular configuration of a multiconfiguration (matrix) project,
+  enter <tt>JOBNAME/AXIS=VALUE,..</tt>, as seen in the URL for that configuration.
+  Example: <tt>MyMatrixJob/jdk=Java6u17</tt>
+  <br/>  To copy artifacts from one matrix project to another, use a parameter to
+  select the matching configuration in the source project.
+  Example: <tt>OtherMatrixJob/jdk=$jdk</tt>
 </div>
