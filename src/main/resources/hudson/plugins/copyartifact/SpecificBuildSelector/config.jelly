@@ -23,25 +23,7 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-  <f:entry title="${%Project name}" field="projectName">
-    <f:editableComboBox id="copyartifact_projectName" items="${app.topLevelItemNames}"/>
-  </f:entry>
-  <f:dropdownList name="selector" title="${%Which build}"
-                  help="/plugin/copyartifact/help-buildSelector.html">
-    <j:set var="currentSelector" value="${instance.buildSelector}"/>
-    <j:forEach var="bsDescriptor" items="${descriptor.buildSelectors.iterator()}" varStatus="loop">
-      <j:set var="selector"
-             value="${bsDescriptor==currentSelector.descriptor ? currentSelector : null}"/>
-      <f:dropdownListBlock title="${bsDescriptor.displayName}" value="${loop.index}"
-                           selected="${selector!=null}" staplerClass="${bsDescriptor.clazz.name}">
-        <st:include page="config.jelly" class="${bsDescriptor.clazz}" optional="${true}"/>
-      </f:dropdownListBlock>
-    </j:forEach>
-  </f:dropdownList>
-  <f:entry title="${%Artifacts to copy}" field="filter">
-    <f:textbox/>
-  </f:entry>
-  <f:entry title="${%Target directory}" field="target">
-    <f:textbox/>
+  <f:entry title="${%Build number}">
+    <f:textbox clazz="required positive-number" name="buildNumber" value="${selector.buildNumber}"/>
   </f:entry>
 </j:jelly>

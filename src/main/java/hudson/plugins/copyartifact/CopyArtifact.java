@@ -23,14 +23,19 @@
  */
 package hudson.plugins.copyartifact;
 
+import com.thoughtworks.xstream.converters.UnmarshallingContext;
+import hudson.DescriptorExtensionList;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.diagnosis.OldDataMonitor;
+import hudson.matrix.MatrixProject;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
@@ -40,12 +45,15 @@ import hudson.model.listeners.ItemListener;
 import hudson.security.AccessControlled;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.util.DescribableList;
 import hudson.util.FormValidation;
+import hudson.util.XStream2;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,18 +70,34 @@ public class CopyArtifact extends Builder {
 
     private String projectName;
     private final String filter, target;
-    private final Boolean stable;
+    private /*almost final*/ BuildSelector selector;
+    @Deprecated private transient Boolean stable;
 
     @DataBoundConstructor
-    public CopyArtifact(String projectName, String filter, String target, boolean stable) {
+    public CopyArtifact(String projectName, BuildSelector selector, String filter, String target) {
         this.projectName = projectName;
+        this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
         this.target = Util.fixNull(target).trim();
-        this.stable = stable ? Boolean.TRUE : null;
+    }
+
+    // Upgrade data from old format
+    public static class ConverterImpl extends XStream2.PassthruConverter<CopyArtifact> {
+        public ConverterImpl(XStream2 xstream) { super(xstream); }
+        @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
+            if (obj.selector == null) {
+                obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable.booleanValue());
+                OldDataMonitor.report(context, "1.355"); // Hudson version# when CopyArtifact 1.2 released
+            }
+        }
     }
 
     public String getProjectName() {
         return projectName;
+    }
+
+    public BuildSelector getBuildSelector() {
+        return selector;
     }
 
     public String getFilter() {
@@ -82,10 +106,6 @@ public class CopyArtifact extends Builder {
 
     public String getTarget() {
         return target;
-    }
-
-    public boolean isStable() {
-        return stable != null ? stable.booleanValue() : false;
     }
 
     @Override
@@ -102,8 +122,7 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run run = stable != null && stable.booleanValue() ? job.getLastStableBuild()
-                                                              : job.getLastSuccessfulBuild();
+            Run run = selector.getBuild(job);
             if (run == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return false;
@@ -168,6 +187,10 @@ public class CopyArtifact extends Builder {
         public String getDisplayName() {
             return Messages.CopyArtifact_DisplayName();
         }
+
+        public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
+            return Hudson.getInstance().getDescriptorList(BuildSelector.class);
+        }
     }
 
     // Listen for project renames and update property here if needed.
@@ -175,20 +198,32 @@ public class CopyArtifact extends Builder {
     public static final class ListenerImpl extends ItemListener {
         @Override
         public void onRenamed(Item item, String oldName, String newName) {
-            for (Project<?,?> project : Hudson.getInstance().getAllItems(Project.class)) {
-                for (CopyArtifact ca : (List<CopyArtifact>)
-                        project.getBuildersList().getAll(CopyArtifact.class)) {
-                    if (ca.getProjectName().equals(oldName)) try {
+            for (AbstractProject<?,?> project
+                    : Hudson.getInstance().getAllItems(AbstractProject.class)) {
+                for (CopyArtifact ca : getCopiers(project)) try {
+                    if (ca.getProjectName().equals(oldName))
                         ca.projectName = newName;
-                        project.save();
-                    } catch (IOException ex) {
-                        Logger.getLogger(ListenerImpl.class.getName()).log(Level.WARNING,
-                                "Failed to resave project " + project.getName()
-                                + " for project rename in CopyArtifact build step ("
-                                + oldName + " =>" + newName + ")", ex);
-                    }
+                    else if (ca.getProjectName().startsWith(oldName + '/'))
+                        // Support rename for "MatrixJobName/AxisName=value" type of name
+                        ca.projectName = newName + ca.projectName.substring(oldName.length());
+                    else continue;
+                    project.save();
+                } catch (IOException ex) {
+                    Logger.getLogger(ListenerImpl.class.getName()).log(Level.WARNING,
+                            "Failed to resave project " + project.getName()
+                            + " for project rename in CopyArtifact build step ("
+                            + oldName + " =>" + newName + ")", ex);
                 }
             }
+        }
+
+        private static List<CopyArtifact> getCopiers(AbstractProject project) {
+            DescribableList<Builder,Descriptor<Builder>> list =
+                    project instanceof Project ? ((Project<?,?>)project).getBuildersList()
+                      : (project instanceof MatrixProject ?
+                          ((MatrixProject)project).getBuildersList() : null);
+            if (list == null) return Collections.emptyList();
+            return (List<CopyArtifact>)list.getAll(CopyArtifact.class);
         }
     }
 }

@@ -57,7 +57,8 @@ public class CopyArtifactTest extends HudsonTestCase {
     private FreeStyleProject createProject(String otherProject,
             String filter, String target, boolean stable) throws IOException {
         FreeStyleProject p = createFreeStyleProject();
-        p.getBuildersList().add(new CopyArtifact(otherProject, filter, target, stable));
+        p.getBuildersList().add(new CopyArtifact(
+                otherProject, new StatusBuildSelector(stable), filter, target));
         return p;
     }
 
@@ -198,8 +199,8 @@ public class CopyArtifactTest extends HudsonTestCase {
         MatrixProject other = createMatrixArtifactProject(),
                       p = createMatrixProject();
         p.setAxes(new AxisList(new Axis("FOO", "one", "two"))); // should match other job
-        p.getBuildersList().add(
-                new CopyArtifact(other.getName() + "/FOO=$FOO", "", "", true));
+        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=$FOO",
+                                    new StatusBuildSelector(true), "", ""));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         MatrixBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -209,5 +210,60 @@ public class CopyArtifactTest extends HudsonTestCase {
         r = b.getRun(new Combination(Collections.singletonMap("FOO", "two")));
         assertFile(false, "one.txt", r);
         assertFile(true, "two.txt", r);
+    }
+
+    /** projectName in CopyArtifact build steps should be updated if a job is renamed */
+    public void testJobRename() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(),
+                         p = createProject(other.getName(), "", "", true);
+        assertEquals("before", other.getName(),
+                     ((CopyArtifact)p.getBuilders().get(0)).getProjectName());
+        String newName = other.getName() + "-new";
+        other.renameTo(newName);
+        assertEquals("after", newName,
+                     ((CopyArtifact)p.getBuilders().get(0)).getProjectName());
+
+        // Test reference to a matrix configuration
+        MatrixProject otherm = createMatrixProject(),
+                      mp = createMatrixProject();
+        mp.getBuildersList().add(new CopyArtifact(otherm.getName() + "/FOO=$FOO",
+                                     new SavedBuildSelector(), "", ""));
+        assertEquals("before", otherm.getName() + "/FOO=$FOO",
+                     ((CopyArtifact)mp.getBuilders().get(0)).getProjectName());
+        otherm.renameTo(newName = otherm.getName() + "-new");
+        assertEquals("after", newName + "/FOO=$FOO",
+                     ((CopyArtifact)mp.getBuilders().get(0)).getProjectName());
+    }
+
+    public void testSavedBuildSelector() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new SavedBuildSelector(), "*.txt", ""));
+        FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
+        assertBuildStatusSuccess(b);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        b.keepLog(true);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testSpecificBuildSelector() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new SpecificBuildSelector(1), "*.txt", ""));
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
     }
 }
