@@ -41,6 +41,7 @@ import hudson.model.ParametersAction;
 import hudson.model.Result;
 import hudson.model.StringParameterValue;
 import hudson.slaves.DumbSlave;
+import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Builder;
 import java.io.IOException;
@@ -54,11 +55,12 @@ import org.jvnet.hudson.test.UnstableBuilder;
  */
 public class CopyArtifactTest extends HudsonTestCase {
 
-    private FreeStyleProject createProject(String otherProject,
-            String filter, String target, boolean stable) throws IOException {
+    private FreeStyleProject createProject(String otherProject, String filter,
+            String target, boolean stable, boolean flatten, boolean optional)
+            throws IOException {
         FreeStyleProject p = createFreeStyleProject();
-        p.getBuildersList().add(new CopyArtifact(
-                otherProject, new StatusBuildSelector(stable), filter, target));
+        p.getBuildersList().add(new CopyArtifact(otherProject,
+                new StatusBuildSelector(stable), filter, target, flatten, optional));
         return p;
     }
 
@@ -102,28 +104,35 @@ public class CopyArtifactTest extends HudsonTestCase {
     }
 
     public void testMissingProject() throws Exception {
-        FreeStyleProject p = createProject("invalid", "", "", false);
+        FreeStyleProject p = createProject("invalid", "", "", false, false, false);
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
     public void testMissingBuild() throws Exception {
         FreeStyleProject other = createFreeStyleProject(),
-                         p = createProject(other.getName(), "", "", false);
+                         p = createProject(other.getName(), "", "", false, false, false);
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
     public void testMissingStableBuild() throws Exception {
         FreeStyleProject other = createFreeStyleProject(),
-                         p = createProject(other.getName(), "", "", true);
+                         p = createProject(other.getName(), "", "", true, false, false);
         // Make an unstable build in "other"
         other.getBuildersList().add(new UnstableBuilder());
         assertBuildStatus(Result.UNSTABLE, other.scheduleBuild2(0, new UserCause()).get());
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
+    public void testMissingArtifact() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(),
+                         p = createProject(other.getName(), "*.txt", "", false, false, false);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
+    }
+
     public void testCopyAll() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject(other.getName(), "", "", false);
+                         p = createProject(other.getName(), "", "", false, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -134,7 +143,8 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testCopyWithFilter() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                 p = createProject(other.getName(), "**/bogus*, **/sub*, bogus/**", "", false);
+                 p = createProject(other.getName(), "**/bogus*, **/sub*, bogus/**", "",
+                                   false, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -145,7 +155,8 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testCopyToTarget() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                 p = createProject(other.getName(), "deep*/**", "new/deep/dir", true);
+                 p = createProject(other.getName(), "deep*/**", "new/deep/dir",
+                                   true, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -156,8 +167,12 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testCopyToSlave() throws Exception {
         DumbSlave node = createSlave();
+        SlaveComputer c = node.getComputer();
+        c.connect(false).get(); // wait until it's connected
+        if(c.isOffline())
+            fail("Slave failed to go online: " + c.getLog());
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject(other.getName(), "", "", false);
+                         p = createProject(other.getName(), "", "", false, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         p.setAssignedLabel(node.getSelfLabel());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
@@ -170,7 +185,8 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testParameters() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject("$PROJSRC", "$BASE/*.txt", "$TARGET/bar", false);
+                         p = createProject("$PROJSRC", "$BASE/*.txt", "$TARGET/bar",
+                                           false, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("PROJSRC", other.getName()),
@@ -184,7 +200,8 @@ public class CopyArtifactTest extends HudsonTestCase {
     /** Test copying artifacts from a particluar configuration of a matrix job */
     public void testMatrixJob() throws Exception {
         MatrixProject other = createMatrixArtifactProject();
-        FreeStyleProject p = createProject(other.getName() + "/FOO=two", "", "", true);
+        FreeStyleProject p = createProject(other.getName() + "/FOO=two", "", "",
+                                           true, false, false);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -200,7 +217,7 @@ public class CopyArtifactTest extends HudsonTestCase {
                       p = createMatrixProject();
         p.setAxes(new AxisList(new Axis("FOO", "one", "two"))); // should match other job
         p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=$FOO",
-                                    new StatusBuildSelector(true), "", ""));
+                                    new StatusBuildSelector(true), "", "", false, false));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         MatrixBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -215,7 +232,7 @@ public class CopyArtifactTest extends HudsonTestCase {
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
     public void testJobRename() throws Exception {
         FreeStyleProject other = createFreeStyleProject(),
-                         p = createProject(other.getName(), "", "", true);
+                         p = createProject(other.getName(), "", "", true, false, false);
         assertEquals("before", other.getName(),
                      ((CopyArtifact)p.getBuilders().get(0)).getProjectName());
         String newName = other.getName() + "-new";
@@ -227,7 +244,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         MatrixProject otherm = createMatrixProject(),
                       mp = createMatrixProject();
         mp.getBuildersList().add(new CopyArtifact(otherm.getName() + "/FOO=$FOO",
-                                     new SavedBuildSelector(), "", ""));
+                                     new SavedBuildSelector(), "", "", false, false));
         assertEquals("before", otherm.getName() + "/FOO=$FOO",
                      ((CopyArtifact)mp.getBuilders().get(0)).getProjectName());
         otherm.renameTo(newName = otherm.getName() + "-new");
@@ -239,7 +256,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new SavedBuildSelector(), "*.txt", ""));
+                                    new SavedBuildSelector(), "*.txt", "", false, false));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         assertBuildStatusSuccess(b);
@@ -256,7 +273,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new SpecificBuildSelector(1), "*.txt", ""));
+                                    new SpecificBuildSelector(1), "*.txt", "", false, false));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get());
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
@@ -265,5 +282,35 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testFlatten() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createProject(other.getName(), "", "newdir", false, true, false);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "newdir/foo.txt", b);
+        assertFile(true, "newdir/subfoo.txt", b);
+        assertFile(true, "newdir/c.log", b);
+    }
+
+    public void testOptional_MissingProject() throws Exception {
+        // Missing project still fails even when copy is optional
+        FreeStyleProject p = createProject("invalid", "", "", false, false, true);
+        assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
+    }
+
+    public void testOptional_MissingBuild() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(),
+                         p = createProject(other.getName(), "", "", false, false, true);
+        assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause()).get());
+    }
+
+    public void testOptional_MissingArtifact() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(),
+                         p = createProject(other.getName(), "*.txt", "", false, false, true);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause()).get());
     }
 }

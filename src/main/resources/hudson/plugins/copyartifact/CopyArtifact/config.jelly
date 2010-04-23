@@ -44,4 +44,9 @@ THE SOFTWARE.
   <f:entry title="${%Target directory}" field="target">
     <f:textbox/>
   </f:entry>
+  <f:entry help="/plugin/copyartifact/help-flatten-optional.html">
+    <f:checkbox field="flatten"/> ${%Flatten directories}
+    <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
+    <f:checkbox field="optional"/> ${%Optional}
+  </f:entry>
 </j:jelly>

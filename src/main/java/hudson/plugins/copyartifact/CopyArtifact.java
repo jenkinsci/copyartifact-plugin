@@ -72,13 +72,17 @@ public class CopyArtifact extends Builder {
     private final String filter, target;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
+    private final Boolean flatten, optional;
 
     @DataBoundConstructor
-    public CopyArtifact(String projectName, BuildSelector selector, String filter, String target) {
+    public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
+                        boolean flatten, boolean optional) {
         this.projectName = projectName;
         this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
         this.target = Util.fixNull(target).trim();
+        this.flatten = flatten ? Boolean.TRUE : null;
+        this.optional = optional ? Boolean.TRUE : null;
     }
 
     // Upgrade data from old format
@@ -108,6 +112,14 @@ public class CopyArtifact extends Builder {
         return target;
     }
 
+    public boolean isFlatten() {
+        return flatten != null && flatten.booleanValue();
+    }
+
+    public boolean isOptional() {
+        return optional != null && optional.booleanValue();
+    }
+
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
@@ -125,13 +137,13 @@ public class CopyArtifact extends Builder {
             Run run = selector.getBuild(job);
             if (run == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
-                return false;
+                return isOptional();  // Fail build unless copy is optional
             }
             File srcDir = run.getArtifactsDir();
             FilePath targetDir = build.getWorkspace();
             if (targetDir == null) {
                 console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
-                return false;
+                return isOptional();  // Fail build unless copy is optional
             }
 
             // Workaround for HUDSON-5977.. this block can be removed whenever
@@ -153,9 +165,20 @@ public class CopyArtifact extends Builder {
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
-            int cnt = new FilePath(srcDir).copyRecursiveTo(expandedFilter, targetDir);
+            int cnt;
+            if (!isFlatten())
+                cnt = new FilePath(srcDir).copyRecursiveTo(expandedFilter, targetDir);
+            else {
+                targetDir.mkdirs();  // Create target if needed
+                FilePath[] list = new FilePath(srcDir).list(expandedFilter);
+                for (FilePath file : list)
+                    file.copyTo(new FilePath(targetDir, file.getName()));
+                cnt = list.length;
+            }
             listener.getLogger().println(
                     Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
+            // Fail build if 0 files copied unless copy is optional
+            return cnt > 0 || isOptional();
         }
         catch (IOException ex) {
             Util.displayIOException(ex, listener);
@@ -163,7 +186,6 @@ public class CopyArtifact extends Builder {
                     Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
             return false;
         }
-        return true;
     }
 
     @Extension
