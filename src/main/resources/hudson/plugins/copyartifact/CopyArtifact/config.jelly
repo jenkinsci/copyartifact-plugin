@@ -45,8 +45,10 @@ THE SOFTWARE.
     <f:textbox/>
   </f:entry>
   <f:entry help="/plugin/copyartifact/help-flatten-optional.html">
-    <f:checkbox field="flatten"/> ${%Flatten directories}
+    <f:checkbox field="flatten"/>
+    <label class="attach-previous">${%Flatten directories}</label>
     <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="optional"/> ${%Optional}
+    <f:checkbox field="optional"/>
+    <label class="attach-previous">${%Optional}</label>
   </f:entry>
 </j:jelly>
