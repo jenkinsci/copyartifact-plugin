@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
@@ -46,7 +47,7 @@ public class SpecificBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
         return job.getBuildByNumber(buildNumber);
     }
 

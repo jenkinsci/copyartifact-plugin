@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Run;
@@ -37,7 +38,7 @@ public class SavedBuildSelector extends BuildSelector {
     public SavedBuildSelector() { }
 
     @Override
-    public boolean isSelectable(Run<?,?> run) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return run.isKeepLog();
     }
 

@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import hudson.EnvVars;
 import hudson.ExtensionPoint;
 import hudson.model.Describable;
 import hudson.model.Descriptor;
@@ -41,11 +42,13 @@ public abstract class BuildSelector implements ExtensionPoint, Describable<Build
 
     /**
      * Find a build to copy artifacts from.
+     * @param job Source project
+     * @param env Environment for build that is copying artifacts
      * @return Build to use, or null if no appropriate build was found
      */
-    public Run<?,?> getBuild(Job<?,?> job) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
         Run<?,?> run = job.getLastCompletedBuild();
-        while (run != null && !isSelectable(run))
+        while (run != null && !isSelectable(run, env))
             run = run.getPreviousBuiltBuild();
         return run;
     }
@@ -53,9 +56,11 @@ public abstract class BuildSelector implements ExtensionPoint, Describable<Build
     /**
      * Should this build be selected?  Override just this method to use a standard
      * loop through completed builds, starting with the most recent.
+     * @param run Build to check
+     * @param env Environment for build that is copying artifacts
      * @return True to select this build
      */
-    public boolean isSelectable(Run<?,?> run) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return false;
     }
 
