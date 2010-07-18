@@ -30,7 +30,7 @@ import org.jvnet.localizer.Localizable;
  * Descriptor type for common case where no overrides are needed.
  * Just do: @Extension public static final Descriptor<BuildSelector> DESCRIPTOR =
  *          new SimpleBuildSelectorDescriptor(MySelector.class, Messages._My_DisplayName());
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
     private transient Localizable displayName;

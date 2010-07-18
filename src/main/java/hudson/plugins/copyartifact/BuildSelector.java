@@ -36,7 +36,7 @@ import hudson.model.Run;
  * In a subclass override just isSelectable() for a standard loop through completed
  * builds, starting with the most recent.  Otherwise override getBuild() to provide
  * different build selection logic.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public abstract class BuildSelector implements ExtensionPoint, Describable<BuildSelector> {
 

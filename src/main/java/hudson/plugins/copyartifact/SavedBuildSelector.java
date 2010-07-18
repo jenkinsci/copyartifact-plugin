@@ -31,7 +31,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Copy artifacts from the latest saved build (marked "keep forever").
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class SavedBuildSelector extends BuildSelector {
     @DataBoundConstructor

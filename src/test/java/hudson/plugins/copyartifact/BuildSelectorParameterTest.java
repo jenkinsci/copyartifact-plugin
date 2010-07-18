@@ -38,7 +38,7 @@ import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * Test interaction of BuildSelectorParameter with Hudson core.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class BuildSelectorParameterTest extends HudsonTestCase {
 

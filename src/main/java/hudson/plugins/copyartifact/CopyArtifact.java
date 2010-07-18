@@ -64,7 +64,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Build step to copy artifacts from another project.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class CopyArtifact extends Builder {
 
@@ -197,6 +197,8 @@ public class CopyArtifact extends Builder {
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             if (Hudson.getInstance().getItemByFullName(value, Job.class) != null)
                 return FormValidation.ok();
+            if (value.indexOf('$') >= 0)
+                return FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
             return FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
                         value, AbstractProject.findNearest(value).getName()));

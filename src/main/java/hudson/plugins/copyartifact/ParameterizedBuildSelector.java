@@ -33,7 +33,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Use a parameter to specify how the build is selected.
  * @see BuildSelectorParameter
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class ParameterizedBuildSelector extends BuildSelector {
     private String parameterName;

@@ -51,7 +51,7 @@ import org.jvnet.hudson.test.UnstableBuilder;
 
 /**
  * Test interaction of copyartifact plugin with Hudson core.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class CopyArtifactTest extends HudsonTestCase {
 
@@ -273,9 +273,24 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new SpecificBuildSelector(1), "*.txt", "", false, false));
+                                    new SpecificBuildSelector("1"), "*.txt", "", false, false));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testSpecificBuildSelectorParameter() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new SpecificBuildSelector("$FOO"), "*.txt", "", false, false));
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "1"))).get());
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);

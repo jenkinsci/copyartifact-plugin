@@ -32,23 +32,23 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Copy artifacts from a specific build.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class SpecificBuildSelector extends BuildSelector {
-    private int buildNumber;
+    private String buildNumber;
 
     @DataBoundConstructor
-    public SpecificBuildSelector(int buildNumber) {
+    public SpecificBuildSelector(String buildNumber) {
         this.buildNumber = buildNumber;
     }
 
-    public int getBuildNumber() {
+    public String getBuildNumber() {
         return buildNumber;
     }
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return job.getBuildByNumber(buildNumber);
+        return job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
     }
 
     @Extension(ordinal=-10)

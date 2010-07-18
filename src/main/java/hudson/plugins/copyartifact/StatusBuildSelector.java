@@ -32,7 +32,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Copy artifacts from the latest successful or stable build.
- * @author Alan.Harder@sun.com
+ * @author Alan Harder
  */
 public class StatusBuildSelector extends BuildSelector {
     private Boolean stable;
