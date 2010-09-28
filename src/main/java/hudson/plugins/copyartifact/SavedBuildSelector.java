@@ -38,7 +38,7 @@ public class SavedBuildSelector extends BuildSelector {
     public SavedBuildSelector() { }
 
     @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return run.isKeepLog();
     }
 

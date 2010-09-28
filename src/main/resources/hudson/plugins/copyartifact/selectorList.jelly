@@ -55,11 +55,7 @@ THE SOFTWARE.
                value="${bsDescriptor==currentSelector.descriptor ? currentSelector : null}"/>
         <f:dropdownListBlock title="${bsDescriptor.displayName}" value="${loop.index}"
                              selected="${selector!=null}" staplerClass="${bsDescriptor.clazz.name}">
-          <j:scope>
-            <j:set var="descriptor" value="${bsDescriptor}" />
-            <j:set var="instance" value="${selector}" />
-            <st:include page="config.jelly" class="${bsDescriptor.clazz}" optional="${true}"/>
-          </j:scope>
+          <st:include page="config.jelly" class="${bsDescriptor.clazz}" optional="${true}"/>
         </f:dropdownListBlock>
       </j:if>
     </j:forEach>

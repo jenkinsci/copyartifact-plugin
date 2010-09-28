@@ -288,12 +288,11 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new SpecificBuildSelector("$BAR"), "*.txt", "", false, false));
+                                    new SpecificBuildSelector("$FOO"), "*.txt", "", false, false));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
-                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get());
+                new ParametersAction(new StringParameterValue("FOO", "1"))).get());
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
-        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
-                new ParametersAction(new StringParameterValue("BAR", "1"))).get();
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);

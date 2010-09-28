@@ -25,7 +25,9 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.ExtensionPoint;
-import hudson.model.AbstractDescribableImpl;
+import hudson.model.Describable;
+import hudson.model.Descriptor;
+import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Run;
 
@@ -36,7 +38,7 @@ import hudson.model.Run;
  * different build selection logic.
  * @author Alan Harder
  */
-public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint {
+public abstract class BuildSelector implements ExtensionPoint, Describable<BuildSelector> {
 
     /**
      * Find a build to copy artifacts from.
@@ -58,7 +60,12 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @param env Environment for build that is copying artifacts
      * @return True to select this build
      */
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Descriptor<BuildSelector> getDescriptor() {
+        return Hudson.getInstance().getDescriptorOrDie(getClass());
     }
 }
