@@ -11,7 +11,7 @@
     <artifactId>copyartifact</artifactId>
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
-    <version>1.9-SNAPSHOT</version>
+    <version>1.9</version>
     <url>http://wiki.hudson-ci.org/display/HUDSON/Copy+Artifact+Plugin</url>
 
     <developers>
@@ -21,4 +21,10 @@
         <email>mindless@dev.java.net</email>
       </developer>
     </developers>
+
+  <scm>
+    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/copyartifact-1.9</connection>
+    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/copyartifact-1.9</developerConnection>
+    <url>https://hudson.dev.java.net/source/browse/hudson/tags/copyartifact-1.9</url>
+  </scm>
 </project>
