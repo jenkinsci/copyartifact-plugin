@@ -70,7 +70,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     private StringParameterValue toStringValue(BuildSelector selector) {
         return new StringParameterValue(
-                getName(), XSTREAM.toXML(selector), getDescription());
+                getName(), XSTREAM.toXML(selector).replaceAll("[\n\r]+", ""), getDescription());
     }
 
     /**
