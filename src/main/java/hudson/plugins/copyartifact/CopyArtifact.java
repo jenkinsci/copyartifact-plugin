@@ -139,9 +139,11 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
             }
-            File srcDir = run.getArtifactsDir();
+            // Check special case for copying from workspace instead of artifacts:
+            FilePath srcDir = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild)
+                            ? ((AbstractBuild)run).getWorkspace() : new FilePath(run.getArtifactsDir());
             FilePath targetDir = build.getWorkspace();
-            if (targetDir == null) {
+            if (targetDir == null || srcDir == null) {
                 console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
                 return isOptional();  // Fail build unless copy is optional
             }
@@ -167,10 +169,10 @@ public class CopyArtifact extends Builder {
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
             int cnt;
             if (!isFlatten())
-                cnt = new FilePath(srcDir).copyRecursiveTo(expandedFilter, targetDir);
+                cnt = srcDir.copyRecursiveTo(expandedFilter, targetDir);
             else {
                 targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = new FilePath(srcDir).list(expandedFilter);
+                FilePath[] list = srcDir.list(expandedFilter);
                 for (FilePath file : list)
                     file.copyTo(new FilePath(targetDir, file.getName()));
                 cnt = list.length;

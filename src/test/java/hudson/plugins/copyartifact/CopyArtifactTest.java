@@ -197,7 +197,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo/bar/subdir/subfoo.txt", b);
     }
 
-    /** Test copying artifacts from a particluar configuration of a matrix job */
+    /** Test copying artifacts from a particular configuration of a matrix job */
     public void testMatrixJob() throws Exception {
         MatrixProject other = createMatrixArtifactProject();
         FreeStyleProject p = createProject(other.getName() + "/FOO=two", "", "",
@@ -211,7 +211,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "deepfoo/a/b/c.log", b);
     }
 
-    /** Test artfiact copy between matrix jobs, for artifact from matching axis */
+    /** Test artifact copy between matrix jobs, for artifact from matching axis */
     public void testMatrixToMatrix() throws Exception {
         MatrixProject other = createMatrixArtifactProject(),
                       p = createMatrixProject();
@@ -227,6 +227,21 @@ public class CopyArtifactTest extends HudsonTestCase {
         r = b.getRun(new Combination(Collections.singletonMap("FOO", "two")));
         assertFile(false, "one.txt", r);
         assertFile(true, "two.txt", r);
+    }
+
+    /** Test copy from workspace instead of artifacts area */
+    public void testCopyFromWorkspace() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(), new WorkspaceSelector(),
+                                "**/*.txt", "", true, false));
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "subfoo.txt", b);
+        assertFile(false, "c.log", b);
     }
 
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
