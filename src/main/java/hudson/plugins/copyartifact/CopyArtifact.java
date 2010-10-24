@@ -148,33 +148,21 @@ public class CopyArtifact extends Builder {
                 return isOptional();  // Fail build unless copy is optional
             }
 
-            // Workaround for HUDSON-5977.. this block can be removed whenever
-            // copyartifact plugin raises its minimum Hudson version to whatever
-            // release fixes #5977.
-            // Make a call to copy a small file, to get all class-loading to happen.
-            // When we copy the real stuff there won't be any classloader requests
-            // coming the other direction, which due to full-buffer-deadlock problem
-            // can cause slave to hang.
-            URL base = Hudson.getInstance().getPluginManager()
-                             .getPlugin("copyartifact").baseResourceURL;
-            if (base!=null && "file".equals(base.getProtocol())) {
-                FilePath tmp = targetDir.createTempDir("copyartifact", ".dir");
-                new FilePath(new File(base.getPath())).copyRecursiveTo("HUDSON-5977/**", tmp);
-                tmp.deleteRecursive();
-            }
-            // End workaround
+            CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
+            copier.init(srcDir, targetDir);
 
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+
             int cnt;
             if (!isFlatten())
-                cnt = srcDir.copyRecursiveTo(expandedFilter, targetDir);
+                cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
             else {
                 targetDir.mkdirs();  // Create target if needed
                 FilePath[] list = srcDir.list(expandedFilter);
                 for (FilePath file : list)
-                    file.copyTo(new FilePath(targetDir, file.getName()));
+                    copier.copyOne(file, new FilePath(targetDir, file.getName()));
                 cnt = list.length;
             }
             listener.getLogger().println(
