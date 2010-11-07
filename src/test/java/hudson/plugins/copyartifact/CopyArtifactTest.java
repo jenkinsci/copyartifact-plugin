@@ -31,6 +31,7 @@ import hudson.matrix.Combination;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
+import hudson.maven.MavenModuleSet;
 import hudson.model.AbstractBuild;
 import hudson.model.Build;
 import hudson.model.BuildListener;
@@ -46,6 +47,7 @@ import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Builder;
 import java.io.IOException;
 import java.util.Collections;
+import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.UnstableBuilder;
 
@@ -227,6 +229,79 @@ public class CopyArtifactTest extends HudsonTestCase {
         r = b.getRun(new Combination(Collections.singletonMap("FOO", "two")));
         assertFile(false, "one.txt", r);
         assertFile(true, "two.txt", r);
+    }
+
+    private static class ArchMatrixBuilder extends Builder {
+        @Override
+        public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
+                throws InterruptedException, IOException {
+            // Get matrix axis value
+            String arch = build.getBuildVariables().get("ARCH");
+            FilePath ws = build.getWorkspace();
+            ws.child("target").mkdirs();
+            // One fixed filename:
+            ws.child("target/readme.txt").touch(System.currentTimeMillis());
+            // Use axis value in one filename:
+            ws.child("target/" + arch + ".out").touch(System.currentTimeMillis());
+            return true;
+        }
+    }
+
+    /** Test copying artifacts from all configurations of a matrix job */
+    public void testMatrixAll() throws Exception {
+        MatrixProject mp = createMatrixProject();
+        mp.setAxes(new AxisList(new Axis("ARCH", "sparc", "x86")));
+        mp.getBuildersList().add(new ArchMatrixBuilder());
+        mp.getPublishersList().add(new ArtifactArchiver("target/*", "", false));
+        assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleProject p = createProject(mp.getName(), "", "", true, false, false);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "ARCH=sparc/target/readme.txt", b);
+        assertFile(true, "ARCH=sparc/target/sparc.out", b);
+        assertFile(true, "ARCH=x86/target/readme.txt", b);
+        assertFile(true, "ARCH=x86/target/x86.out", b);
+    }
+
+    /** Test copying from a particular module of a maven job */
+    public void testMavenJob() throws Exception {
+        configureDefaultMaven();
+        MavenModuleSet mp = createMavenProject();
+        mp.setGoals("clean package");
+        mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$moduleB", "", "", true, false, false);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        String dir = "org.jvnet.hudson.main.test.multimod/moduleB/1.0-SNAPSHOT/";
+        assertFile(true, dir + "moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + "pom.xml", b);
+    }
+
+    /** Test copying all artifacts from a maven job */
+    public void testMavenAll() throws Exception {
+        configureDefaultMaven();
+        MavenModuleSet mp = createMavenProject();
+        mp.setGoals("clean package");
+        mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleProject p = createProject(mp.getName(), "", "", true, false, false);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        String dir = "org.jvnet.hudson.main.test.multimod/";
+        assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
+        // Test with filter
+        p = createProject(mp.getName(), "**/*.jar", "", true, false, false);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
     }
 
     /** Test copy from workspace instead of artifacts area */

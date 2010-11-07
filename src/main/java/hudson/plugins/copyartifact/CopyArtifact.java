@@ -31,7 +31,10 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.diagnosis.OldDataMonitor;
+import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.maven.MavenModuleSet;
+import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -49,10 +52,8 @@ import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.XStream2;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
@@ -139,36 +140,33 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
             }
-            // Check special case for copying from workspace instead of artifacts:
-            FilePath srcDir = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild)
-                            ? ((AbstractBuild)run).getWorkspace() : new FilePath(run.getArtifactsDir());
-            FilePath targetDir = build.getWorkspace();
-            if (targetDir == null || srcDir == null) {
+            FilePath targetDir = build.getWorkspace(), baseTargetDir = targetDir;
+            if (targetDir == null) {
                 console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
                 return isOptional();  // Fail build unless copy is optional
             }
-
-            CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
-            copier.init(srcDir, targetDir);
-
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+            CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
 
-            int cnt;
-            if (!isFlatten())
-                cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
-            else {
-                targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = srcDir.list(expandedFilter);
-                for (FilePath file : list)
-                    copier.copyOne(file, new FilePath(targetDir, file.getName()));
-                cnt = list.length;
+            if (run instanceof MavenModuleSetBuild) {
+                boolean ok = false;
+                // Copy artifacts from all modules of this Maven build
+                for (Run r : ((MavenModuleSetBuild)run).getModuleLastBuilds().values())
+                    ok |= perform(r, expandedFilter, targetDir, baseTargetDir, copier, console);
+                return ok;
+            } else if (run instanceof MatrixBuild) {
+                boolean ok = false;
+                // Copy artifacts from all configurations of this matrix build
+                for (Run r : ((MatrixBuild)run).getRuns())
+                    // Use subdir of targetDir with configuration name (like "jdk=java6u20")
+                    ok |= perform(r, expandedFilter, targetDir.child(r.getParent().getName()),
+                                  baseTargetDir, copier, console);
+                return ok;
+            } else {
+                return perform(run, expandedFilter, targetDir, baseTargetDir, copier, console);
             }
-            listener.getLogger().println(
-                    Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
-            // Fail build if 0 files copied unless copy is optional
-            return cnt > 0 || isOptional();
         }
         catch (IOException ex) {
             Util.displayIOException(ex, listener);
@@ -178,6 +176,34 @@ public class CopyArtifact extends Builder {
         }
     }
 
+    private boolean perform(Run run, String expandedFilter, FilePath targetDir,
+            FilePath baseTargetDir, CopyMethod copier, PrintStream console)
+            throws IOException, InterruptedException {
+        // Check special case for copying from workspace instead of artifacts:
+        FilePath srcDir = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild)
+                        ? ((AbstractBuild)run).getWorkspace() : new FilePath(run.getArtifactsDir());
+        if (srcDir == null) {
+            console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
+            return isOptional();  // Fail build unless copy is optional
+        }
+
+        copier.init(srcDir, baseTargetDir);
+
+        int cnt;
+        if (!isFlatten())
+            cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
+        else {
+            targetDir.mkdirs();  // Create target if needed
+            FilePath[] list = srcDir.list(expandedFilter);
+            for (FilePath file : list)
+                copier.copyOne(file, new FilePath(targetDir, file.getName()));
+            cnt = list.length;
+        }
+        console.println(Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
+        // Fail build if 0 files copied unless copy is optional
+        return cnt > 0 || isOptional();
+    }
+
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
@@ -185,13 +211,21 @@ public class CopyArtifact extends Builder {
                 @AncestorInPath AccessControlled anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
-            if (Hudson.getInstance().getItemByFullName(value, Job.class) != null)
-                return FormValidation.ok();
-            if (value.indexOf('$') >= 0)
-                return FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
-            return FormValidation.error(
+            FormValidation result;
+            Item item = Hudson.getInstance().getItemByFullName(value, Job.class);
+            if (item != null)
+                result = item instanceof MavenModuleSet
+                       ? FormValidation.warning(Messages.CopyArtifact_MavenProject())
+                       : (item instanceof MatrixProject
+                          ? FormValidation.warning(Messages.CopyArtifact_MatrixProject())
+                          : FormValidation.ok());
+            else if (value.indexOf('$') >= 0)
+                result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
+            else
+                result = FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
                         value, AbstractProject.findNearest(value).getName()));
+            return result;
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> clazz) {

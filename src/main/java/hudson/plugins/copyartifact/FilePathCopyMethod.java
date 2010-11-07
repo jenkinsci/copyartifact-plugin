@@ -43,7 +43,7 @@ public class FilePathCopyMethod implements CopyMethod {
             throws IOException, InterruptedException {
         // Workaround for HUDSON-5977.. this block can be removed whenever
         // copyartifact plugin raises its minimum Hudson version to whatever
-        // release fixes #5977.
+        // release fixes #5977 (1.379).
         // Make a call to copy a small file, to get all class-loading to happen.
         // When we copy the real stuff there won't be any classloader requests
         // coming the other direction, which due to full-buffer-deadlock problem
