@@ -89,7 +89,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         }
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            return Hudson.getInstance().getDescriptorList(BuildSelector.class);
+            return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
         }
     }
 

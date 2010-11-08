@@ -237,7 +237,7 @@ public class CopyArtifact extends Builder {
         }
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            return Hudson.getInstance().getDescriptorList(BuildSelector.class);
+            return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
         }
     }
 
