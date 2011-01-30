@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -263,12 +263,17 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "ARCH=x86/target/x86.out", b);
     }
 
-    /** Test copying from a particular module of a maven job */
-    public void testMavenJob() throws Exception {
+    private MavenModuleSet setupMavenJob() throws Exception {
         configureDefaultMaven();
         MavenModuleSet mp = createMavenProject();
         mp.setGoals("clean package");
         mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        return mp;
+    }
+
+    /** Test copying from a particular module of a maven job */
+    public void testMavenJob() throws Exception {
+        MavenModuleSet mp = setupMavenJob();
         assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$moduleB", "", "", true, false, false);
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
@@ -279,10 +284,7 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     /** Test copying all artifacts from a maven job */
     public void testMavenAll() throws Exception {
-        configureDefaultMaven();
-        MavenModuleSet mp = createMavenProject();
-        mp.setGoals("clean package");
-        mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        MavenModuleSet mp = setupMavenJob();
         assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName(), "", "", true, false, false);
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
@@ -301,6 +303,28 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
         assertFile(false, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
         assertFile(true, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
+    }
+
+    /** Test copying from maven job where artifacts manually archived instead of automatic */
+    public void testMavenJobWithArchivePostBuildStep() throws Exception {
+        MavenModuleSet mp = setupMavenJob();
+        // Turn off automatic archiving and use a post-build step instead.
+        // Artifacts will be stored with the parent build instead of the child module builds.
+        mp.setIsArchivingDisabled(true);
+        mp.getPublishersList().add(new ArtifactArchiver("moduleB/*.xml", "", false));
+        assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleProject p = createProject(mp.getName(), "", "", true, false, false);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        // Archived artifact should be copied:
+        assertFile(true, "moduleB/pom.xml", b);
+        // None of the maven artifacts should be archived or copied:
+        String dir = "org.jvnet.hudson.main.test.multimod/";
+        assertFile(false, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
         assertFile(false, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
     }
 

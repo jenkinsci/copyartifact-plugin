@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -151,8 +151,9 @@ public class CopyArtifact extends Builder {
             CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
 
             if (run instanceof MavenModuleSetBuild) {
-                boolean ok = false;
-                // Copy artifacts from all modules of this Maven build
+                // Copy artifacts from the build (ArchiveArtifacts build step)
+                boolean ok = perform(run, expandedFilter, targetDir, baseTargetDir, copier, console);
+                // Copy artifacts from all modules of this Maven build (automatic archiving)
                 for (Run r : ((MavenModuleSetBuild)run).getModuleLastBuilds().values())
                     ok |= perform(r, expandedFilter, targetDir, baseTargetDir, copier, console);
                 return ok;
