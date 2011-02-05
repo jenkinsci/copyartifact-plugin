@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
     <version>1.13-SNAPSHOT</version>
-    <url>http://wiki.hudson-ci.org/display/HUDSON/Copy+Artifact+Plugin</url>
+    <url>http://wiki.jenkins-ci.org/display/HUDSON/Copy+Artifact+Plugin</url>
 
     <developers>
       <developer>
@@ -29,4 +29,10 @@
         <optional>true</optional>
       </dependency>
     </dependencies>
+
+    <scm>
+      <connection>scm:git:git://github.com/jenkinsci/copyartifact-plugin.git</connection>
+      <developerConnection>scm:git:git@github.com:jenkinsci/copyartifact-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/copyartifact-plugin</url>
+    </scm>
 </project>
