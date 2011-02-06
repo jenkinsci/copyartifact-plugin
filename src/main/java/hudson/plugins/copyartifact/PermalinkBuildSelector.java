@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2010, InfraDNA, Inc.
+ * Copyright (c) 2010-2011, InfraDNA, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,6 @@ package hudson.plugins.copyartifact;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.RelativePath;
-import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.Job;
@@ -34,6 +33,7 @@ import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
 import hudson.util.ListBoxModel;
 import hudson.util.ListBoxModel.Option;
+import java.util.List;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -52,10 +52,11 @@ public class PermalinkBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?, ?> job, EnvVars env) {
+    public Run<?,?> getBuild(Job<?, ?> job, List<Run<?,?>> runList, EnvVars env) {
         Permalink p = job.getPermalinks().get(id);
         if (p==null)    return null;
-        return p.resolve(job);
+        Run<?,?> run = p.resolve(job);
+        return (run != null && (runList == null || runList.contains(run))) ? run : null;
     }
 
     @Extension

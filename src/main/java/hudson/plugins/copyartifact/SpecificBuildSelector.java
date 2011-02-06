@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
+import java.util.List;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -47,8 +48,9 @@ public class SpecificBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
+    public Run<?,?> getBuild(Job<?,?> job, List<Run<?,?>> runList, EnvVars env) {
+        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
+        return (run != null && (runList == null || runList.contains(run))) ? run : null;
     }
 
     @Extension(ordinal=-10)

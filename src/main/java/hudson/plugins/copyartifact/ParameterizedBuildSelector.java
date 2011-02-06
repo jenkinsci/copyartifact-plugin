@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
+import java.util.List;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -48,8 +49,8 @@ public class ParameterizedBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName)).getBuild(job, env);
+    public Run<?,?> getBuild(Job<?,?> job, List<Run<?,?>> runList, EnvVars env) {
+        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName)).getBuild(job, runList, env);
     }
 
     @Extension(ordinal=-20)

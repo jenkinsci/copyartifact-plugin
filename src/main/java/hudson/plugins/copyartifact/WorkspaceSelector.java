@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,6 @@ package hudson.plugins.copyartifact;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.Job;
 import hudson.model.Run;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -41,8 +40,8 @@ public class WorkspaceSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return job.getLastCompletedBuild();
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+        return true;
     }
 
     @Extension(ordinal=-20)
