@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,9 +25,11 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.ExtensionPoint;
+import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Job;
 import hudson.model.Run;
+import java.util.List;
 
 /**
  * Extension point for selecting the build to copy artifacts from.
@@ -41,14 +43,34 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     /**
      * Find a build to copy artifacts from.
      * @param job Source project
+     * @param runList If non-null, ordered set of builds to examine for a match
      * @param env Environment for build that is copying artifacts
      * @return Build to use, or null if no appropriate build was found
      */
+    public Run<?,?> getBuild(Job<?,?> job, List<Run<?,?>> runList, EnvVars env) {
+    	// Backward compatibility:
+    	// If this BuildSelector overrides the old API just call it (even though it'll ignore runList)
+        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class))
+            return getBuild(job, env);
+
+        if (runList != null) {
+	        for (Run<?,?> run : runList)
+	            if (isSelectable(run, env))
+	                return run;
+	    } else {
+        	for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
+        		if (isSelectable(run, env))
+        			return run;
+	    }
+        return null;
+    }
+
+    /**
+     * Older version of API.
+     */
+    @Deprecated
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        Run<?,?> run = job.getLastCompletedBuild();
-        while (run != null && !isSelectable(run, env))
-            run = run.getPreviousBuiltBuild();
-        return run;
+        return getBuild(job, null, env);
     }
 
     /**
