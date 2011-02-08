@@ -1,0 +1,21 @@
+<div>
+  Name of source project for copying of artifact(s).
+  May contain references to build parameters like <tt>$PARAM</tt>.
+  <p/>
+  If a Maven project is specified, artifacts from all of its modules will be copied.
+  Enter <tt>JOBNAME/MODULENAME</tt> here to copy from a particular module; you may
+  copy/paste this from the URL for that module when browsing Hudson.
+  Example: <tt>MyMavenJob/my.group$MyModule</tt>
+  <p/>
+  If a multiconfiguration (matrix) project is specified, artifacts from all of its
+  configurations will be copied, each into a subdirectory with the name of the
+  configuration as seen in its URL when browsing Hudson.
+  Example: If target directory is given as <tt>fromMatrix</tt> then the copy could
+  create <tt>$WORKSPACE/fromMatrix/label=slaveA/dist/mybuild.jar</tt> and
+  <tt>$WORKSPACE/fromMatrix/label=slaveB/dist/mybuild.jar</tt>. <br/>
+  To copy from a particular configuration, enter <tt>JOBNAME/AXIS=VALUE,..</tt> as
+  seen in the URL for that configuration. Example: <tt>MyMatrixJob/jdk=Java6u17</tt>
+  <br/>  To copy artifacts from one matrix project to another, use a parameter to
+  select the matching configuration in the source project.
+  Example: <tt>OtherMatrixJob/jdk=$jdk</tt>
+</div>
