@@ -46,6 +46,7 @@ import hudson.model.Project;
 import hudson.model.Run;
 import hudson.model.listeners.ItemListener;
 import hudson.security.AccessControlled;
+import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.DescribableList;
@@ -59,6 +60,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.acegisecurity.GrantedAuthority;
+import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -78,6 +81,11 @@ public class CopyArtifact extends Builder {
     @DataBoundConstructor
     public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
                         boolean flatten, boolean optional) {
+        // Prevents both invalid values and access to artifacts of projects which this user cannot see.
+        // If value is parameterized, it will be checked when build runs.
+        if (projectName.indexOf('$') < 0
+                && Hudson.getInstance().getItemByFullName(projectName, Job.class) == null)
+            projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
         this.projectName = projectName;
         this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
@@ -131,6 +139,17 @@ public class CopyArtifact extends Builder {
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(projectName);
             Job job = Hudson.getInstance().getItemByFullName(expandedProject, Job.class);
+            if (job != null && !expandedProject.equals(projectName)
+                // If projectName is parameterized, need to do permission check on source project.
+                // Would like to check if user who started build has permission, but unable to get
+                // Authentication object for arbitrary user.. instead, only allow use of parameters
+                // to select jobs which are accessible to all authenticated users.
+                && !job.getACL().hasPermission(
+                        new UsernamePasswordAuthenticationToken("authenticated", "",
+                                new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
+                        Item.READ)) {
+                job = null; // Disallow access
+            }
             if (job == null) {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;

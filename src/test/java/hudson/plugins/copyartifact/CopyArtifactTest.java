@@ -47,9 +47,12 @@ import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Builder;
 import java.io.IOException;
 import java.util.Collections;
+import org.acegisecurity.context.SecurityContextHolder;
+import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.UnstableBuilder;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 /**
  * Test interaction of copyartifact plugin with Hudson core.
@@ -99,7 +102,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         return p;
     }
 
-    private static void assertFile(boolean exists, String path, Build b)
+    private static void assertFile(boolean exists, String path, Build<?,?> b)
             throws IOException, InterruptedException {
         if (b.getWorkspace().child(path).exists() != exists)
             assertEquals(path + ": " + getLog(b), exists, !exists);
@@ -442,5 +445,47 @@ public class CopyArtifactTest extends HudsonTestCase {
                          p = createProject(other.getName(), "*.txt", "", false, false, true);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause()).get());
+    }
+
+    /**
+     * Test that a user is prevented from bypassing permissions on other jobs when configuring
+     * a copyartifact build step.
+     */
+    @LocalData
+    public void testPermission() throws Exception {
+        SecurityContextHolder.clearContext();
+        assertNull("Job should not be accessible to anonymous", hudson.getItem("testJob"));
+        assertEquals("Should ignore/clear value for inaccessible project", "",
+                     new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+        // Login as user with access to testJob:
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("joe","joe"));
+        assertEquals("Should allow use of testJob for joe", "testJob",
+                     new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+    }
+
+    /**
+     * When the source project name is parameterized, cannot check at configure time whether
+     * the project is accessible.  In this case, permission check is done when the build runs.
+     * Only jobs accessible to all authenticated users are allowed.
+     */
+    @LocalData
+    public void testPermissionWhenParameterized() throws Exception {
+        FreeStyleProject p = createProject("test$JOB", "", "", false, false, false);
+        // Build step should succeed when this parameter expands to a job accessible
+        // to authenticated users (even if triggered by anonymous, as in this case):
+        SecurityContextHolder.clearContext();
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("JOB", "Job2"))).get();
+        assertFile(true, "foo2.txt", b);
+        assertBuildStatusSuccess(b);
+        // Build step should fail for a job not accessible to all authenticated users,
+        // even when accessible to the user starting the job, as in this case:
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("joe","joe"));
+        b = p.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("JOB", "Job"))).get();
+        assertFile(false, "foo.txt", b);
+        assertBuildStatus(Result.FAILURE, b);
     }
 }
