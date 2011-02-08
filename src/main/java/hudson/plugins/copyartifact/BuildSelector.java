@@ -48,20 +48,20 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @return Build to use, or null if no appropriate build was found
      */
     public Run<?,?> getBuild(Job<?,?> job, List<Run<?,?>> runList, EnvVars env) {
-    	// Backward compatibility:
-    	// If this BuildSelector overrides the old API just call it (even though it'll ignore runList)
+        // Backward compatibility:
+        // If this BuildSelector overrides the old API just call it (even though it'll ignore runList)
         if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class))
             return getBuild(job, env);
 
         if (runList != null) {
-	        for (Run<?,?> run : runList)
-	            if (isSelectable(run, env))
-	                return run;
-	    } else {
-        	for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
-        		if (isSelectable(run, env))
-        			return run;
-	    }
+            for (Run<?,?> run : runList)
+                if (isSelectable(run, env))
+                    return run;
+        } else {
+            for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
+                if (isSelectable(run, env))
+                    return run;
+        }
         return null;
     }
 

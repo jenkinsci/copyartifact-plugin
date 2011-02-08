@@ -48,7 +48,7 @@ public class StatusBuildSelector extends BuildSelector {
 
     @Override
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
-    	return run.getResult().isBetterOrEqualTo(isStable() ? Result.SUCCESS : Result.UNSTABLE);
+        return run.getResult().isBetterOrEqualTo(isStable() ? Result.SUCCESS : Result.UNSTABLE);
     }
 
     @Extension(ordinal=100)
