@@ -37,14 +37,18 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
+import hudson.model.EnvironmentContributingAction;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
 import hudson.model.Project;
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
+import hudson.model.listeners.RunListener;
 import hudson.security.AccessControlled;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -56,7 +60,9 @@ import hudson.util.XStream2;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -163,6 +169,11 @@ public class CopyArtifact extends Builder {
             if (targetDir == null || !targetDir.exists()) {
                 console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
                 return isOptional();  // Fail build unless copy is optional
+            }
+            // Add info about the selected build into the environment
+            EnvAction envData = build.getAction(EnvAction.class);
+            if (envData != null) {
+                envData.add(expandedProject, run.getNumber());
             }
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
@@ -293,5 +304,40 @@ public class CopyArtifact extends Builder {
             if (list == null) return Collections.emptyList();
             return (List<CopyArtifact>)list.getAll(CopyArtifact.class);
         }
+    }
+
+    // Listen for new builds and add EnvAction in any that use CopyArtifact build step
+    @Extension
+    public static final class CopyArtifactRunListener extends RunListener<Build> {
+        public CopyArtifactRunListener() {
+            super(Build.class);
+        }
+
+        @Override
+        public void onStarted(Build r, TaskListener listener) {
+            if (((Build<?,?>)r).getProject().getBuildersList().get(CopyArtifact.class) != null)
+                r.addAction(new EnvAction());
+        }
+    }
+    
+    private static class EnvAction implements EnvironmentContributingAction {
+        // Decided not to record this data in build.xml, so marked transient:
+        private transient Map<String,String> data = new HashMap<String,String>();
+
+        private void add(String projectName, int buildNumber) {
+            int i = projectName.indexOf('/'); // Omit any detail after a /
+            if (i > 0) projectName = projectName.substring(0, i);
+            data.put("COPYARTIFACT_BUILD_NUMBER_"
+                       + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
+                     Integer.toString(buildNumber));
+        }
+
+        public void buildEnvVars(AbstractBuild<?,?> build, EnvVars env) {
+            env.putAll(data);
+        }
+
+        public String getIconFileName() { return null; }
+        public String getDisplayName() { return null; }
+        public String getUrlName() { return null; }
     }
 }

@@ -51,6 +51,7 @@ import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -70,7 +71,8 @@ public class CopyArtifactTest extends HudsonTestCase {
     }
 
     private static class ArtifactBuilder extends Builder {
-        @Override public boolean perform(
+        @Override
+        public boolean perform(
                 AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
                 throws InterruptedException, IOException {
             // Make some files to archive as artifacts
@@ -87,11 +89,15 @@ public class CopyArtifactTest extends HudsonTestCase {
         }
     }
 
-    private FreeStyleProject createArtifactProject() throws IOException {
-        FreeStyleProject p = createFreeStyleProject();
+    private FreeStyleProject createArtifactProject(String name) throws IOException {
+        FreeStyleProject p = name != null ? createFreeStyleProject(name) : createFreeStyleProject();
         p.getBuildersList().add(new ArtifactBuilder());
         p.getPublishersList().add(new ArtifactArchiver("**", "", false));
         return p;
+    }
+
+    private FreeStyleProject createArtifactProject() throws IOException {
+        return createArtifactProject(null);
     }
 
     private MatrixProject createMatrixArtifactProject() throws IOException {
@@ -487,5 +493,22 @@ public class CopyArtifactTest extends HudsonTestCase {
                 new ParametersAction(new StringParameterValue("JOB", "Job"))).get();
         assertFile(false, "foo.txt", b);
         assertBuildStatus(Result.FAILURE, b);
+    }
+
+    /**
+     * Test that info about selected builds is added into the environment for later build steps.
+     */
+    public void testEnvData() throws Exception {
+        // Also test conversion of job name to env var name, only keeping letters:
+        FreeStyleProject other = createArtifactProject("My (Test) Job"),
+                 p = createProject(other.getName(), "", "", false, false, false);
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        p.getBuildersList().add(envStep);
+        // Bump up the build number a bit:
+        for (int i = 0; i < 3; i++) other.assignBuildNumber();
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
     }
 }
