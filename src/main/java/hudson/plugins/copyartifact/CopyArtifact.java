@@ -144,23 +144,23 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(projectName);
-            Job job = Hudson.getInstance().getItemByFullName(expandedProject, Job.class);
-            if (job != null && !expandedProject.equals(projectName)
+            JobResolver job = new JobResolver(expandedProject);
+            if (job.job != null && !expandedProject.equals(projectName)
                 // If projectName is parameterized, need to do permission check on source project.
                 // Would like to check if user who started build has permission, but unable to get
                 // Authentication object for arbitrary user.. instead, only allow use of parameters
                 // to select jobs which are accessible to all authenticated users.
-                && !job.getACL().hasPermission(
+                && !job.job.getACL().hasPermission(
                         new UsernamePasswordAuthenticationToken("authenticated", "",
                                 new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
                         Item.READ)) {
-                job = null; // Disallow access
+                job.job = null; // Disallow access
             }
-            if (job == null) {
+            if (job.job == null) {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run run = selector.getBuild(job, null, env);
+            Run run = selector.getBuild(job.job, job.getApplicableBuilds(), env);
             if (run == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
@@ -233,6 +233,18 @@ public class CopyArtifact extends Builder {
         console.println(Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
         // Fail build if 0 files copied unless copy is optional
         return cnt > 0 || isOptional();
+    }
+
+    private static class JobResolver {
+        Job<?,?> job;
+
+        JobResolver(String projectName) {
+            job = Hudson.getInstance().getItemByFullName(projectName, Job.class);
+        }
+
+        List<Run<?,?>> getApplicableBuilds() {
+            return null;
+        }
     }
 
     @Extension
