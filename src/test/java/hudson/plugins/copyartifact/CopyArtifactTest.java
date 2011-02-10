@@ -33,13 +33,18 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.model.AbstractBuild;
+import hudson.model.BooleanParameterDefinition;
+import hudson.model.BooleanParameterValue;
 import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Cause.UserCause;
+import hudson.model.ChoiceParameterDefinition;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
@@ -72,8 +77,7 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     private static class ArtifactBuilder extends Builder {
         @Override
-        public boolean perform(
-                AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
+        public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
                 throws InterruptedException, IOException {
             // Make some files to archive as artifacts
             FilePath ws = build.getWorkspace();
@@ -510,5 +514,93 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
+    }
+
+    /**
+     * Test filtering on parameters, ie. last stable build with parameter FOO=bar.
+     */
+    public void testFilterByParameters() throws Exception {
+        FreeStyleProject other = createArtifactProject("Foo job");
+        other.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("FOO", ""),
+                new BooleanParameterDefinition("BAR", false, ""),
+                new ChoiceParameterDefinition("BAZ", new String[] { "foo", "bar", "baz" }, "")));
+        // #1: FOO=foo BAR=false BAZ=baz
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(
+                new StringParameterValue("FOO", "foo"),
+                new BooleanParameterValue("BAR", false),
+                new StringParameterValue("BAZ", "baz"))).get());
+        // #2: FOO=bar BAR=true BAZ=foo
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(
+                new StringParameterValue("FOO", "bar"),
+                new BooleanParameterValue("BAR", true),
+                new StringParameterValue("BAZ", "foo"))).get());
+        // #3: FOO=foo BAR=true BAZ=bar
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(
+                new StringParameterValue("FOO", "foo"),
+                new BooleanParameterValue("BAR", true),
+                new StringParameterValue("BAZ", "bar"))).get());
+
+        FreeStyleProject p = createProject(other.getName() + "/FOO=bar", "*.txt", "", true, false, false);
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        p.getBuildersList().add(envStep);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+
+        p = createProject(other.getName() + "/BAR=0", "*.txt", "", true, false, false);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("1", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+
+        p = createProject(other.getName() + "/BAZ=foo,BAR=yes", "*.txt", "", true, false, false);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+
+        p = createProject(other.getName() + "/FOO=foo,BAR=false,BAZ=baz", "*.txt", "", true, false, false);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("1", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+
+        p = createProject(other.getName() + "/BAZ=bar,FOO=bogus", "*.txt", "", true, false, false);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatus(Result.FAILURE, b);
+    }
+
+    public void testSavedBuildSelectorWithParameterFilter() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        other.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("FOO", "")));
+        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=buildone",
+                                    new SavedBuildSelector(), "*.txt", "", false, false));
+        FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
+        assertBuildStatusSuccess(b);
+        b.keepLog(true);
+        assertBuildStatusSuccess(b = other.scheduleBuild2(0, new UserCause()).get());
+        b.keepLog(true); // Keep #2 too, but it doesn't have FOO=buildone so should not be selected
+        assertBuildStatusSuccess(b = p.scheduleBuild2(0, new UserCause()).get());
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    // Verify build fails if given build# does not match params
+    public void testSpecificBuildSelectorWithParameterFilter() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        other.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("FOO", "")));
+        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=bogus",
+                                    new SpecificBuildSelector("1"), "*.txt", "", false, false));
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "foo"))).get());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatus(Result.FAILURE, b);
+        assertFile(false, "foo.txt", b);
     }
 }
