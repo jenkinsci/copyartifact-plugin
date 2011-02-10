@@ -49,8 +49,8 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
         // Backward compatibility:
         if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class)) {
-        	Run<?,?> run = getBuild(job, env);
-        	return (run != null && filter.isSelectable(run, env)) ? run : null;
+            Run<?,?> run = getBuild(job, env);
+            return (run != null && filter.isSelectable(run, env)) ? run : null;
         }
 
         for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())

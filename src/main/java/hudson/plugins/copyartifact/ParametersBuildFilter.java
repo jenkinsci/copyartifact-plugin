@@ -39,41 +39,41 @@ import java.util.regex.Pattern;
  * @author Alan Harder
  */
 public class ParametersBuildFilter extends BuildFilter {
-	private String paramsToMatch;
-	private List<StringParameterValue> stringMatches;
-	private List<BooleanParameterValue> booleanMatches;
+    private String paramsToMatch;
+    private List<StringParameterValue> stringMatches;
+    private List<BooleanParameterValue> booleanMatches;
 
-	private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
+    private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
-	public ParametersBuildFilter(String paramsToMatch) {
-		this.paramsToMatch = paramsToMatch;
-	}
+    public ParametersBuildFilter(String paramsToMatch) {
+        this.paramsToMatch = paramsToMatch;
+    }
 
     /**
      * {@inheritDoc}
      */
-	@Override
+    @Override
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
-		if (stringMatches == null) {
-	        // Initialize.. parse out the given parameters/values.
-	        Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
-	        stringMatches = new ArrayList<StringParameterValue>(5);
-	        booleanMatches = new ArrayList<BooleanParameterValue>(5);
-	        while (m.find()) {
-	            String name = m.group(1), value = m.group(2);
-	            stringMatches.add(new StringParameterValue(name, value));
-	            // Try Boolean if parameter value looks boolean
-	            if ("true".equalsIgnoreCase(value) || "1".equals(value)
-	                    || "yes".equalsIgnoreCase(value) || "on".equalsIgnoreCase(value)) {
-	                booleanMatches.add(new BooleanParameterValue(name, true));
-	            }
-	            else if ("false".equalsIgnoreCase(value) || "0".equals(value)
-	                    || "no".equalsIgnoreCase(value) || "off".equalsIgnoreCase(value)) {
-	                booleanMatches.add(new BooleanParameterValue(name, false));
-	            }
-	            else booleanMatches.add(null);
-	        }
-		}
+        if (stringMatches == null) {
+            // Initialize.. parse out the given parameters/values.
+            Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
+            stringMatches = new ArrayList<StringParameterValue>(5);
+            booleanMatches = new ArrayList<BooleanParameterValue>(5);
+            while (m.find()) {
+                String name = m.group(1), value = m.group(2);
+                stringMatches.add(new StringParameterValue(name, value));
+                // Try Boolean if parameter value looks boolean
+                if ("true".equalsIgnoreCase(value) || "1".equals(value)
+                        || "yes".equalsIgnoreCase(value) || "on".equalsIgnoreCase(value)) {
+                    booleanMatches.add(new BooleanParameterValue(name, true));
+                }
+                else if ("false".equalsIgnoreCase(value) || "0".equals(value)
+                        || "no".equalsIgnoreCase(value) || "off".equalsIgnoreCase(value)) {
+                    booleanMatches.add(new BooleanParameterValue(name, false));
+                }
+                else booleanMatches.add(null);
+            }
+        }
         if (stringMatches.isEmpty()) return false;  // Unable to parse text after /
 
         ParametersAction pa = run.getAction(ParametersAction.class);

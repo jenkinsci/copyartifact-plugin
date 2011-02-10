@@ -245,7 +245,7 @@ public class CopyArtifact extends Builder {
             Hudson hudson = Hudson.getInstance();
             job = hudson.getItemByFullName(projectName, Job.class);
             if (job == null) {
-            	// Check for parameterized job with filter (see help file)
+                // Check for parameterized job with filter (see help file)
                 int i = projectName.indexOf('/');
                 if (i > 0) {
                     Job<?,?> candidate = hudson.getItemByFullName(projectName.substring(0, i), Job.class);
