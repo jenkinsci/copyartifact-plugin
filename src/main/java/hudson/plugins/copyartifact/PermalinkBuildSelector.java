@@ -33,7 +33,6 @@ import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
 import hudson.util.ListBoxModel;
 import hudson.util.ListBoxModel.Option;
-import java.util.List;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -52,11 +51,11 @@ public class PermalinkBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?, ?> job, List<Run<?,?>> runList, EnvVars env) {
+    public Run<?,?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter) {
         Permalink p = job.getPermalinks().get(id);
         if (p==null)    return null;
         Run<?,?> run = p.resolve(job);
-        return (run != null && (runList == null || runList.contains(run))) ? run : null;
+        return (run != null && filter.isSelectable(run, env)) ? run : null;
     }
 
     @Extension

@@ -29,7 +29,6 @@ import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Job;
 import hudson.model.Run;
-import java.util.List;
 
 /**
  * Extension point for selecting the build to copy artifacts from.
@@ -43,25 +42,21 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     /**
      * Find a build to copy artifacts from.
      * @param job Source project
-     * @param runList If non-null, ordered set of builds to examine for a match
      * @param env Environment for build that is copying artifacts
+     * @param filter Additional filter; returned result should return true (return null otherwise)
      * @return Build to use, or null if no appropriate build was found
      */
-    public Run<?,?> getBuild(Job<?,?> job, List<Run<?,?>> runList, EnvVars env) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
         // Backward compatibility:
-        // If this BuildSelector overrides the old API just call it (even though it'll ignore runList)
-        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class))
-            return getBuild(job, env);
-
-        if (runList != null) {
-            for (Run<?,?> run : runList)
-                if (isSelectable(run, env))
-                    return run;
-        } else {
-            for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
-                if (isSelectable(run, env))
-                    return run;
+        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class)) {
+        	Run<?,?> run = getBuild(job, env);
+        	return (run != null && filter.isSelectable(run, env)) ? run : null;
         }
+
+        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
+            if (isSelectable(run, env) && filter.isSelectable(run, env))
+                return run;
+
         return null;
     }
 
@@ -70,7 +65,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      */
     @Deprecated
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return getBuild(job, null, env);
+        return getBuild(job, env, new BuildFilter());
     }
 
     /**

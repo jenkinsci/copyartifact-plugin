@@ -37,7 +37,6 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.BooleanParameterValue;
 import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
@@ -45,12 +44,9 @@ import hudson.model.EnvironmentContributingAction;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
-import hudson.model.ParameterValue;
-import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Project;
 import hudson.model.Run;
-import hudson.model.StringParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.RunListener;
@@ -64,15 +60,12 @@ import hudson.util.XStream2;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -113,7 +106,7 @@ public class CopyArtifact extends Builder {
         @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
             if (obj.selector == null) {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable.booleanValue());
-                OldDataMonitor.report(context, "1.355"); // Hudson version# when CopyArtifact 1.2 released
+                OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
         }
     }
@@ -167,7 +160,7 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run run = selector.getBuild(job.job, job.getApplicableBuilds(), env);
+            Run run = selector.getBuild(job.job, env, job.filter);
             if (run == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
@@ -246,67 +239,22 @@ public class CopyArtifact extends Builder {
     // but this class encapsulates additional logic like filtering on parameters.
     private static class JobResolver {
         Job<?,?> job;
-        private String paramsToMatch;
+        BuildFilter filter = new BuildFilter();
 
         JobResolver(String projectName) {
             Hudson hudson = Hudson.getInstance();
             job = hudson.getItemByFullName(projectName, Job.class);
             if (job == null) {
+            	// Check for parameterized job with filter (see help file)
                 int i = projectName.indexOf('/');
                 if (i > 0) {
                     Job<?,?> candidate = hudson.getItemByFullName(projectName.substring(0, i), Job.class);
                     if (candidate != null && candidate.getProperty(ParametersDefinitionProperty.class) != null) {
                         job = candidate;
-                        paramsToMatch = projectName.substring(i + 1);
+                        filter = new ParametersBuildFilter(projectName.substring(i + 1));
                     }
                 }
             }
-        }
-
-        List<Run<?,?>> getApplicableBuilds() {
-            // Normally just return null and BuildSelector will look at all completed builds.
-            if (paramsToMatch == null) return null;
-
-            // Collect the given parameters.
-            Matcher m = Pattern.compile("(.*?)=([^,]*)(,|$)").matcher(paramsToMatch);
-            List<StringParameterValue> stringMatches = new ArrayList<StringParameterValue>(5);
-            List<BooleanParameterValue> booleanMatches = new ArrayList<BooleanParameterValue>(5);
-            while (m.find()) {
-                String name = m.group(1), value = m.group(2);
-                stringMatches.add(new StringParameterValue(name, value));
-                // Try Boolean if parameter value looks boolean
-                if ("true".equalsIgnoreCase(value) || "1".equals(value)
-                        || "yes".equalsIgnoreCase(value) || "on".equalsIgnoreCase(value)) {
-                    booleanMatches.add(new BooleanParameterValue(name, true));
-                }
-                else if ("false".equalsIgnoreCase(value) || "0".equals(value)
-                        || "no".equalsIgnoreCase(value) || "off".equalsIgnoreCase(value)) {
-                    booleanMatches.add(new BooleanParameterValue(name, false));
-                }
-                else booleanMatches.add(null);
-            }
-            List<Run<?,?>> runs = new ArrayList<Run<?,?>>();
-            if (stringMatches.isEmpty()) return runs;  // Unable to parse text after /
-            outer:
-            for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) {
-                ParametersAction pa = run.getAction(ParametersAction.class);
-                if (pa == null) continue;
-                int i = 0;
-                // All parameters must match (either as string or boolean):
-                for (StringParameterValue spv : stringMatches) {
-                    BooleanParameterValue bpv = booleanMatches.get(i++);
-                    boolean ok = false;
-                    for (ParameterValue pv : pa.getParameters()) {
-                        if (spv.equals(pv) || (bpv != null && bpv.equals(pv))) {
-                            ok = true;
-                            break;
-                        }
-                    }
-                    if (!ok) continue outer; // No match for this parameter so skip this build
-                }
-                runs.add(run);
-            }
-            return runs;
         }
     }
 

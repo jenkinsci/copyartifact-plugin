@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2011, Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,36 +24,21 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.model.Job;
 import hudson.model.Run;
-import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * Copy artifacts from a specific build.
+ * Additional filter used by BuildSelector.
  * @author Alan Harder
  */
-public class SpecificBuildSelector extends BuildSelector {
-    private String buildNumber;
+public class BuildFilter {
 
-    @DataBoundConstructor
-    public SpecificBuildSelector(String buildNumber) {
-        this.buildNumber = buildNumber;
+    /**
+     * Can this build be selected?
+     * @param run Build to check
+     * @param env Environment for build that is copying artifacts
+     * @return True if this build may be selected; default implementation always returns true.
+     */
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+        return true;
     }
-
-    public String getBuildNumber() {
-        return buildNumber;
-    }
-
-    @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
-        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
-        return (run != null && filter.isSelectable(run, env)) ? run : null;
-    }
-
-    @Extension(ordinal=-10)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                SpecificBuildSelector.class, Messages._SpecificBuildSelector_DisplayName());
 }
