@@ -2,10 +2,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.jvnet.hudson.plugins</groupId>
+        <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.376</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>1.396</version>
     </parent>
 
     <artifactId>copyartifact</artifactId>
@@ -24,7 +23,7 @@
 
     <dependencies>
       <dependency>
-        <groupId>org.jvnet.hudson.main</groupId>
+        <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
         <optional>true</optional>
       </dependency>
