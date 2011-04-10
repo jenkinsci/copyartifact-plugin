@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,33 +39,20 @@ import java.net.URL;
 @Extension(ordinal=-100)
 public class FilePathCopyMethod implements CopyMethod {
 
+    @Override
     public void init(FilePath srcDir, FilePath baseTargetDir)
             throws IOException, InterruptedException {
-        // Workaround for JENKINS-5977.. this block can be removed whenever
-        // copyartifact plugin raises its minimum core version to whatever
-        // release fixes #5977 (1.379).
-        // Make a call to copy a small file, to get all class-loading to happen.
-        // When we copy the real stuff there won't be any classloader requests
-        // coming the other direction, which due to full-buffer-deadlock problem
-        // can cause slave to hang.
-        hudson.PluginWrapper pw = Hudson.getInstance().getPluginManager().getPlugin("copyartifact");
-        if (pw==null) { System.out.println("foo"); return; }
-        URL base = pw.baseResourceURL;
-        if (base != null && "file".equals(base.getProtocol())) {
-            FilePath tmp = baseTargetDir.createTempDir("copyartifact", ".dir");
-            new FilePath(new File(base.getPath())).copyRecursiveTo("HUDSON-5977/**", tmp);
-            tmp.deleteRecursive();
-        }
-        // End workaround
     }
 
     /** @see FilePath#recursiveCopyTo(String,FilePath) */
+    @Override
     public int copyAll(FilePath srcDir, String filter, FilePath targetDir)
             throws IOException, InterruptedException {
         return srcDir.copyRecursiveTo(filter, targetDir);
     }
 
     /** @see FilePath#copyTo(FilePath) */
+    @Override
     public void copyOne(FilePath source, FilePath target)
             throws IOException, InterruptedException {
         source.copyTo(target);
