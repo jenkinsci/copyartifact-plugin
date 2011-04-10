@@ -30,7 +30,7 @@ import java.io.IOException;
 /**
  * Extension point for how files are copied.
  * CopyArtifact plugin provides a default implementation using methods
- * available in Hudson's FilePath class.
+ * available in the Jenkins FilePath class.
  * @author Alan Harder
  */
 public interface CopyMethod extends ExtensionPoint {

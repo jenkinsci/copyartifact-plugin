@@ -32,7 +32,7 @@ import java.net.URL;
 
 /**
  * Default implementation of CopyMethod extension point,
- * using Hudson's FilePath class.  Has -100 ordinal value so any other
+ * using the Jenkins FilePath class.  Has -100 ordinal value so any other
  * plugin implementing this extension point should override this one.
  * @author Alan Harder
  */
@@ -41,8 +41,8 @@ public class FilePathCopyMethod implements CopyMethod {
 
     public void init(FilePath srcDir, FilePath baseTargetDir)
             throws IOException, InterruptedException {
-        // Workaround for HUDSON-5977.. this block can be removed whenever
-        // copyartifact plugin raises its minimum Hudson version to whatever
+        // Workaround for JENKINS-5977.. this block can be removed whenever
+        // copyartifact plugin raises its minimum core version to whatever
         // release fixes #5977 (1.379).
         // Make a call to copy a small file, to get all class-loading to happen.
         // When we copy the real stuff there won't be any classloader requests

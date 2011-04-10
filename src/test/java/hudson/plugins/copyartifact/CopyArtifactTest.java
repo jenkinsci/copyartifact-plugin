@@ -61,7 +61,7 @@ import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
 /**
- * Test interaction of copyartifact plugin with Hudson core.
+ * Test interaction of copyartifact plugin with Jenkins core.
  * @author Alan Harder
  */
 public class CopyArtifactTest extends HudsonTestCase {

@@ -167,7 +167,7 @@ public class CopyArtifact extends Builder {
             }
             FilePath targetDir = build.getWorkspace(), baseTargetDir = targetDir;
             if (targetDir == null || !targetDir.exists()) {
-                console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
+                console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
                 return isOptional();  // Fail build unless copy is optional
             }
             // Add info about the selected build into the environment
@@ -214,7 +214,7 @@ public class CopyArtifact extends Builder {
         FilePath srcDir = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild)
                         ? ((AbstractBuild)run).getWorkspace() : new FilePath(run.getArtifactsDir());
         if (srcDir == null || !srcDir.exists()) {
-            console.println(Messages.CopyArtifact_MissingWorkspace()); // (see HUDSON-3330)
+            console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
             return isOptional();  // Fail build unless copy is optional
         }
 
