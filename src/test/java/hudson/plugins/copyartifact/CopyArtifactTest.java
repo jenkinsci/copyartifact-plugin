@@ -37,19 +37,23 @@ import hudson.model.BooleanParameterDefinition;
 import hudson.model.BooleanParameterValue;
 import hudson.model.Build;
 import hudson.model.BuildListener;
+import hudson.model.Item;
 import hudson.model.Cause.UserCause;
 import hudson.model.ChoiceParameterDefinition;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Hudson;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
+import hudson.security.AuthorizationMatrixProperty;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Builder;
+import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -284,15 +288,24 @@ public class CopyArtifactTest extends HudsonTestCase {
         return mp;
     }
 
+    private static final VersionNumber MAVEN_POM_CUTOFF = new VersionNumber("1.405");
+
+    private static String pomName(String module, String version) {
+        return module + '/' + version + '/' +
+               (MAVEN_POM_CUTOFF.isNewerThan(Hudson.getVersion()) ? "pom.xml"
+                                                                  : (module + '-' + version + ".pom"));
+    }
+
     /** Test copying from a particular module of a maven job */
     public void testMavenJob() throws Exception {
         MavenModuleSet mp = setupMavenJob();
         assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
-        FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$moduleB", "", "", true, false, false);
+        FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$moduleB",
+                                           "", "", true, false, false);
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
-        String dir = "org.jvnet.hudson.main.test.multimod/moduleB/1.0-SNAPSHOT/";
-        assertFile(true, dir + "moduleB-1.0-SNAPSHOT.jar", b);
-        assertFile(true, dir + "pom.xml", b);
+        String dir = "org.jvnet.hudson.main.test.multimod/";
+        assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
     }
 
     /** Test copying all artifacts from a maven job */
@@ -303,20 +316,20 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         String dir = "org.jvnet.hudson.main.test.multimod/";
         assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
-        assertFile(true, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
         assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
-        assertFile(true, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
         assertFile(true, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
-        assertFile(true, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(true, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
         // Test with filter
         p = createProject(mp.getName(), "**/*.jar", "", true, false, false);
         b = p.scheduleBuild2(0, new UserCause()).get();
         assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
         assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
         assertFile(true, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
     }
 
     /** Test copying from maven job where artifacts manually archived instead of automatic */
@@ -334,11 +347,11 @@ public class CopyArtifactTest extends HudsonTestCase {
         // None of the maven artifacts should be archived or copied:
         String dir = "org.jvnet.hudson.main.test.multimod/";
         assertFile(false, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleA/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
         assertFile(false, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
         assertFile(false, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
-        assertFile(false, dir + "moduleC/1.0-SNAPSHOT/pom.xml", b);
+        assertFile(false, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
     }
 
     /** Test copy from workspace instead of artifacts area */
@@ -497,6 +510,43 @@ public class CopyArtifactTest extends HudsonTestCase {
                 new ParametersAction(new StringParameterValue("JOB", "Job"))).get();
         assertFile(false, "foo.txt", b);
         assertBuildStatus(Result.FAILURE, b);
+    }
+
+    @LocalData
+    public void testPermissionWhenParameterizedForMatrixConfig() throws Exception {
+        // This test fails before Jenkins 1.406
+        if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
+
+        FreeStyleProject p = createProject("testMatrix/FOO=$FOO", "", "", false, false, false);
+        // Build step should succeed when this parameter expands to a job accessible to
+        // authenticated users, even when selecting a single matrix config, not the parent job:
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "foo"))).get();
+        assertFile(true, "foo.txt", b);
+        assertBuildStatusSuccess(b);
+    }
+
+    @LocalData
+    public void testPermissionWhenParameterizedForMavenModule() throws Exception {
+        // This test fails before Jenkins 1.406
+        if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
+
+        MavenModuleSet mp = setupMavenJob();
+        mp.addProperty(new AuthorizationMatrixProperty(
+                Collections.singletonMap(Item.READ, Collections.singleton("authenticated"))));
+        assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$FOO",
+                                           "", "", false, false, false);
+        // Build step should succeed when this parameter expands to a job accessible to
+        // authenticated users, even when selecting a single maven module, not the parent job:
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "$moduleA"))).get();
+        String dir = "org.jvnet.hudson.main.test.multimod/";
+        assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
+        assertFile(true, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
+        assertFile(false, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
+        assertFile(false, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
+        assertBuildStatusSuccess(b);
     }
 
     /**
