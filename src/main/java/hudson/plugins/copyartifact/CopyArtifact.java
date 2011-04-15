@@ -348,6 +348,7 @@ public class CopyArtifact extends Builder {
         private transient Map<String,String> data = new HashMap<String,String>();
 
         private void add(String projectName, int buildNumber) {
+            if (data==null) return;
             int i = projectName.indexOf('/'); // Omit any detail after a /
             if (i > 0) projectName = projectName.substring(0, i);
             data.put("COPYARTIFACT_BUILD_NUMBER_"
@@ -356,7 +357,7 @@ public class CopyArtifact extends Builder {
         }
 
         public void buildEnvVars(AbstractBuild<?,?> build, EnvVars env) {
-            env.putAll(data);
+            if (data!=null) env.putAll(data);
         }
 
         public String getIconFileName() { return null; }
