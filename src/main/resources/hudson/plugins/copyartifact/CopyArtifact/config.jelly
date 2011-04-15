@@ -1,7 +1,7 @@
 <!--
 The MIT License
 
-Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:ca="/hudson/plugins/copyartifact">
   <f:entry title="${%Project name}" field="projectName">
-    <f:editableComboBox id="copyartifact_projectName" items="${app.topLevelItemNames}"/>
+    <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
   </f:entry>
   <ca:selectorList currentSelector="${instance.buildSelector}"
       name="selector" title="${%Which build}"/>
