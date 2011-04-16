@@ -619,13 +619,13 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(b);
         assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
 
-        p = createProject(other.getName() + "/BAR=0", "*.txt", "", true, false, false);
+        p = createProject(other.getName() + "/BAR=false", "*.txt", "", true, false, false);
         p.getBuildersList().add(envStep);
         b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertEquals("1", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
 
-        p = createProject(other.getName() + "/BAZ=foo,BAR=yes", "*.txt", "", true, false, false);
+        p = createProject(other.getName() + "/BAZ=foo,BAR=true", "*.txt", "", true, false, false);
         p.getBuildersList().add(envStep);
         b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
@@ -640,6 +640,13 @@ public class CopyArtifactTest extends HudsonTestCase {
         p = createProject(other.getName() + "/BAZ=bar,FOO=bogus", "*.txt", "", true, false, false);
         b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatus(Result.FAILURE, b);
+
+        // Test matching other build variables besides parameters
+        p = createProject(other.getName() + "/BUILD_NUMBER=2", "*.txt", "", true, false, false);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
     }
 
     public void testSavedBuildSelectorWithParameterFilter() throws Exception {

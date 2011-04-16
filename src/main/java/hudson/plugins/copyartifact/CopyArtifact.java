@@ -249,9 +249,12 @@ public class CopyArtifact extends Builder {
                 int i = projectName.indexOf('/');
                 if (i > 0) {
                     Job<?,?> candidate = hudson.getItemByFullName(projectName.substring(0, i), Job.class);
-                    if (candidate != null && candidate.getProperty(ParametersDefinitionProperty.class) != null) {
-                        job = candidate;
-                        filter = new ParametersBuildFilter(projectName.substring(i + 1));
+                    if (candidate != null) {
+                        ParametersBuildFilter pFilter = new ParametersBuildFilter(projectName.substring(i + 1));
+                        if (pFilter.isValid(candidate)) {
+                            job = candidate;
+                            filter = pFilter;
+                        }
                     }
                 }
             }

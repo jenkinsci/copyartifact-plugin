@@ -24,9 +24,8 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
-import hudson.model.BooleanParameterValue;
-import hudson.model.ParameterValue;
-import hudson.model.ParametersAction;
+import hudson.model.TaskListener;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
 import java.util.ArrayList;
@@ -35,18 +34,38 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Additional filter used by BuildSelector.
+ * Filter to find builds matching particular parameters.
  * @author Alan Harder
  */
 public class ParametersBuildFilter extends BuildFilter {
-    private String paramsToMatch;
-    private List<StringParameterValue> stringMatches;
-    private List<BooleanParameterValue> booleanMatches;
+    private List<StringParameterValue> filters;
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
     public ParametersBuildFilter(String paramsToMatch) {
-        this.paramsToMatch = paramsToMatch;
+        // Initialize.. parse out the given parameters/values.
+        filters = new ArrayList<StringParameterValue>(5);
+        Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
+        while (m.find()) {
+            filters.add(new StringParameterValue(m.group(1), m.group(2)));
+        }
+    }
+
+    public boolean isValid(Job<?,?> job) {
+        if (filters.isEmpty()) return false;  // Unable to parse text after /
+        // Consider the filter valid for this job if any build for this job has all the filter params
+        outer:
+        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) try {
+            EnvVars env = run.getEnvironment(TaskListener.NULL);
+            for (StringParameterValue spv : filters) {
+                if (!env.containsKey(spv.getName())) {
+                    continue outer;
+                }
+            }
+            return true;
+        } catch (Exception ignore) {
+        }
+        return false;
     }
 
     /**
@@ -54,42 +73,16 @@ public class ParametersBuildFilter extends BuildFilter {
      */
     @Override
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
-        if (stringMatches == null) {
-            // Initialize.. parse out the given parameters/values.
-            Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
-            stringMatches = new ArrayList<StringParameterValue>(5);
-            booleanMatches = new ArrayList<BooleanParameterValue>(5);
-            while (m.find()) {
-                String name = m.group(1), value = m.group(2);
-                stringMatches.add(new StringParameterValue(name, value));
-                // Try Boolean if parameter value looks boolean
-                if ("true".equalsIgnoreCase(value) || "1".equals(value)
-                        || "yes".equalsIgnoreCase(value) || "on".equalsIgnoreCase(value)) {
-                    booleanMatches.add(new BooleanParameterValue(name, true));
-                }
-                else if ("false".equalsIgnoreCase(value) || "0".equals(value)
-                        || "no".equalsIgnoreCase(value) || "off".equalsIgnoreCase(value)) {
-                    booleanMatches.add(new BooleanParameterValue(name, false));
-                }
-                else booleanMatches.add(null);
-            }
+        EnvVars otherEnv;
+        try {
+            otherEnv = run.getEnvironment(TaskListener.NULL);
+        } catch (Exception ex) {
+            return false;
         }
-        if (stringMatches.isEmpty()) return false;  // Unable to parse text after /
-
-        ParametersAction pa = run.getAction(ParametersAction.class);
-        if (pa == null) return false;
-        int i = 0;
-        // All parameters must match (either as string or boolean):
-        for (StringParameterValue spv : stringMatches) {
-            BooleanParameterValue bpv = booleanMatches.get(i++);
-            boolean ok = false;
-            for (ParameterValue pv : pa.getParameters()) {
-                if (spv.equals(pv) || (bpv != null && bpv.equals(pv))) {
-                    ok = true;
-                    break;
-                }
+        for (StringParameterValue spv : filters) {
+            if (!spv.value.equals(otherEnv.get(spv.getName()))) {
+                return false;
             }
-            if (!ok) return false; // No match for this parameter
         }
         return true;
     }
