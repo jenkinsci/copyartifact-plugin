@@ -44,12 +44,14 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @param job Source project
      * @param env Environment for build that is copying artifacts
      * @param filter Additional filter; returned result should return true (return null otherwise)
+     * @param parent Build to which artifacts are being copied
      * @return Build to use, or null if no appropriate build was found
      */
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         // Backward compatibility:
-        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild", Job.class, EnvVars.class)) {
-            Run<?,?> run = getBuild(job, env);
+        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild",
+                              Job.class, EnvVars.class, BuildFilter.class)) {
+            Run<?,?> run = getBuild(job, env, filter);
             return (run != null && filter.isSelectable(run, env)) ? run : null;
         }
 
@@ -64,8 +66,8 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * Older version of API.
      */
     @Deprecated
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env) {
-        return getBuild(job, env, new BuildFilter());
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
+        return getBuild(job, env, filter, null);
     }
 
     /**

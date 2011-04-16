@@ -48,8 +48,9 @@ public class ParameterizedBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
-        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName)).getBuild(job, env, filter);
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName))
+                                     .getBuild(job, env, filter, parent);
     }
 
     @Extension(ordinal=-20)

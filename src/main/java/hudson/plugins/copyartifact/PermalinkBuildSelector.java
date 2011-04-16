@@ -51,7 +51,7 @@ public class PermalinkBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter) {
+    public Run<?,?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         Permalink p = job.getPermalinks().get(id);
         if (p==null)    return null;
         Run<?,?> run = p.resolve(job);

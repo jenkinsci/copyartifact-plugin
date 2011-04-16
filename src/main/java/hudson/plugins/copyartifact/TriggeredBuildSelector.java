@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2011, Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,34 +26,35 @@ package hudson.plugins.copyartifact;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.model.Cause;
+import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
 import hudson.model.Run;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * Copy artifacts from a specific build.
+ * Copy artifacts from the build that triggered this build.
  * @author Alan Harder
  */
-public class SpecificBuildSelector extends BuildSelector {
-    private String buildNumber;
-
+public class TriggeredBuildSelector extends BuildSelector {
     @DataBoundConstructor
-    public SpecificBuildSelector(String buildNumber) {
-        this.buildNumber = buildNumber;
-    }
-
-    public String getBuildNumber() {
-        return buildNumber;
-    }
+    public TriggeredBuildSelector() { }
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
-        return (run != null && filter.isSelectable(run, env)) ? run : null;
+        String jobName = job.getFullName();
+        for (Cause cause : parent.getCauses()) {
+            if (cause instanceof UpstreamCause
+                    && jobName.equals(((UpstreamCause)cause).getUpstreamProject())) {
+                Run<?,?> run = job.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild());
+                return (run != null && filter.isSelectable(run, env)) ? run : null;
+            }
+        }
+        return null;
     }
 
-    @Extension(ordinal=-10)
+    @Extension(ordinal=25)
     public static final Descriptor<BuildSelector> DESCRIPTOR =
             new SimpleBuildSelectorDescriptor(
-                SpecificBuildSelector.class, Messages._SpecificBuildSelector_DisplayName());
+                TriggeredBuildSelector.class, Messages._TriggeredBuildSelector_DisplayName());
 }

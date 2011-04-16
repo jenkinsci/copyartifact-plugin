@@ -52,6 +52,7 @@ import hudson.security.AuthorizationMatrixProperty;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
+import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
 import hudson.util.VersionNumber;
 import java.io.IOException;
@@ -438,6 +439,26 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testTriggeredBuildSelector() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+        p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new TriggeredBuildSelector(), "*.txt", "", false, false));
+        other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
+        hudson.rebuildDependencyGraph();
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        // p#1 was triggered, now building.
+        FreeStyleBuild b = p.getBuildByNumber(1);
+        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        assertNotNull(b);
+        while (b.isBuilding()) Thread.sleep(10);
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+        // Verify error if build not triggered by upstream job:
+        assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
     public void testFlatten() throws Exception {
