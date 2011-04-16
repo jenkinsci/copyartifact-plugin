@@ -28,6 +28,22 @@
       </dependency>
     </dependencies>
 
+    <reporting>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>cobertura-maven-plugin</artifactId>
+          <version>2.5</version>
+          <configuration>
+            <formats>
+              <format>xml</format>
+              <format>html</format>
+            </formats>
+          </configuration>
+        </plugin>
+      </plugins>
+    </reporting>
+
     <scm>
       <connection>scm:git:git://github.com/jenkinsci/copyartifact-plugin.git</connection>
       <developerConnection>scm:git:git@github.com:jenkinsci/copyartifact-plugin.git</developerConnection>
