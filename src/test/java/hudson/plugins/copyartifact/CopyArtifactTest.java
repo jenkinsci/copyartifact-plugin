@@ -653,12 +653,12 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
         other.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("FOO", "")));
-        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=buildone",
-                                    new SavedBuildSelector(), "*.txt", "", false, false));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         assertBuildStatusSuccess(b);
         b.keepLog(true);
+        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=buildone",
+                                    new SavedBuildSelector(), "*.txt", "", false, false));
         assertBuildStatusSuccess(b = other.scheduleBuild2(0, new UserCause()).get());
         b.keepLog(true); // Keep #2 too, but it doesn't have FOO=buildone so should not be selected
         assertBuildStatusSuccess(b = p.scheduleBuild2(0, new UserCause()).get());
