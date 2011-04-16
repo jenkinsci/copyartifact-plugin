@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,14 +42,10 @@ import org.jvnet.hudson.test.HudsonTestCase;
  */
 public class BuildSelectorParameterTest extends HudsonTestCase {
 
-    // TODO: until testParameter method comes back
-    public void testDummy() throws Exception {}
-
     /**
      * Verify BuildSelectorParameter works via HTML form, http POST and CLI.
      */
-    // TODO: excluded until 1.379 release
-    public void _testParameter() throws Exception {
+    public void testParameter() throws Exception {
         FreeStyleProject job = createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(
                 new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(false), "foo")));
@@ -87,8 +83,9 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via CLI
-        CLI.main(new String[] { "-s", getURL().toString(),
-                 "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>" });
+        CLI cli = new CLI(getURL());
+        assertEquals(0, cli.execute(
+                "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"));
         q = hudson.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
