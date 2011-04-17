@@ -35,6 +35,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.model.AbstractBuild;
 import hudson.model.BooleanParameterDefinition;
 import hudson.model.BooleanParameterValue;
+import hudson.model.Action;
 import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Item;
@@ -49,11 +50,13 @@ import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.security.AuthorizationMatrixProperty;
+import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
+import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
@@ -413,8 +416,9 @@ public class CopyArtifactTest extends HudsonTestCase {
     public void testSpecificBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
-        p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new SpecificBuildSelector("1"), "*.txt", "", false, false));
+        SpecificBuildSelector sbs = new SpecificBuildSelector("1");
+        assertEquals("1", sbs.getBuildNumber());
+        p.getBuildersList().add(new CopyArtifact(other.getName(), sbs, "*.txt", "", false, false));
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get());
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
@@ -439,6 +443,46 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testParameterizedBuildSelector() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("PBS");
+        assertEquals("PBS", pbs.getParameterName());
+        p.getBuildersList().add(new CopyArtifact(other.getName(), pbs, "*.txt", "", false, false));
+        FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
+        assertBuildStatusSuccess(b);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        b.keepLog(true);
+        b = p.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("PBS", "<SavedBuildSelector/>"))).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testPermalinkBuildSelector() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new PermalinkBuildSelector("lastStableBuild"), "*.txt", "", false, false));
+        FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
+        assertBuildStatusSuccess(b);
+        other.getBuildersList().add(new UnstableBuilder());
+        assertBuildStatus(Result.UNSTABLE, other.scheduleBuild2(0, new UserCause()).get());
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "buildone.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+        // Invalid permalink
+        p.getBuildersList().replace(new CopyArtifact(other.getName(),
+                new PermalinkBuildSelector("fooBuild"), "*.txt", "", false, false));
+        assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
     public void testTriggeredBuildSelector() throws Exception {
@@ -647,6 +691,18 @@ public class CopyArtifactTest extends HudsonTestCase {
         b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+        
+        // Test coverage for EnvAction
+        boolean ok = false;
+        for (Action a : b.getActions()) {
+            if ("hudson.plugins.copyartifact.CopyArtifact$EnvAction".equals(a.getClass().getName())) {
+                assertNull(a.getIconFileName());
+                assertNull(a.getDisplayName());
+                assertNull(a.getUrlName());
+                ok = true;
+            }
+        }
+        assertTrue(ok);
     }
 
     public void testSavedBuildSelectorWithParameterFilter() throws Exception {
@@ -680,5 +736,55 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatus(Result.FAILURE, b);
         assertFile(false, "foo.txt", b);
+    }
+
+    // Verify BuildSelector defaults to false
+    public void testBuildSelectorDefault() {
+        assertFalse(new BuildSelector() { }.isSelectable(null, null));
+    }
+
+    // Test field getters
+    public void testFields() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        CopyArtifact ca = new CopyArtifact(p.getFullName(), new SavedBuildSelector(), "filter", "target", false, true);
+        assertEquals(p.getFullName(), ca.getProjectName());
+        assertSame(SavedBuildSelector.class, ca.getBuildSelector().getClass());
+        assertEquals("filter", ca.getFilter());
+        assertEquals("target", ca.getTarget());
+        assertFalse(ca.isFlatten());
+        assertTrue(ca.isOptional());
+        ca = new CopyArtifact("foo", null, null, null, true, false);
+        assertTrue(ca.isFlatten());
+        assertFalse(ca.isOptional());
+    }
+
+    public void testFieldValidation() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        CopyArtifact.DescriptorImpl descriptor = hudson.getDescriptorByType(CopyArtifact.DescriptorImpl.class);
+        assertNotNull(descriptor);
+        // Valid value
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, p.getFullName()).kind);
+        // Empty value
+        assertSame(FormValidation.Kind.ERROR, descriptor.doCheckProjectName(p, "").kind);
+        // Parameterized value
+        assertSame(FormValidation.Kind.WARNING, descriptor.doCheckProjectName(p, "$FOO").kind);
+        // Filter
+        p.scheduleBuild2(0, new UserCause()).get();
+        assertSame(FormValidation.Kind.OK,
+                   descriptor.doCheckProjectName(p, p.getFullName() + "/BUILD_NUMBER=1").kind);
+        // Filter with invalid param
+        assertSame(FormValidation.Kind.ERROR,
+                   descriptor.doCheckProjectName(p, p.getFullName() + "/FOO=1").kind);
+        // Unparseable filter
+        assertSame(FormValidation.Kind.ERROR,
+                   descriptor.doCheckProjectName(p, p.getFullName() + "/FOO-1").kind);
+        // Just returns OK if no permission
+        hudson.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
+        SecurityContextHolder.clearContext();
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, "").kind);
+        // Other descriptor methods
+        assertTrue(descriptor.isApplicable(null));
+        assertTrue(descriptor.getDisplayName().length() > 0);
+        assertTrue(descriptor.getBuildSelectors().size() > 0);
     }
 }
