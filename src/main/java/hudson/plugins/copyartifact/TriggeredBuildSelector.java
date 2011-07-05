@@ -37,9 +37,17 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * @author Alan Harder
  */
 public class TriggeredBuildSelector extends BuildSelector {
+	private Boolean fallbackToLastSuccessful;
+		
     @DataBoundConstructor
-    public TriggeredBuildSelector() { }
+    public TriggeredBuildSelector(boolean fallback) {
+    	this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
+    }
 
+    public boolean isFallbackToLastSuccessful() {
+        return fallbackToLastSuccessful != null && fallbackToLastSuccessful.booleanValue();
+    }
+    
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         String jobName = job.getFullName();
@@ -50,7 +58,16 @@ public class TriggeredBuildSelector extends BuildSelector {
                 return (run != null && filter.isSelectable(run, env)) ? run : null;
             }
         }
+        if(isFallbackToLastSuccessful()){
+        	//TODO: Write to console, that fallback is used.
+        	return super.getBuild(job, env, filter, parent);
+        }
         return null;
+    }
+    
+    @Override
+    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+        return isFallbackToLastSuccessful();
     }
 
     @Extension(ordinal=25)
