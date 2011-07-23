@@ -487,7 +487,7 @@ public class CopyArtifactTest extends HudsonTestCase {
 
     public void testTriggeredBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-        p = createFreeStyleProject();
+                         p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
                                     new TriggeredBuildSelector(false), "*.txt", "", false, false));
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
@@ -508,6 +508,51 @@ public class CopyArtifactTest extends HudsonTestCase {
         p.getBuildersList().add(new CopyArtifact(other.getName(),
                 new TriggeredBuildSelector(true), "*.txt", "", false, false));
         assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
+    }
+
+    /**
+     * When copying from a particular matrix configuration, the upstream project
+     * is the matrix parent.
+     */
+    public void testTriggeredBuildSelectorFromMatrix() throws Exception {
+        MatrixProject other = createMatrixArtifactProject();
+        FreeStyleProject p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName() + "/FOO=two",
+                                    new TriggeredBuildSelector(false), "*.txt", "", false, false));
+        other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
+        hudson.rebuildDependencyGraph();
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        // p#1 was triggered, now building.
+        FreeStyleBuild b = p.getBuildByNumber(1);
+        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        assertNotNull(b);
+        while (b.isBuilding()) Thread.sleep(10);
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "two.txt", b);
+    }
+
+    /**
+     * When copying to a matrix job, need to check the upstream cause of the
+     * matrix parent.
+     */
+    public void testTriggeredBuildSelectorToMatrix() throws Exception {
+        FreeStyleProject other = createArtifactProject();
+        MatrixProject p = createMatrixProject();
+        p.setAxes(new AxisList(new Axis("FOO", "one", "two")));
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                                    new TriggeredBuildSelector(false), "*.txt", "", false, false));
+        other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
+        hudson.rebuildDependencyGraph();
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        // p#1 was triggered, now building.
+        MatrixBuild b = p.getBuildByNumber(1);
+        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        assertNotNull(b);
+        while (b.isBuilding()) Thread.sleep(10);
+        assertBuildStatusSuccess(b);
+        MatrixRun r = b.getRuns().get(0);
+        assertFile(true, "foo.txt", r);
     }
 
     public void testFlatten() throws Exception {

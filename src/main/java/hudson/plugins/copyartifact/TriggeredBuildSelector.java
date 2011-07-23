@@ -25,6 +25,8 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.matrix.MatrixConfiguration;
+import hudson.matrix.MatrixRun;
 import hudson.model.Descriptor;
 import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
@@ -50,8 +52,12 @@ public class TriggeredBuildSelector extends BuildSelector {
     
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        String jobName = job.getFullName();
-        for (Cause cause : parent.getCauses()) {
+        // Upstream job for matrix will be parent project, not individual configuration:
+        String jobName = job instanceof MatrixConfiguration
+            ? job.getParent().getFullName() : job.getFullName();
+        // Matrix run is triggered by its parent project, so check causes of parent build:
+        for (Cause cause : parent instanceof MatrixRun
+                ? ((MatrixRun)parent).getParentBuild().getCauses() : parent.getCauses()) {
             if (cause instanceof UpstreamCause
                     && jobName.equals(((UpstreamCause)cause).getUpstreamProject())) {
                 Run<?,?> run = job.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild());
