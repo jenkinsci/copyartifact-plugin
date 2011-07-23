@@ -489,7 +489,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject other = createArtifactProject(),
         p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(),
-                                    new TriggeredBuildSelector(), "*.txt", "", false, false));
+                                    new TriggeredBuildSelector(false), "*.txt", "", false, false));
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         hudson.rebuildDependencyGraph();
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
@@ -503,6 +503,11 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(false, "subdir/subfoo.txt", b);
         // Verify error if build not triggered by upstream job:
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
+        // test fallback
+        p.getBuildersList().remove(CopyArtifact.class);
+        p.getBuildersList().add(new CopyArtifact(other.getName(),
+                new TriggeredBuildSelector(true), "*.txt", "", false, false));
+        assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
     public void testFlatten() throws Exception {
