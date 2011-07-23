@@ -37,11 +37,11 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * @author Alan Harder
  */
 public class TriggeredBuildSelector extends BuildSelector {
-	private Boolean fallbackToLastSuccessful;
-		
+    private Boolean fallbackToLastSuccessful;
+
     @DataBoundConstructor
     public TriggeredBuildSelector(boolean fallback) {
-    	this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
+        this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
     }
 
     public boolean isFallbackToLastSuccessful() {
@@ -58,9 +58,9 @@ public class TriggeredBuildSelector extends BuildSelector {
                 return (run != null && filter.isSelectable(run, env)) ? run : null;
             }
         }
-        if(isFallbackToLastSuccessful()){
-        	//TODO: Write to console, that fallback is used.
-        	return super.getBuild(job, env, filter, parent);
+        if (isFallbackToLastSuccessful()) {
+            //TODO: Write to console, that fallback is used.
+            return super.getBuild(job, env, filter, parent);
         }
         return null;
     }
