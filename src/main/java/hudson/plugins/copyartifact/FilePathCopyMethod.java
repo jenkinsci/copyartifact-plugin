@@ -55,6 +55,6 @@ public class FilePathCopyMethod implements CopyMethod {
     @Override
     public void copyOne(FilePath source, FilePath target)
             throws IOException, InterruptedException {
-        source.copyTo(target);
+        source.copyToWithPermission(target);
     }
 }
