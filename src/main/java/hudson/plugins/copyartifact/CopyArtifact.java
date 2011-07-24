@@ -33,6 +33,7 @@ import hudson.Util;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
@@ -190,7 +191,7 @@ public class CopyArtifact extends Builder {
             } else if (run instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
-                for (Run r : ((MatrixBuild)run).getRuns())
+                for (Run r : getMatrixRuns((MatrixBuild)run))
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                     ok |= perform(r, expandedFilter, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
@@ -233,6 +234,16 @@ public class CopyArtifact extends Builder {
         console.println(Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
         // Fail build if 0 files copied unless copy is optional
         return cnt > 0 || isOptional();
+    }
+
+    // TODO: remove this method and use getExactRuns directly once minimum core is 1.413+
+    private static List<MatrixRun> getMatrixRuns(MatrixBuild build) {
+        // Use MatrixBuild.getExactRuns if available
+        try {
+            return (List<MatrixRun>)build.getClass().getMethod("getExactRuns").invoke(build);
+        } catch (Exception ignore) {}
+
+        return build.getRuns();
     }
 
     // Find the job from the given name; usually just a Hudson.getItemByFullName lookup,
