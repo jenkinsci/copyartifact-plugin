@@ -33,6 +33,7 @@ import hudson.Util;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
@@ -57,6 +58,7 @@ import hudson.tasks.Builder;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.XStream2;
+import hudson.util.VersionNumber;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -190,7 +192,15 @@ public class CopyArtifact extends Builder {
             } else if (run instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
-                for (Run r : ((MatrixBuild)run).getRuns())
+                // NOTE: getRuns() method behaviour changed slightly.
+                // Turn to getExactRuns() introduced in 1.413.
+                List<MatrixRun> runs;
+                if (new VersionNumber("1.413").isNewerThan(Hudson.getVersion())) {
+                    runs = ((MatrixBuild)run).getRuns();
+                } else {
+                    runs = ((MatrixBuild)run).getExactRuns();
+                }
+                for (Run r : runs)
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                     ok |= perform(r, expandedFilter, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
