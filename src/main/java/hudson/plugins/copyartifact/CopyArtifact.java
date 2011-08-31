@@ -212,10 +212,12 @@ public class CopyArtifact extends Builder {
             FilePath baseTargetDir, CopyMethod copier, PrintStream console)
             throws IOException, InterruptedException {
         // Check special case for copying from workspace instead of artifacts:
-        FilePath srcDir = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild)
-                        ? ((AbstractBuild)run).getWorkspace() : new FilePath(run.getArtifactsDir());
+        boolean useWs = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild);
+        FilePath srcDir = useWs ? ((AbstractBuild)run).getWorkspace()
+                                : new FilePath(run.getArtifactsDir());
         if (srcDir == null || !srcDir.exists()) {
-            console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
+            console.println(useWs ? Messages.CopyArtifact_MissingSrcWorkspace() // (see JENKINS-3330)
+                                  : Messages.CopyArtifact_MissingSrcArtifacts());
             return isOptional();  // Fail build unless copy is optional
         }
 
