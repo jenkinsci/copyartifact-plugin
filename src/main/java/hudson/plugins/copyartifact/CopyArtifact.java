@@ -30,6 +30,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
@@ -233,7 +234,8 @@ public class CopyArtifact extends Builder {
                 copier.copyOne(file, new FilePath(targetDir, file.getName()));
             cnt = list.length;
         }
-        console.println(Messages.CopyArtifact_Copied(cnt, run.getFullDisplayName()));
+        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ run.getParent().getUrl(), run.getParent().getFullDisplayName()),
+                HyperlinkNote.encodeTo('/'+run.getUrl(), Integer.toString(run.getNumber()))));
         // Fail build if 0 files copied unless copy is optional
         return cnt > 0 || isOptional();
     }
