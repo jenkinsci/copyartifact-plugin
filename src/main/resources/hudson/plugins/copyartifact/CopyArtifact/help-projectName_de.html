@@ -1,0 +1,32 @@
+<div>
+  <p>Name des Quellprojekts, aus dem Artefakte kopiert werden sollen.
+  Darf Referenzen auf Buildparameter, wie z.B. <tt>$PARAM</tt>, enthalten
+  (Bemerkung: Wenn ein Parameter benutzt wird, m&uuml;ssen alle
+  authentifizierten Benutzer Zugriff auf das Quellprojekt haben; das verhindert die
+  Benutzung von Parametern um auf Artefakte von private Jobs zuzugreifen).
+  </p>
+  <p>Wenn ein Maven Projekt angegeben wird, werden die Artefakte aus allen Modulen
+  dieses Projekts kopiert. Mit <tt>JOBNAME/MODULENAME</tt> kann ein einzelnes Modul
+  angegeben werden; per copy und paste kann man diesen Wert aus der URL f&uuml;r dieses
+  Modul &uuml;bernehmen.<br/> Beispiel: <tt>MyMavenJob/my.group$MyModule</tt>
+  </p>
+  <p>Wenn ein Multikonfigurations-(Matrix-)Projekt angegeben wird, werden die Artefakte
+  aus allen Konfigurationen jeweils in ein Unterverzeichnis mit dem Namen der Konfiguration,
+  wie er in der URL zu sehen ist, kopiert.<br/> Beispiel: Wenn das Zielverzeichnis
+  <tt>fromMatrix</tt> hei&szlig;t dann werden <tt>$WORKSPACE/fromMatrix/label=slaveA/dist/mybuild.jar</tt> und
+  <tt>$WORKSPACE/fromMatrix/label=slaveB/dist/mybuild.jar</tt> angelegt.<br/>
+  Um die Artefakte aus einer einzelnen Konfiguration zu kopieren, muss <tt>JOBNAME/AXIS=VALUE,..</tt>,
+  wie es in der URL f&uuml;r diese Konfiguration zu sehen ist, angegeben werden.<br/>
+  Beispiel: <tt>MyMatrixJob/jdk=Java6u17</tt></br>
+  Wenn Artefakte von einem Matrixprojekt zu einem anderen Matrixprojekt kopiert werden sollen, kann
+  ein Parameter benutzt werden um die richtige Konfiguration im Quellprojekt auszuw&auml;hlen.
+  Beispiel: <tt>OtherMatrixJob/jdk=$jdk</tt>
+  </p>
+  <p>Jobs k&ouml;nnen gefiltert werden, damit nur Builds, die bestimmten Parametern oder anderen Buildvariablen
+  entsprechen, ausgew&auml;hlt werden. <tt>JOBNAME/PARAM=VALUE,...</tt> kann im Projektnamen-Feld benutzt werden
+  um Parameter-Filter aufzulisten; das entspricht der selben Syntax wie f&uuml;r Matrixjobs, nur mit
+  Parameter- statt Achsenwerten.<br/>
+  Beispiel: <tt>MyParamJob/FOO=bar,BAZ=true</tt> ber&uuml;cksichtigt nur Builds
+  von <tt>MyParamJob</tt>, bei denen der Parameter <tt>FOO</tt> auf <tt>bar</tt> gesetzt und die Checkbox
+  <tt>BAZ</tt> selektiert wurde.</p>
+</div>
