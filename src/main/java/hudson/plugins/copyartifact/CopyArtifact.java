@@ -85,11 +85,11 @@ public class CopyArtifact extends Builder {
     private final String filter, target;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
-    private final Boolean flatten, optional;
+    private final Boolean flatten, optional, useWorkspace;
 
     @DataBoundConstructor
     public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
-                        boolean flatten, boolean optional) {
+                        boolean flatten, boolean optional, boolean useWorkspace) {
         // Prevents both invalid values and access to artifacts of projects which this user cannot see.
         // If value is parameterized, it will be checked when build runs.
         if (projectName.indexOf('$') < 0 && new JobResolver(projectName).job == null)
@@ -100,6 +100,7 @@ public class CopyArtifact extends Builder {
         this.target = Util.fixNull(target).trim();
         this.flatten = flatten ? Boolean.TRUE : null;
         this.optional = optional ? Boolean.TRUE : null;
+        this.useWorkspace = useWorkspace ? Boolean.TRUE : null;
     }
 
     // Upgrade data from old format
@@ -135,6 +136,10 @@ public class CopyArtifact extends Builder {
 
     public boolean isOptional() {
         return optional != null && optional.booleanValue();
+    }
+
+    public boolean isUseWorkspace() {
+        return useWorkspace != null && useWorkspace.booleanValue();
     }
 
     @Override
@@ -213,7 +218,7 @@ public class CopyArtifact extends Builder {
             FilePath baseTargetDir, CopyMethod copier, PrintStream console)
             throws IOException, InterruptedException {
         // Check special case for copying from workspace instead of artifacts:
-        boolean useWs = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild);
+        boolean useWs = (isUseWorkspace() && run instanceof AbstractBuild);
         FilePath srcDir = useWs ? ((AbstractBuild)run).getWorkspace()
                                 : new FilePath(run.getArtifactsDir());
         if (srcDir == null || !srcDir.exists()) {
