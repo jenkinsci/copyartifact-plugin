@@ -1,11 +1,19 @@
 <div>
+  <p>
   Select "Flatten directories" to ignore the directory structure of the artifacts
   in the source project and copy all matching artifacts directly into the specified
   target directory.  By default the artifacts are copied in the same directory
   structure as the source project.
-  <p/>
-  Select "Optional" to allow this build to continue even if no build is found
+  </p>
+  <p>Select "Optional" to allow this build to continue even if no build is found
   matching the "Which build" condition selected above, the build's workspace does
   not exist or is inaccessible, or no artifacts are found matching the specified
   pattern.  By default this build step fails the build if no artifacts are copied.
+  </p>
+  <p>Select "Copy from workspace" to copy files from the workspace of the source
+  project instead of the artifacts area.<br/>
+  Note that copy from workspace when both source and destination are different
+  remote slave nodes (not Jenkins master) only works when flatten directories
+  is chosen, due to a limitation in the underlying Jenkins core method.
+  </p>
 </div>
