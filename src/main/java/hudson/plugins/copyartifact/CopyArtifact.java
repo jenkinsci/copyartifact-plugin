@@ -46,7 +46,6 @@ import hudson.model.EnvironmentContributingAction;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
-import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Project;
 import hudson.model.Run;
 import hudson.model.TaskListener;
