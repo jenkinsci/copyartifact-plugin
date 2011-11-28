@@ -27,8 +27,12 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixRun;
-import hudson.model.*;
+import hudson.model.Result;
+import hudson.model.Descriptor;
+import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
+import hudson.model.Job;
+import hudson.model.Run;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
