@@ -25,10 +25,7 @@ package hudson.plugins.copyartifact;
 
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.model.Hudson;
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 
 /**
  * Default implementation of CopyMethod extension point,

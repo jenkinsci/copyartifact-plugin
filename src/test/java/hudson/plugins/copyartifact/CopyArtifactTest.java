@@ -65,6 +65,7 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
+import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -504,6 +505,12 @@ public class CopyArtifactTest extends HudsonTestCase {
         // Verify error if build not triggered by upstream job:
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
         // test fallback
+        
+        //run a failing build to make sure the fallback selects the last successful build
+        other.getPublishersList().clear();
+        other.getBuildersList().add(new FailureBuilder());
+        assertBuildStatus(Result.FAILURE, other.scheduleBuild2(0, new UserCause()).get());
+        
         p.getBuildersList().remove(CopyArtifact.class);
         p.getBuildersList().add(new CopyArtifact(other.getName(),
                 new TriggeredBuildSelector(true), "*.txt", "", false, false));
