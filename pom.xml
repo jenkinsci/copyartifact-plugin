@@ -10,7 +10,7 @@
     <artifactId>copyartifact</artifactId>
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
-    <version>1.19-SNAPSHOT</version>
+    <version>1.19</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin</url>
 
     <developers>
