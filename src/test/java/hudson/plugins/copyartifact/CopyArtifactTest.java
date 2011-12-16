@@ -38,6 +38,7 @@ import hudson.model.BooleanParameterValue;
 import hudson.model.Action;
 import hudson.model.Build;
 import hudson.model.BuildListener;
+import hudson.model.Fingerprint;
 import hudson.model.Item;
 import hudson.model.Cause.UserCause;
 import hudson.model.ChoiceParameterDefinition;
@@ -157,13 +158,18 @@ public class CopyArtifactTest extends HudsonTestCase {
     public void testCopyAll() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), "", "", false, false, false);
-        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild s = assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
-        interactiveBreak();
+        
+        // testing fingerprints
+        String d = b.getWorkspace().child("foo.txt").digest();
+        Fingerprint f = Hudson.getInstance().getFingerprintMap().get(d);
+        assertSame(f.getOriginal().getRun(),s);
+        assertTrue(f.getRangeSet(p).includes(b.getNumber()));
     }
 
     public void testCopyWithFilter() throws Exception {
