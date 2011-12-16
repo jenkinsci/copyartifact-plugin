@@ -43,6 +43,7 @@ import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.EnvironmentContributingAction;
+import hudson.model.FingerprintMap;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
@@ -55,6 +56,7 @@ import hudson.security.AccessControlled;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.tasks.Fingerprinter.FingerprintAction;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.XStream2;
@@ -233,6 +235,26 @@ public class CopyArtifact extends Builder {
                 copier.copyOne(file, new FilePath(targetDir, file.getName()));
             cnt = list.length;
         }
+
+        if (run instanceof AbstractBuild) {
+            AbstractBuild build = (AbstractBuild)run;
+
+            FingerprintMap map = Hudson.getInstance().getFingerprintMap();
+            Map<String,String> fingerprints = new HashMap<String, String>();
+
+            FilePath[] list = srcDir.list(expandedFilter);
+            for (FilePath file : list) {
+                String digest = file.digest();
+                map.getOrCreate(null, file.getName(), digest).add(build);
+                fingerprints.put(file.getName(), digest);
+            }
+
+            // add action
+            FingerprintAction fa = build.getAction(FingerprintAction.class);
+            if (fa != null) fa.add(fingerprints);
+            else            build.getActions().add(new FingerprintAction(build, fingerprints));
+        }
+
         console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ run.getParent().getUrl(), run.getParent().getFullDisplayName()),
                 HyperlinkNote.encodeTo('/'+run.getUrl(), Integer.toString(run.getNumber()))));
         // Fail build if 0 files copied unless copy is optional
