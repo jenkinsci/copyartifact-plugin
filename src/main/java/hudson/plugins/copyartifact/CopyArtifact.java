@@ -43,6 +43,7 @@ import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.EnvironmentContributingAction;
+import hudson.model.Fingerprint;
 import hudson.model.FingerprintMap;
 import hudson.model.Hudson;
 import hudson.model.Job;
@@ -185,21 +186,21 @@ public class CopyArtifact extends Builder {
 
             if (src instanceof MavenModuleSetBuild) {
                 // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(src, expandedFilter, targetDir, baseTargetDir, copier, console);
+                boolean ok = perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
                 // Copy artifacts from all modules of this Maven build (automatic archiving)
                 for (Run r : ((MavenModuleSetBuild)src).getModuleLastBuilds().values())
-                    ok |= perform(r, expandedFilter, targetDir, baseTargetDir, copier, console);
+                    ok |= perform(r, build, expandedFilter, targetDir, baseTargetDir, copier, console);
                 return ok;
             } else if (src instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
                 for (Run r : getMatrixRuns((MatrixBuild)src))
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                    ok |= perform(r, expandedFilter, targetDir.child(r.getParent().getName()),
+                    ok |= perform(r, build, expandedFilter, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
                 return ok;
             } else {
-                return perform(src, expandedFilter, targetDir, baseTargetDir, copier, console);
+                return perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
             }
         }
         catch (IOException ex) {
@@ -210,7 +211,7 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    private boolean perform(Run src, String expandedFilter, FilePath targetDir,
+    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, FilePath targetDir,
             FilePath baseTargetDir, CopyMethod copier, PrintStream console)
             throws IOException, InterruptedException {
         // Check special case for copying from workspace instead of artifacts:
@@ -237,22 +238,22 @@ public class CopyArtifact extends Builder {
         }
 
         if (src instanceof AbstractBuild) {
-            AbstractBuild build = (AbstractBuild)src;
-
             FingerprintMap map = Hudson.getInstance().getFingerprintMap();
             Map<String,String> fingerprints = new HashMap<String, String>();
 
             FilePath[] list = srcDir.list(expandedFilter);
             for (FilePath file : list) {
                 String digest = file.digest();
-                map.getOrCreate(null, file.getName(), digest).add(build);
+                Fingerprint f = map.getOrCreate(src, file.getName(), digest);
+                f.add((AbstractBuild)src);
+                f.add(dst);
                 fingerprints.put(file.getName(), digest);
             }
 
             // add action
-            FingerprintAction fa = build.getAction(FingerprintAction.class);
+            FingerprintAction fa = dst.getAction(FingerprintAction.class);
             if (fa != null) fa.add(fingerprints);
-            else            build.getActions().add(new FingerprintAction(build, fingerprints));
+            else            dst.getActions().add(new FingerprintAction(dst, fingerprints));
         }
 
         console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
