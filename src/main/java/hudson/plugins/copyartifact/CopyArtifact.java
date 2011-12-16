@@ -237,26 +237,31 @@ public class CopyArtifact extends Builder {
             cnt = list.length;
         }
 
-        if (src instanceof AbstractBuild) {
-            AbstractBuild _src = (AbstractBuild)src;
-            FingerprintMap map = Hudson.getInstance().getFingerprintMap();
-            Map<String,String> fingerprints = new HashMap<String, String>();
+        AbstractBuild _src = null;
+        if (src instanceof AbstractBuild)
+          _src = (AbstractBuild)src;
 
-            FilePath[] list = srcDir.list(expandedFilter);
-            for (FilePath file : list) {
-                String digest = file.digest();
-                Fingerprint f = map.getOrCreate(src, file.getName(), digest);
+        FingerprintMap map = Hudson.getInstance().getFingerprintMap();
+        Map<String,String> fingerprints = new HashMap<String, String>();
+
+        FilePath[] list = srcDir.list(expandedFilter);
+        for (FilePath file : list) {
+            String digest = file.digest();
+            Fingerprint f = map.getOrCreate(src, file.getName(), digest);
+            if (_src != null)
                 f.add(_src);
-                f.add(dst);
-                fingerprints.put(file.getName(), digest);
-            }
+            f.add(dst);
+            fingerprints.put(file.getName(), digest);
+        }
 
-            // add action
-            for (AbstractBuild r : new AbstractBuild[]{_src,dst}) {
-                FingerprintAction fa = r.getAction(FingerprintAction.class);
-                if (fa != null) fa.add(fingerprints);
-                else            r.getActions().add(new FingerprintAction(r, fingerprints));
-            }
+        // add action
+        for (AbstractBuild r : new AbstractBuild[]{_src,dst}) {
+            if (r == null)
+                continue;
+
+            FingerprintAction fa = r.getAction(FingerprintAction.class);
+            if (fa != null) fa.add(fingerprints);
+            else            r.getActions().add(new FingerprintAction(r, fingerprints));
         }
 
         console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
