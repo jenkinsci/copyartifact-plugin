@@ -163,8 +163,8 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run run = selector.getBuild(job.job, env, job.filter, build);
-            if (run == null) {
+            Run src = selector.getBuild(job.job, env, job.filter, build);
+            if (src == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
             }
@@ -176,30 +176,30 @@ public class CopyArtifact extends Builder {
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
             if (envData != null) {
-                envData.add(expandedProject, run.getNumber());
+                envData.add(expandedProject, src.getNumber());
             }
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
             CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
 
-            if (run instanceof MavenModuleSetBuild) {
+            if (src instanceof MavenModuleSetBuild) {
                 // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(run, expandedFilter, targetDir, baseTargetDir, copier, console);
+                boolean ok = perform(src, expandedFilter, targetDir, baseTargetDir, copier, console);
                 // Copy artifacts from all modules of this Maven build (automatic archiving)
-                for (Run r : ((MavenModuleSetBuild)run).getModuleLastBuilds().values())
+                for (Run r : ((MavenModuleSetBuild)src).getModuleLastBuilds().values())
                     ok |= perform(r, expandedFilter, targetDir, baseTargetDir, copier, console);
                 return ok;
-            } else if (run instanceof MatrixBuild) {
+            } else if (src instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
-                for (Run r : getMatrixRuns((MatrixBuild)run))
+                for (Run r : getMatrixRuns((MatrixBuild)src))
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                     ok |= perform(r, expandedFilter, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
                 return ok;
             } else {
-                return perform(run, expandedFilter, targetDir, baseTargetDir, copier, console);
+                return perform(src, expandedFilter, targetDir, baseTargetDir, copier, console);
             }
         }
         catch (IOException ex) {
@@ -210,13 +210,13 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    private boolean perform(Run run, String expandedFilter, FilePath targetDir,
+    private boolean perform(Run src, String expandedFilter, FilePath targetDir,
             FilePath baseTargetDir, CopyMethod copier, PrintStream console)
             throws IOException, InterruptedException {
         // Check special case for copying from workspace instead of artifacts:
-        boolean useWs = (selector instanceof WorkspaceSelector && run instanceof AbstractBuild);
-        FilePath srcDir = useWs ? ((AbstractBuild)run).getWorkspace()
-                                : new FilePath(run.getArtifactsDir());
+        boolean useWs = (selector instanceof WorkspaceSelector && src instanceof AbstractBuild);
+        FilePath srcDir = useWs ? ((AbstractBuild)src).getWorkspace()
+                                : new FilePath(src.getArtifactsDir());
         if (srcDir == null || !srcDir.exists()) {
             console.println(useWs ? Messages.CopyArtifact_MissingSrcWorkspace() // (see JENKINS-3330)
                                   : Messages.CopyArtifact_MissingSrcArtifacts());
@@ -236,8 +236,8 @@ public class CopyArtifact extends Builder {
             cnt = list.length;
         }
 
-        if (run instanceof AbstractBuild) {
-            AbstractBuild build = (AbstractBuild)run;
+        if (src instanceof AbstractBuild) {
+            AbstractBuild build = (AbstractBuild)src;
 
             FingerprintMap map = Hudson.getInstance().getFingerprintMap();
             Map<String,String> fingerprints = new HashMap<String, String>();
@@ -255,8 +255,8 @@ public class CopyArtifact extends Builder {
             else            build.getActions().add(new FingerprintAction(build, fingerprints));
         }
 
-        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ run.getParent().getUrl(), run.getParent().getFullDisplayName()),
-                HyperlinkNote.encodeTo('/'+run.getUrl(), Integer.toString(run.getNumber()))));
+        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
+                HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
         // Fail build if 0 files copied unless copy is optional
         return cnt > 0 || isOptional();
     }

@@ -163,6 +163,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
+        interactiveBreak();
     }
 
     public void testCopyWithFilter() throws Exception {
