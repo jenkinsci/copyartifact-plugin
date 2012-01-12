@@ -57,6 +57,7 @@ import hudson.security.AccessControlled;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.tasks.Fingerprinter;
 import hudson.tasks.Fingerprinter.FingerprintAction;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
@@ -237,9 +238,23 @@ public class CopyArtifact extends Builder {
             cnt = list.length;
         }
 
-        AbstractBuild _src = null;
-        if (src instanceof AbstractBuild)
-          _src = (AbstractBuild)src;
+        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
+                HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
+
+        // Fail build if 0 files copied unless copy is optional
+        if (isOptional() && cnt < 1)
+            return false;
+
+        if (!(src instanceof AbstractBuild))
+            return true;
+
+        AbstractBuild<?,?> _src = (AbstractBuild<?,?>)src;
+
+        // Only fingerprint if the source project has "Fingerprint all archived
+        // artifacts" enabled [JENKINS-12134].
+        Fingerprinter fp = _src.getProject().getPublishersList().get(Fingerprinter.class);
+        if (fp == null || !fp.getRecordBuildArtifacts())
+            return true;
 
         FingerprintMap map = Hudson.getInstance().getFingerprintMap();
         Map<String,String> fingerprints = new HashMap<String, String>();
@@ -264,10 +279,7 @@ public class CopyArtifact extends Builder {
             else            r.getActions().add(new FingerprintAction(r, fingerprints));
         }
 
-        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
-                HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
-        // Fail build if 0 files copied unless copy is optional
-        return cnt > 0 || isOptional();
+        return true;
     }
 
     // TODO: remove this method and use getExactRuns directly once minimum core is 1.413+
