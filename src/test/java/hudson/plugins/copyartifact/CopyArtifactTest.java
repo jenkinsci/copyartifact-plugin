@@ -57,6 +57,7 @@ import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
+import hudson.tasks.Fingerprinter;
 import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import java.io.IOException;
@@ -158,18 +159,40 @@ public class CopyArtifactTest extends HudsonTestCase {
     public void testCopyAll() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), "", "", false, false, false);
+
+        // Make the project fingerprint artifacts.
+        other.getPublishersList().add(new Fingerprinter("", true));
+
         FreeStyleBuild s = assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
-        
+
         // testing fingerprints
         String d = b.getWorkspace().child("foo.txt").digest();
         Fingerprint f = Hudson.getInstance().getFingerprintMap().get(d);
+        assertNotNull(f);
         assertSame(f.getOriginal().getRun(),s);
         assertTrue(f.getRangeSet(p).includes(b.getNumber()));
+    }
+
+    public void testRespectSourceFingerprinting() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createProject(other.getName(), "", "", false, false, false);
+
+        FreeStyleBuild s = assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "subdir/subfoo.txt", b);
+        assertFile(true, "deepfoo/a/b/c.log", b);
+
+        // testing fingerprints
+        String d = b.getWorkspace().child("foo.txt").digest();
+        Fingerprint f = Hudson.getInstance().getFingerprintMap().get(d);
+        assertNull(f);
     }
 
     public void testCopyWithFilter() throws Exception {
