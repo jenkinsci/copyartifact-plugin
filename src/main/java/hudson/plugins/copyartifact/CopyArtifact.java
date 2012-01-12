@@ -34,7 +34,6 @@ import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
-import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
@@ -107,7 +106,7 @@ public class CopyArtifact extends Builder {
         public ConverterImpl(XStream2 xstream) { super(xstream); }
         @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
             if (obj.selector == null) {
-                obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable.booleanValue());
+                obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
         }
@@ -194,7 +193,8 @@ public class CopyArtifact extends Builder {
             } else if (src instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
-                for (Run r : getMatrixRuns((MatrixBuild)src))
+                // Use MatrixBuild.getExactRuns if available
+                for (Run r : ((MatrixBuild) src).getExactRuns())
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                     ok |= perform(r, build, expandedFilter, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
@@ -244,16 +244,6 @@ public class CopyArtifact extends Builder {
         } finally {
             copier.end();
         }
-    }
-
-    // TODO: remove this method and use getExactRuns directly once minimum core is 1.413+
-    private static List<MatrixRun> getMatrixRuns(MatrixBuild build) {
-        // Use MatrixBuild.getExactRuns if available
-        try {
-            return (List<MatrixRun>)build.getClass().getMethod("getExactRuns").invoke(build);
-        } catch (Exception ignore) {}
-
-        return build.getRuns();
     }
 
     // Find the job from the given name; usually just a Hudson.getItemByFullName lookup,
