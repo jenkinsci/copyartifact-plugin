@@ -43,8 +43,6 @@ import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.EnvironmentContributingAction;
-import hudson.model.Fingerprint;
-import hudson.model.FingerprintMap;
 import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Item;
@@ -57,7 +55,6 @@ import hudson.security.AccessControlled;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
-import hudson.tasks.Fingerprinter.FingerprintAction;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.XStream2;
@@ -71,6 +68,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.model.Jenkins;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
@@ -132,11 +130,11 @@ public class CopyArtifact extends Builder {
     }
 
     public boolean isFlatten() {
-        return flatten != null && flatten.booleanValue();
+        return flatten != null && flatten;
     }
 
     public boolean isOptional() {
-        return optional != null && optional.booleanValue();
+        return optional != null && optional;
     }
 
     @Override
@@ -182,7 +180,9 @@ public class CopyArtifact extends Builder {
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
-            CopyMethod copier = Hudson.getInstance().getExtensionList(CopyMethod.class).get(0);
+
+            // for backward compatibility, look up the copier as CopyMethod
+            Copier copier = Copier.from(Jenkins.getInstance().getExtensionList(CopyMethod.class).get(0)).clone();
 
             if (src instanceof MavenModuleSetBuild) {
                 // Copy artifacts from the build (ArchiveArtifacts build step)
@@ -212,7 +212,7 @@ public class CopyArtifact extends Builder {
     }
 
     private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, FilePath targetDir,
-            FilePath baseTargetDir, CopyMethod copier, PrintStream console)
+            FilePath baseTargetDir, Copier copier, PrintStream console)
             throws IOException, InterruptedException {
         // Check special case for copying from workspace instead of artifacts:
         boolean useWs = (selector instanceof WorkspaceSelector && src instanceof AbstractBuild);
@@ -224,50 +224,26 @@ public class CopyArtifact extends Builder {
             return isOptional();  // Fail build unless copy is optional
         }
 
-        copier.init(srcDir, baseTargetDir);
+        copier.init(src,dst,srcDir,baseTargetDir);
+        try {
+            int cnt;
+            if (!isFlatten())
+                cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
+            else {
+                targetDir.mkdirs();  // Create target if needed
+                FilePath[] list = srcDir.list(expandedFilter);
+                for (FilePath file : list)
+                    copier.copyOne(file, new FilePath(targetDir, file.getName()));
+                cnt = list.length;
+            }
 
-        int cnt;
-        if (!isFlatten())
-            cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
-        else {
-            targetDir.mkdirs();  // Create target if needed
-            FilePath[] list = srcDir.list(expandedFilter);
-            for (FilePath file : list)
-                copier.copyOne(file, new FilePath(targetDir, file.getName()));
-            cnt = list.length;
+            console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
+                    HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
+            // Fail build if 0 files copied unless copy is optional
+            return cnt > 0 || isOptional();
+        } finally {
+            copier.end();
         }
-
-        AbstractBuild _src = null;
-        if (src instanceof AbstractBuild)
-          _src = (AbstractBuild)src;
-
-        FingerprintMap map = Hudson.getInstance().getFingerprintMap();
-        Map<String,String> fingerprints = new HashMap<String, String>();
-
-        FilePath[] list = srcDir.list(expandedFilter);
-        for (FilePath file : list) {
-            String digest = file.digest();
-            Fingerprint f = map.getOrCreate(src, file.getName(), digest);
-            if (_src != null)
-                f.add(_src);
-            f.add(dst);
-            fingerprints.put(file.getName(), digest);
-        }
-
-        // add action
-        for (AbstractBuild r : new AbstractBuild[]{_src,dst}) {
-            if (r == null)
-                continue;
-
-            FingerprintAction fa = r.getAction(FingerprintAction.class);
-            if (fa != null) fa.add(fingerprints);
-            else            r.getActions().add(new FingerprintAction(r, fingerprints));
-        }
-
-        console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
-                HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
-        // Fail build if 0 files copied unless copy is optional
-        return cnt > 0 || isOptional();
     }
 
     // TODO: remove this method and use getExactRuns directly once minimum core is 1.413+

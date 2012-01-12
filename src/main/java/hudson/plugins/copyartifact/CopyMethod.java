@@ -23,18 +23,18 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.ExtensionPoint;
 import hudson.FilePath;
+
 import java.io.IOException;
 
 /**
- * Extension point for how files are copied.
- * CopyArtifact plugin provides a default implementation using methods
- * available in the Jenkins FilePath class.
- * @author Alan Harder
- * @see JENKINS-7753
+ * 
+ * @deprecated as of 1.21
+ *      If you were implementing this interface, extend from {@link Copier} instead.
+ *      If you were taking an instance of this interface, use {@link Copier#from()}
+ *      to wrap it as a {@link Copier}
  */
-public interface CopyMethod extends ExtensionPoint {
+public interface CopyMethod {
 
     /**
      * Called before copy-artifact operation.

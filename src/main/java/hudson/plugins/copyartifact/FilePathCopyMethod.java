@@ -25,6 +25,9 @@ package hudson.plugins.copyartifact;
 
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.model.AbstractBuild;
+import hudson.model.Run;
+
 import java.io.IOException;
 
 /**
@@ -33,14 +36,8 @@ import java.io.IOException;
  * plugin implementing this extension point should override this one.
  * @author Alan Harder
  */
-@Extension(ordinal=-100)
-public class FilePathCopyMethod implements CopyMethod {
-
-    @Override
-    public void init(FilePath srcDir, FilePath baseTargetDir)
-            throws IOException, InterruptedException {
-    }
-
+@Extension(ordinal=-200)
+public class FilePathCopyMethod extends Copier {
     /** @see FilePath#recursiveCopyTo(String,FilePath) */
     @Override
     public int copyAll(FilePath srcDir, String filter, FilePath targetDir)
@@ -53,5 +50,10 @@ public class FilePathCopyMethod implements CopyMethod {
     public void copyOne(FilePath source, FilePath target)
             throws IOException, InterruptedException {
         source.copyToWithPermission(target);
+    }
+
+    @Override
+    public Copier clone() {
+        return this;
     }
 }
