@@ -76,6 +76,7 @@ public class FingerprintingCopyMethod extends Copier {
                 out.close();
             }
             d.chmod(s.mode());
+            d.touch(s.lastModified());
             String digest = Util.toHexString(md5.digest());
 
             FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
