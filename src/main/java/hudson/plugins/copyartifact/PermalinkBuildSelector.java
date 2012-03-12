@@ -37,8 +37,6 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-import static hudson.plugins.copyartifact.CopyArtifact.fromName;
-
 /**
  * Picks up a build through {@link Permalink}
  *
@@ -70,7 +68,7 @@ public class PermalinkBuildSelector extends BuildSelector {
         public ListBoxModel doFillIdItems(@AncestorInPath Job defaultJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             // gracefully fall back to some job, if none is given
             Job j = null;
-            if (projectName!=null)  j = fromName(defaultJob.getParent(), projectName);
+            if (projectName!=null)  j = Hudson.getInstance().getItemByFullName(projectName,Job.class);
             if (j==null)    j = defaultJob;
 
             ListBoxModel r = new ListBoxModel();

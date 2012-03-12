@@ -37,17 +37,14 @@ import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractItem;
 import hudson.model.AbstractProject;
 import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.Hudson;
-import hudson.model.Item;
-import hudson.model.ItemGroup;
-import hudson.model.Items;
 import hudson.model.Job;
+import hudson.model.Item;
 import hudson.model.Project;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -76,7 +73,6 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.Stapler;
 
 /**
  * Build step to copy artifacts from another project.
@@ -93,12 +89,9 @@ public class CopyArtifact extends Builder {
     @DataBoundConstructor
     public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
                         boolean flatten, boolean optional) {
-        ItemGroup context = Stapler.getCurrentRequest().findAncestorObject(ItemGroup.class);
-        if (context == null) context = Hudson.getInstance();
-
         // Prevents both invalid values and access to artifacts of projects which this user cannot see.
         // If value is parameterized, it will be checked when build runs.
-        if (projectName.indexOf('$') < 0 && new JobResolver(context, projectName).job == null)
+        if (projectName.indexOf('$') < 0 && new JobResolver(projectName).job == null)
             projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
         this.projectName = projectName;
         this.selector = selector;
@@ -152,7 +145,7 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(projectName);
-            JobResolver job = new JobResolver(build.getProject().getParent(), expandedProject);
+            JobResolver job = new JobResolver(expandedProject);
             if (job.job != null && !expandedProject.equals(projectName)
                 // If projectName is parameterized, need to do permission check on source project.
                 // Would like to check if user who started build has permission, but unable to get
@@ -253,19 +246,20 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    // Find the job from the given name inside the current itemGroup; usually just a getItem lookup by name,
+    // Find the job from the given name; usually just a Hudson.getItemByFullName lookup,
     // but this class encapsulates additional logic like filtering on parameters.
     private static class JobResolver {
         Job<?,?> job;
         BuildFilter filter = new BuildFilter();
 
-        JobResolver(ItemGroup context, String projectName) {
-            job = fromName(context, projectName);
+        JobResolver(String projectName) {
+            Hudson hudson = Hudson.getInstance();
+            job = hudson.getItemByFullName(projectName, Job.class);
             if (job == null) {
                 // Check for parameterized job with filter (see help file)
                 int i = projectName.indexOf('/');
                 if (i > 0) {
-                    Job<?,?> candidate = fromName(context, projectName.substring(0, i));
+                    Job<?,?> candidate = hudson.getItemByFullName(projectName.substring(0, i), Job.class);
                     if (candidate != null) {
                         ParametersBuildFilter pFilter = new ParametersBuildFilter(projectName.substring(i + 1));
                         if (pFilter.isValid(candidate)) {
@@ -276,24 +270,17 @@ public class CopyArtifact extends Builder {
                 }
             }
         }
-
-    }
-
-    public static Job fromName(ItemGroup context, String projectName) {
-        List<Job> jobs = Items.fromNameList(context, projectName, Job.class);
-        if (jobs.isEmpty()) return null;
-        return jobs.get(0);
     }
 
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AbstractItem anc, @QueryParameter String value) {
+                @AncestorInPath AccessControlled anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
-            Item item = new JobResolver(anc.getParent(), value).job;
+            Item item = new JobResolver(value).job;
             if (item != null)
                 result = item instanceof MavenModuleSet
                        ? FormValidation.warning(Messages.CopyArtifact_MavenProject())
