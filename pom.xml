@@ -49,4 +49,20 @@
       <developerConnection>scm:git:git@github.com:jenkinsci/copyartifact-plugin.git</developerConnection>
       <url>https://github.com/jenkinsci/copyartifact-plugin</url>
     </scm>
-</project>
+
+    <repositories>
+        <repository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>  
+  
+
