@@ -61,6 +61,8 @@ import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.concurrent.Callable;
+
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.ExtractResourceSCM;
@@ -605,15 +607,25 @@ public class CopyArtifactTest extends HudsonTestCase {
      */
     @LocalData
     public void testPermission() throws Exception {
-        SecurityContextHolder.clearContext();
-        assertNull("Job should not be accessible to anonymous", hudson.getItem("testJob"));
-        assertEquals("Should ignore/clear value for inaccessible project", "",
-                     new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+        executeOnServer(new Callable<Object>() {
+            public Object call() throws Exception {
+                assertNull("Job should not be accessible to anonymous", hudson.getItem("testJob"));
+                assertEquals("Should ignore/clear value for inaccessible project", "",
+                        new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+                return null;
+            }
+        });
+
         // Login as user with access to testJob:
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken("joe","joe"));
-        assertEquals("Should allow use of testJob for joe", "testJob",
-                     new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+        WebClient wc = createWebClient();
+        wc.login("joe", "joe");
+        wc.executeOnServer(new Callable<Object>() {
+            public Object call() throws Exception {
+                assertEquals("Should allow use of testJob for joe", "testJob",
+                             new CopyArtifact("testJob", null, null, null, false, false).getProjectName());
+                return null;
+            }
+        });
     }
 
     /**

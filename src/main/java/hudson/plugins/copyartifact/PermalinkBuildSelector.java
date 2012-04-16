@@ -27,12 +27,12 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.RelativePath;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
 import hudson.util.ListBoxModel;
 import hudson.util.ListBoxModel.Option;
+import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -68,7 +68,7 @@ public class PermalinkBuildSelector extends BuildSelector {
         public ListBoxModel doFillIdItems(@AncestorInPath Job defaultJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             // gracefully fall back to some job, if none is given
             Job j = null;
-            if (projectName!=null)  j = Hudson.getInstance().getItemByFullName(projectName,Job.class);
+            if (projectName!=null)  j = Jenkins.getInstance().getItem(projectName,defaultJob,Job.class);
             if (j==null)    j = defaultJob;
 
             ListBoxModel r = new ListBoxModel();

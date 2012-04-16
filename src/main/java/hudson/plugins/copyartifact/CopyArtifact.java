@@ -37,12 +37,14 @@ import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
+import hudson.model.AbstractItem;
 import hudson.model.AbstractProject;
 import hudson.model.Build;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.Hudson;
+import hudson.model.ItemGroup;
 import hudson.model.Job;
 import hudson.model.Item;
 import hudson.model.Project;
@@ -50,7 +52,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.RunListener;
-import hudson.security.AccessControlled;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -64,6 +65,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -73,6 +75,8 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Build step to copy artifacts from another project.
@@ -89,10 +93,18 @@ public class CopyArtifact extends Builder {
     @DataBoundConstructor
     public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
                         boolean flatten, boolean optional) {
-        // Prevents both invalid values and access to artifacts of projects which this user cannot see.
-        // If value is parameterized, it will be checked when build runs.
-        if (projectName.indexOf('$') < 0 && new JobResolver(projectName).job == null)
-            projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+        // check the permissions only if we can
+        StaplerRequest req = Stapler.getCurrentRequest();
+        if (req!=null) {
+            ItemGroup context = req.findAncestorObject(ItemGroup.class);
+            if (context == null) context = Jenkins.getInstance();
+
+            // Prevents both invalid values and access to artifacts of projects which this user cannot see.
+            // If value is parameterized, it will be checked when build runs.
+            if (projectName.indexOf('$') < 0 && new JobResolver(context, projectName).job == null)
+                projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+        }
+
         this.projectName = projectName;
         this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
@@ -145,7 +157,7 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(projectName);
-            JobResolver job = new JobResolver(expandedProject);
+            JobResolver job = new JobResolver(build.getProject().getParent(),expandedProject);
             if (job.job != null && !expandedProject.equals(projectName)
                 // If projectName is parameterized, need to do permission check on source project.
                 // Would like to check if user who started build has permission, but unable to get
@@ -252,14 +264,13 @@ public class CopyArtifact extends Builder {
         Job<?,?> job;
         BuildFilter filter = new BuildFilter();
 
-        JobResolver(String projectName) {
-            Hudson hudson = Hudson.getInstance();
-            job = hudson.getItemByFullName(projectName, Job.class);
+        JobResolver(ItemGroup context, String projectName) {
+            job = getItem(context, projectName);
             if (job == null) {
                 // Check for parameterized job with filter (see help file)
-                int i = projectName.indexOf('/');
+                int i = projectName.lastIndexOf('/');
                 if (i > 0) {
-                    Job<?,?> candidate = hudson.getItemByFullName(projectName.substring(0, i), Job.class);
+                    Job<?,?> candidate = getItem(context, projectName.substring(0, i));
                     if (candidate != null) {
                         ParametersBuildFilter pFilter = new ParametersBuildFilter(projectName.substring(i + 1));
                         if (pFilter.isValid(candidate)) {
@@ -270,17 +281,71 @@ public class CopyArtifact extends Builder {
                 }
             }
         }
+
+        // working around a bug in Jenkins < 1.461 that accepts arbitrary bogus tokens as suffix.
+        private Job getItem(ItemGroup context, String pathName) {
+            Jenkins jenkins = Jenkins.getInstance();
+            if (context==null)  context = jenkins;
+            if (pathName==null) return null;
+    
+            if (pathName.startsWith("/"))   // absolute
+                return jenkins.getItemByFullName(pathName,Job.class);
+    
+            Object/*Item|ItemGroup*/ ctx = context;
+    
+            StringTokenizer tokens = new StringTokenizer(pathName,"/");
+            while (tokens.hasMoreTokens()) {
+                String s = tokens.nextToken();
+                if (s.equals("..")) {
+                    if (ctx instanceof Item) {
+                        ctx = ((Item)ctx).getParent();
+                        continue;
+                    }
+    
+                    ctx=null;    // can't go up further
+                    break;
+                }
+                if (s.equals(".")) {
+                    continue;
+                }
+    
+                if (ctx instanceof ItemGroup) {
+                    ItemGroup g = (ItemGroup) ctx;
+                    Item i;
+                    try {
+                        i = g.getItem(s);
+                    } catch (Exception e) {
+                        // working around a bug in MatrixProject that reports IAE.
+                        // With Jenkins > 1.461, this is not necessary
+                        i=null;
+                    }
+                    if (i==null || !i.hasPermission(Item.READ)) {
+                        ctx=null;    // can't go up further
+                        break;
+                    }
+                    ctx=i;
+                } else {
+                    return null;
+                }
+            }
+    
+            if (ctx instanceof Job)
+                return (Job)ctx;
+    
+            // fall back to the classic interpretation
+            return jenkins.getItemByFullName(pathName,Job.class);
+        }
     }
 
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AccessControlled anc, @QueryParameter String value) {
+                @AncestorInPath AbstractItem anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
-            Item item = new JobResolver(value).job;
+            Item item = new JobResolver(anc.getParent(),value).job;
             if (item != null)
                 result = item instanceof MavenModuleSet
                        ? FormValidation.warning(Messages.CopyArtifact_MavenProject())
