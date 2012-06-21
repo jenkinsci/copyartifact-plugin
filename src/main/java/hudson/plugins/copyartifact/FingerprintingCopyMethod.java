@@ -53,20 +53,20 @@ public class FingerprintingCopyMethod extends Copier {
     }
 
     @Override
-    public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
+    public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
         targetDir.mkdirs();  // Create target if needed
         FilePath[] list = srcDir.list(filter);
         for (FilePath file : list) {
             String tail = file.getRemote().substring(srcDir.getRemote().length());
             if (tail.startsWith("\\") || tail.startsWith("/"))
                 tail = tail.substring(1);
-            copyOne(file, new FilePath(targetDir, tail));
+            copyOne(file, new FilePath(targetDir, tail), fingerprintArtifacts);
         }
         return list.length;
     }
 
     @Override
-    public void copyOne(FilePath s, FilePath d) throws IOException, InterruptedException {
+    public void copyOne(FilePath s, FilePath d, boolean fingerprintArtifacts) throws IOException, InterruptedException {
         try {
             md5.reset();
             DigestOutputStream out =new DigestOutputStream(d.write(),md5);
@@ -79,14 +79,16 @@ public class FingerprintingCopyMethod extends Copier {
             d.touch(s.lastModified());
             String digest = Util.toHexString(md5.digest());
 
-            FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
+            if (fingerprintArtifacts) {
+                FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
 
-            Fingerprint f = map.getOrCreate(src, s.getName(), digest);
-            if (src!=null) {
-                f.add((AbstractBuild)src);
+                Fingerprint f = map.getOrCreate(src, s.getName(), digest);
+                if (src!=null) {
+                    f.add((AbstractBuild)src);
+                }
+                f.add(dst);
+                fingerprints.put(s.getName(), digest);
             }
-            f.add(dst);
-            fingerprints.put(s.getName(), digest);
         } catch (IOException e) {
             throw new IOException2("Failed to copy "+s+" to "+d,e);
         }
