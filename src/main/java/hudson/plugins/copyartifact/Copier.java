@@ -43,25 +43,43 @@ public abstract class Copier implements CopyMethod, ExtensionPoint {
     public void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         init(srcDir,baseTargetDir); // for backward compatibility with older subtypes
     }
+
+    /**
+     * @deprecated 
+     *      call/override {@link #copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts)} instead.
+     */
+    public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
+        return copyAll(srcDir, filter, targetDir, true);
+    }
     
     /**
      * Copy files matching the given file mask to the specified target.
      * @param srcDir Source directory
      * @param filter Ant GLOB pattern
      * @param targetDir Target directory
+     * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
      * @return Number of files that were copied
      * @see FilePath#copyRecursiveTo(String,FilePath)
      */
-    public abstract int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException;
+    public abstract int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException;
+    
+    /**
+     * @deprecated 
+     *      call/override {@link #copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts)} instead.
+     */
+    public void copyOne(FilePath source, FilePath target) throws IOException, InterruptedException {
+        copyOne(source, target, true);
+    }
 
     /**
      * Copy a single file.
      * @param source Source file
      * @param target Target file (includes filename; this is not the target directory).
      *   Directory for target should already exist (copy-artifact build step calls mkdirs).
+     * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
      * @see FilePath#copyTo(FilePath)
      */
-    public abstract void copyOne(FilePath source, FilePath target) throws IOException, InterruptedException;
+    public abstract void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts) throws IOException, InterruptedException;
 
     /**
      * Ends what's started by the {@link #init(Run, AbstractBuild, FilePath, FilePath)} method.
@@ -94,11 +112,11 @@ public abstract class Copier implements CopyMethod, ExtensionPoint {
                 legacy.init(srcDir, baseTargetDir);
             }
 
-            public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
+            public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
                 return legacy.copyAll(srcDir, filter, targetDir);
             }
 
-            public void copyOne(FilePath source, FilePath target) throws IOException, InterruptedException {
+            public void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts) throws IOException, InterruptedException {
                 legacy.copyOne(source, target);
             }
 
