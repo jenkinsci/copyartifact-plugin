@@ -101,9 +101,11 @@ public class FingerprintingCopyMethod extends Copier {
             if (r == null)
                 continue;
 
-            FingerprintAction fa = r.getAction(FingerprintAction.class);
-            if (fa != null) fa.add(fingerprints);
-            else            r.getActions().add(new FingerprintAction(r, fingerprints));
+            if (fingerprints.size() > 0) {
+                FingerprintAction fa = r.getAction(FingerprintAction.class);
+                if (fa != null) fa.add(fingerprints);
+                else            r.getActions().add(new FingerprintAction(r, fingerprints));
+            }
         }
     }
 
