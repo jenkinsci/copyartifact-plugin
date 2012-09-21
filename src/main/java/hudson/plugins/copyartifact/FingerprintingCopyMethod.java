@@ -2,6 +2,7 @@ package hudson.plugins.copyartifact;
 
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.Fingerprint;
@@ -17,6 +18,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Performs fingerprinting during the copy.
@@ -76,7 +78,16 @@ public class FingerprintingCopyMethod extends Copier {
                 out.close();
             }
             d.chmod(s.mode());
-            d.touch(s.lastModified());
+            // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
+            try {
+                d.touch(s.lastModified());
+            } catch (IOException x) {
+                if (Functions.isWindows()) {
+                    Logger.getLogger(FingerprintingCopyMethod.class.getName()).warning(x.getMessage());
+                } else {
+                    throw x;
+                }
+            }
             String digest = Util.toHexString(md5.digest());
 
             FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
