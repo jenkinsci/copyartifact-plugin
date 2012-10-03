@@ -2,7 +2,6 @@ package hudson.plugins.copyartifact;
 
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.Functions;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.Fingerprint;
@@ -82,11 +81,7 @@ public class FingerprintingCopyMethod extends Copier {
             try {
                 d.touch(s.lastModified());
             } catch (IOException x) {
-                if (Functions.isWindows()) {
-                    Logger.getLogger(FingerprintingCopyMethod.class.getName()).warning(x.getMessage());
-                } else {
-                    throw x;
-                }
+                Logger.getLogger(FingerprintingCopyMethod.class.getName()).warning(x.getMessage());
             }
             String digest = Util.toHexString(md5.digest());
 
