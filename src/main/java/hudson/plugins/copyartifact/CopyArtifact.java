@@ -232,7 +232,7 @@ public class CopyArtifact extends Builder {
                                 : new FilePath(src.getArtifactsDir());
         if (srcDir == null || !srcDir.exists()) {
             console.println(useWs ? Messages.CopyArtifact_MissingSrcWorkspace() // (see JENKINS-3330)
-                                  : Messages.CopyArtifact_MissingSrcArtifacts());
+                                  : Messages.CopyArtifact_MissingSrcArtifacts(srcDir));
             return isOptional();  // Fail build unless copy is optional
         }
 
