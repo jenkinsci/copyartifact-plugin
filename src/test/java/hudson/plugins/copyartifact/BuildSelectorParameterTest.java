@@ -28,12 +28,12 @@ import com.gargoylesoftware.htmlunit.WebRequestSettings;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import hudson.cli.CLI;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import java.net.URL;
 import java.util.Arrays;
 import org.apache.commons.httpclient.NameValuePair;
-import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
@@ -49,8 +49,6 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         FreeStyleProject job = createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(
                 new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(false), "foo")));
-        CaptureEnvironmentBuilder ceb = new CaptureEnvironmentBuilder();
-        job.getBuildersList().add(ceb);
 
         // Run via UI (HTML form)
         WebClient wc = new WebClient();
@@ -64,9 +62,12 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         Queue.Item q = hudson.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
-        assertEquals("<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
-                     ceb.getEnvVars().get("SELECTOR").replaceAll("\\s+", ""));
-        job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
+
+        for (ParametersAction action : job.getLastBuild().getActions(ParametersAction.class)) {
+            BuildSelectorParameterValue item = (BuildSelectorParameterValue) action.getParameter("SELECTOR");
+            assertNotNull(item);
+            assertTrue(item.getBuildSelector() instanceof SpecificBuildSelector );
+        }
 
         // Run via HTTP POST (buildWithParameters)
         WebRequestSettings post = new WebRequestSettings(
@@ -79,8 +80,12 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         q = hudson.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
-        assertEquals(xml, ceb.getEnvVars().get("SELECTOR"));
-        job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
+
+        for (ParametersAction action : job.getLastBuild().getActions(ParametersAction.class)) {
+            BuildSelectorParameterValue item = (BuildSelectorParameterValue) action.getParameter("SELECTOR");
+            assertNotNull(item);
+            assertTrue(item.getBuildSelector() instanceof StatusBuildSelector );
+        }
 
         // Run via CLI
         CLI cli = new CLI(getURL());
@@ -89,6 +94,11 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         q = hudson.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
-        assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
+
+        for (ParametersAction action : job.getLastBuild().getActions(ParametersAction.class)) {
+            BuildSelectorParameterValue item = (BuildSelectorParameterValue) action.getParameter("SELECTOR");
+            assertNotNull(item);
+            assertTrue(item.getBuildSelector() instanceof SavedBuildSelector );
+        }
     }
 }

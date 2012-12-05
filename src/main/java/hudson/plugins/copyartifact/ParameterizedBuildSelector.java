@@ -27,6 +27,8 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
 import hudson.model.Run;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -34,6 +36,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Use a parameter to specify how the build is selected.
  * @see BuildSelectorParameter
  * @author Alan Harder
+ * @author Chris Johnson
  */
 public class ParameterizedBuildSelector extends BuildSelector {
     private String parameterName;
@@ -46,11 +49,33 @@ public class ParameterizedBuildSelector extends BuildSelector {
     public String getParameterName() {
         return parameterName;
     }
-
+    /**
+     * Gets the build using the selector in the parameterValue with the matching name.
+     * @param job
+     * @param env
+     * @param filter
+     * @param parent
+     * @return build for selector provided in parameter.
+     *  Null if no valid parameter found
+     */
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName))
-                                     .getBuild(job, env, filter, parent);
+        BuildSelector selector = getBuildSelectorFromParameter(parent);
+        return (selector== null) ? null : selector.getBuild(job, env, filter, parent);
+    }
+
+    private BuildSelector getBuildSelectorFromParameter( Run<?,?> parent ) {
+        BuildSelector buildSelector = null;
+
+        for(ParametersAction action : parent.getActions(ParametersAction.class) ) {
+            ParameterValue paramValue = action.getParameter(getParameterName());
+            if(paramValue!= null && paramValue instanceof BuildSelectorParameterValue ) {
+                BuildSelectorParameterValue p = (BuildSelectorParameterValue) paramValue;
+                buildSelector = p.getBuildSelector();
+                break;
+            }
+        }
+        return buildSelector;
     }
 
     @Extension(ordinal=-20)
