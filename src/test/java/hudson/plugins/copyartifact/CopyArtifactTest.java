@@ -486,7 +486,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(b);
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
         b.keepLog(true);
-        b = p.scheduleBuild2(0, new UserCause(), null).get();
+        b = p.scheduleBuild2(0, new UserCause()).get();
         assertEquals(b.getResult(), Result.FAILURE);
     }
 
