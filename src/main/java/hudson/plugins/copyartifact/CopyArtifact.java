@@ -195,7 +195,8 @@ public class CopyArtifact extends Builder {
             // for backward compatibility, look up the copier as CopyMethod
             Copier copier = Copier.from(Jenkins.getInstance().getExtensionList(CopyMethod.class).get(0)).clone();
 
-            if (src instanceof MavenModuleSetBuild) {
+            if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) { 
+            // use classes in the "maven-plugin" plugin as might not be installed
                 // Copy artifacts from the build (ArchiveArtifacts build step)
                 boolean ok = perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
                 // Copy artifacts from all modules of this Maven build (automatic archiving)
@@ -347,11 +348,13 @@ public class CopyArtifact extends Builder {
             FormValidation result;
             Item item = new JobResolver(anc.getParent(),value).job;
             if (item != null)
-                result = item instanceof MavenModuleSet
-                       ? FormValidation.warning(Messages.CopyArtifact_MavenProject())
-                       : (item instanceof MatrixProject
+                if (Hudson.getInstance().getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
+                    result = FormValidation.warning(Messages.CopyArtifact_MavenProject());
+                } else {
+                    result = (item instanceof MatrixProject)
                           ? FormValidation.warning(Messages.CopyArtifact_MatrixProject())
-                          : FormValidation.ok());
+                          : FormValidation.ok();
+                }
             else if (value.indexOf('$') >= 0)
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
             else
