@@ -40,14 +40,14 @@ import java.io.IOException;
 public class FilePathCopyMethod extends Copier {
     /** @see FilePath#recursiveCopyTo(String,FilePath) */
     @Override
-    public int copyAll(FilePath srcDir, String filter, FilePath targetDir)
+    public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts)
             throws IOException, InterruptedException {
         return srcDir.copyRecursiveTo(filter, targetDir);
     }
 
     /** @see FilePath#copyTo(FilePath) */
     @Override
-    public void copyOne(FilePath source, FilePath target)
+    public void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts)
             throws IOException, InterruptedException {
         source.copyToWithPermission(target);
     }
