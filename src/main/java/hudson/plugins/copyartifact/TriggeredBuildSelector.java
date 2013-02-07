@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
@@ -63,6 +64,19 @@ public class TriggeredBuildSelector extends BuildSelector {
                     && jobName.equals(((UpstreamCause)cause).getUpstreamProject())) {
                 Run<?,?> run = job.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild());
                 return (run != null && filter.isSelectable(run, env)) ? run : null;
+            }
+            else if (cause instanceof UpstreamCause) {
+                // Figure out the parent job and do a recursive call to getBuild
+                String parentJobName = ((UpstreamCause)cause).getUpstreamProject();
+                Job <?,?> parentJob = Jenkins.getInstance().getItemByFullName(parentJobName, Job.class);
+                Run<?,?> run = getBuild(
+                        job,
+                        env,
+                        filter,
+                        parentJob.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild()));
+                if (run != null && filter.isSelectable(run, env)) {
+                    return run;
+                }
             }
         }
         if (isFallbackToLastSuccessful()) {
