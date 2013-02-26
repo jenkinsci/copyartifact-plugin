@@ -36,7 +36,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Build parameter to select a promotion level from the list of configured levels.
  * @author Alan Harder
  */
 public class BuildSelectorParameter extends SimpleParameterDefinition {
