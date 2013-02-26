@@ -13,13 +13,6 @@
     <version>1.26-SNAPSHOT</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin</url>
 
-    <developers>
-      <developer>
-        <id>mindless</id>
-        <name>Alan Harder</name>
-      </developer>
-    </developers>
-
     <dependencies>
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
