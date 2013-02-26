@@ -65,7 +65,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -260,12 +259,12 @@ public class CopyArtifact extends Builder {
         BuildFilter filter = new BuildFilter();
 
         JobResolver(ItemGroup context, String projectName) {
-            job = getItem(context, projectName);
+            job = Jenkins.getInstance().getItem(projectName, context, Job.class);
             if (job == null) {
                 // Check for parameterized job with filter (see help file)
                 int i = projectName.lastIndexOf('/');
                 if (i > 0) {
-                    Job<?,?> candidate = getItem(context, projectName.substring(0, i));
+                    Job<?,?> candidate = Jenkins.getInstance().getItem(projectName.substring(0, i), context, Job.class);
                     if (candidate != null) {
                         ParametersBuildFilter pFilter = new ParametersBuildFilter(projectName.substring(i + 1));
                         if (pFilter.isValid(candidate)) {
@@ -275,60 +274,6 @@ public class CopyArtifact extends Builder {
                     }
                 }
             }
-        }
-
-        // working around a bug in Jenkins < 1.461 that accepts arbitrary bogus tokens as suffix.
-        private Job getItem(ItemGroup context, String pathName) {
-            Jenkins jenkins = Jenkins.getInstance();
-            if (context==null)  context = jenkins;
-            if (pathName==null) return null;
-    
-            if (pathName.startsWith("/"))   // absolute
-                return jenkins.getItemByFullName(pathName,Job.class);
-    
-            Object/*Item|ItemGroup*/ ctx = context;
-    
-            StringTokenizer tokens = new StringTokenizer(pathName,"/");
-            while (tokens.hasMoreTokens()) {
-                String s = tokens.nextToken();
-                if (s.equals("..")) {
-                    if (ctx instanceof Item) {
-                        ctx = ((Item)ctx).getParent();
-                        continue;
-                    }
-    
-                    ctx=null;    // can't go up further
-                    break;
-                }
-                if (s.equals(".")) {
-                    continue;
-                }
-    
-                if (ctx instanceof ItemGroup) {
-                    ItemGroup g = (ItemGroup) ctx;
-                    Item i;
-                    try {
-                        i = g.getItem(s);
-                    } catch (Exception e) {
-                        // working around a bug in MatrixProject that reports IAE.
-                        // With Jenkins > 1.461, this is not necessary
-                        i=null;
-                    }
-                    if (i==null || !i.hasPermission(Item.READ)) {
-                        ctx=null;    // can't go up further
-                        break;
-                    }
-                    ctx=i;
-                } else {
-                    return null;
-                }
-            }
-    
-            if (ctx instanceof Job)
-                return (Job)ctx;
-    
-            // fall back to the classic interpretation
-            return jenkins.getItemByFullName(pathName,Job.class);
         }
     }
 
