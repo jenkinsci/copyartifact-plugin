@@ -192,7 +192,7 @@ public class CopyArtifact extends Builder {
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
 
             // for backward compatibility, look up the copier as CopyMethod
-            Copier copier = Copier.from(Jenkins.getInstance().getExtensionList(CopyMethod.class).get(0)).clone();
+            Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
 
             if (src instanceof MavenModuleSetBuild) {
                 // Copy artifacts from the build (ArchiveArtifacts build step)
