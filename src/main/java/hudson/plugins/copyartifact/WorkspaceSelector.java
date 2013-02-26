@@ -25,8 +25,12 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.FilePath;
+import hudson.model.AbstractBuild;
 import hudson.model.Descriptor;
 import hudson.model.Run;
+import java.io.IOException;
+import java.io.PrintStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -42,6 +46,20 @@ public class WorkspaceSelector extends BuildSelector {
     @Override
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return true;
+    }
+
+    @Override protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
+        if (src instanceof AbstractBuild) {
+            FilePath srcDir = ((AbstractBuild) src).getWorkspace();
+            if (srcDir != null && srcDir.exists()) {
+                return srcDir;
+            } else {
+                console.println(Messages.CopyArtifact_MissingSrcWorkspace()); // (see JENKINS-3330)
+                return null;
+            }
+        } else {
+            return super.getSourceDirectory(src, console);
+        }
     }
 
     @Extension(ordinal=-20)
