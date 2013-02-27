@@ -83,14 +83,16 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class CopyArtifact extends Builder {
 
-    private String projectName;
+    @Deprecated private transient String projectName;
+    private String project;
+    private String parameters;
     private final String filter, target;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
     private final Boolean flatten, optional;
 
     @DataBoundConstructor
-    public CopyArtifact(String projectName, BuildSelector selector, String filter, String target,
+    public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
                         boolean flatten, boolean optional) {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
@@ -100,11 +102,12 @@ public class CopyArtifact extends Builder {
 
             // Prevents both invalid values and access to artifacts of projects which this user cannot see.
             // If value is parameterized, it will be checked when build runs.
-            if (projectName.indexOf('$') < 0 && new JobResolver(context, projectName).job == null)
+            if (projectName.indexOf('$') < 0 && Jenkins.getInstance().getItem(projectName, context, Job.class) == null)
                 projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
         }
 
-        this.projectName = projectName;
+        this.project = projectName;
+        this.parameters = Util.fixEmptyAndTrim(parameters);
         this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
         this.target = Util.fixNull(target).trim();
@@ -120,11 +123,26 @@ public class CopyArtifact extends Builder {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
+            if (obj.projectName != null) {
+                int i = obj.projectName.lastIndexOf('/');
+                if (i != -1 && obj.projectName.indexOf('=', i) != -1) {
+                    obj.project = obj.projectName.substring(0, i);
+                    obj.parameters = obj.projectName.substring(i + 1);
+                } else {
+                    obj.project = obj.projectName;
+                    obj.parameters = null;
+                }
+                obj.projectName = null;
+            }
         }
     }
 
     public String getProjectName() {
-        return projectName;
+        return project;
+    }
+    
+    public String getParameters() {
+        return parameters;
     }
 
     public BuildSelector getBuildSelector() {
@@ -151,28 +169,28 @@ public class CopyArtifact extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException {
         PrintStream console = listener.getLogger();
-        String expandedProject = projectName, expandedFilter = filter;
+        String expandedProject = project, expandedFilter = filter;
         try {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
-            expandedProject = env.expand(projectName);
-            JobResolver job = new JobResolver(build.getProject().getParent(),expandedProject);
-            if (job.job != null && !expandedProject.equals(projectName)
+            expandedProject = env.expand(project);
+            Job job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
+            if (job != null && !expandedProject.equals(project)
                 // If projectName is parameterized, need to do permission check on source project.
                 // Would like to check if user who started build has permission, but unable to get
                 // Authentication object for arbitrary user.. instead, only allow use of parameters
                 // to select jobs which are accessible to all authenticated users.
-                && !job.job.getACL().hasPermission(
+                && !job.getACL().hasPermission(
                         new UsernamePasswordAuthenticationToken("authenticated", "",
                                 new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
                         Item.READ)) {
-                job.job = null; // Disallow access
+                job = null; // Disallow access
             }
-            if (job.job == null) {
+            if (job == null) {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run src = selector.getBuild(job.job, env, job.filter, build);
+            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(parameters) : new BuildFilter(), build);
             if (src == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
@@ -252,31 +270,6 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    // Find the job from the given name; usually just a Hudson.getItemByFullName lookup,
-    // but this class encapsulates additional logic like filtering on parameters.
-    private static class JobResolver {
-        Job<?,?> job;
-        BuildFilter filter = new BuildFilter();
-
-        JobResolver(ItemGroup context, String projectName) {
-            job = Jenkins.getInstance().getItem(projectName, context, Job.class);
-            if (job == null) {
-                // Check for parameterized job with filter (see help file)
-                int i = projectName.lastIndexOf('/');
-                if (i > 0) {
-                    Job<?,?> candidate = Jenkins.getInstance().getItem(projectName.substring(0, i), context, Job.class);
-                    if (candidate != null) {
-                        ParametersBuildFilter pFilter = new ParametersBuildFilter(projectName.substring(i + 1));
-                        if (pFilter.isValid(candidate)) {
-                            job = candidate;
-                            filter = pFilter;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
@@ -285,7 +278,7 @@ public class CopyArtifact extends Builder {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
-            Item item = new JobResolver(anc.getParent(),value).job;
+            Item item = Jenkins.getInstance().getItem(value, anc.getParent());
             if (item != null)
                 result = item instanceof MavenModuleSet
                        ? FormValidation.warning(Messages.CopyArtifact_MavenProject())
@@ -323,10 +316,10 @@ public class CopyArtifact extends Builder {
                     : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                 for (CopyArtifact ca : getCopiers(project)) try {
                     if (ca.getProjectName().equals(oldName))
-                        ca.projectName = newName;
+                        ca.project = newName;
                     else if (ca.getProjectName().startsWith(oldName + '/'))
                         // Support rename for "MatrixJobName/AxisName=value" type of name
-                        ca.projectName = newName + ca.projectName.substring(oldName.length());
+                        ca.project = newName + ca.project.substring(oldName.length());
                     else continue;
                     project.save();
                 } catch (IOException ex) {
