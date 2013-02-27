@@ -190,7 +190,7 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(parameters) : new BuildFilter(), build);
+            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
             if (src == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional

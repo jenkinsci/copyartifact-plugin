@@ -781,6 +781,21 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(ok);
     }
 
+    public void testFilterByMetaParameters() throws Exception {
+        FreeStyleProject other = createArtifactProject("Foo job");
+        other.addProperty(new ParametersDefinitionProperty(new BooleanParameterDefinition("BAR", false, "")));
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(new BooleanParameterValue("BAR", false))).get());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(new BooleanParameterValue("BAR", true))).get());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(), new ParametersAction(new BooleanParameterValue("BAR", false))).get());
+        FreeStyleProject p = createProject(other.getName(), "$VAR=true", "*.txt", "", true, false, false);
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("VAR", "")));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        p.getBuildersList().add(envStep);
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(), new ParametersAction(new StringParameterValue("VAR", "BAR"))).get();
+        assertBuildStatusSuccess(b);
+        assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOO_JOB"));
+    }
+
     public void testSavedBuildSelectorWithParameterFilter() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createFreeStyleProject();
