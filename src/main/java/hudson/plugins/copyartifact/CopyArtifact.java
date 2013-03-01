@@ -83,7 +83,7 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class CopyArtifact extends Builder {
 
-    @Deprecated private transient String projectName;
+    @Deprecated private String projectName;
     private String project;
     private String parameters;
     private final String filter, target;
@@ -123,17 +123,6 @@ public class CopyArtifact extends Builder {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
-            if (obj.projectName != null) {
-                int i = obj.projectName.lastIndexOf('/');
-                if (i != -1 && obj.projectName.indexOf('=', i) != -1) {
-                    obj.project = obj.projectName.substring(0, i);
-                    obj.parameters = obj.projectName.substring(i + 1);
-                } else {
-                    obj.project = obj.projectName;
-                    obj.parameters = null;
-                }
-                obj.projectName = null;
-            }
         }
     }
 
@@ -167,7 +156,20 @@ public class CopyArtifact extends Builder {
 
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
-            throws InterruptedException {
+            throws InterruptedException, IOException {
+        if (projectName != null) {
+            int i = projectName.lastIndexOf('/');
+            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, build.getProject().getParent(), Job.class) == null) {
+                project = projectName.substring(0, i);
+                parameters = projectName.substring(i + 1);
+            } else {
+                project = projectName;
+                parameters = null;
+            }
+            Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
+            projectName = null;
+            build.getParent().save();
+        }
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         try {

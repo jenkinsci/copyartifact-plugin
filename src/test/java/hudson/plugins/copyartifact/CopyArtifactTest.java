@@ -62,6 +62,7 @@ import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Callable;
+import jenkins.model.Jenkins;
 
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -868,4 +869,26 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(descriptor.getDisplayName().length() > 0);
         assertTrue(descriptor.getBuildSelectors().size() > 0);
     }
+
+    @LocalData
+    public void testProjectNameSplit() throws Exception {
+        FreeStyleProject parameterized = Jenkins.getInstance().getItemByFullName("parameterized", FreeStyleProject.class);
+        assertNotNull(parameterized);
+        assertTrue(((BooleanParameterValue) parameterized.getBuildByNumber(2).getAction(ParametersAction.class).getParameter("good")).value);
+        FreeStyleProject copier = Jenkins.getInstance().getItemByFullName("copier", FreeStyleProject.class);
+        assertNotNull(copier);
+        String configXml = copier.getConfigFile().asString();
+        assertTrue(configXml, configXml.contains("<projectName>matrix/which=two</projectName>"));
+        FreeStyleBuild build = copier.scheduleBuild2(0).get();
+        @SuppressWarnings("deprecation") String log = build.getLog();
+        assertEquals(log, Result.SUCCESS, build.getResult());
+        assertTrue(log, log.contains("OK"));
+        configXml = copier.getConfigFile().asString();
+        assertFalse(configXml, configXml.contains("<projectName>"));
+        assertTrue(configXml, configXml.contains("<project>plain</project>"));
+        assertTrue(configXml, configXml.contains("<project>parameterized</project>"));
+        assertTrue(configXml, configXml.contains("<parameters>good=true</parameters>"));
+        assertTrue(configXml, configXml.contains("<project>matrix/which=two</project>"));
+    }
+
 }
