@@ -531,7 +531,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject grandparent = createArtifactProject(),
                          parent = createFreeStyleProject(),
                          p = createFreeStyleProject();
-        p.getBuildersList().add(new CopyArtifact(grandparent.getName(),
+        p.getBuildersList().add(new CopyArtifact(grandparent.getName(), null, 
                                     new TriggeredBuildSelector(false), "*.txt", "", false, false));
         parent.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         grandparent.getPublishersList().add(new BuildTrigger(parent.getFullName(), false));
@@ -561,7 +561,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatus(Result.FAILURE, grandparent.scheduleBuild2(0, new UserCause()).get());
         
         p.getBuildersList().remove(CopyArtifact.class);
-        p.getBuildersList().add(new CopyArtifact(grandparent.getName(),
+        p.getBuildersList().add(new CopyArtifact(grandparent.getName(), null,
                 new TriggeredBuildSelector(true), "*.txt", "", false, false));
         assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
