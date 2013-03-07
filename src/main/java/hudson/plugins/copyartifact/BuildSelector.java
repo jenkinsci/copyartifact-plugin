@@ -25,10 +25,13 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.ExtensionPoint;
+import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Job;
 import hudson.model.Run;
+import java.io.IOException;
+import java.io.PrintStream;
 
 /**
  * Extension point for selecting the build to copy artifacts from.
@@ -80,4 +83,15 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     protected boolean isSelectable(Run<?,?> run, EnvVars env) {
         return false;
     }
+
+    protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
+        FilePath srcDir = new FilePath(src.getArtifactsDir());
+        if (srcDir.exists()) {
+            return srcDir;
+        } else {
+            console.println(Messages.CopyArtifact_MissingSrcArtifacts(srcDir));
+            return null;
+        }
+    }
+
 }

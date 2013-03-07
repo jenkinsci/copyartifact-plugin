@@ -15,20 +15,11 @@ import java.io.IOException;
  * <p>
  * A copier instance 
  * 
- * <p>
- * 1.21 introduced this in place of {@link CopyMethod} to allow us to evolve this interface
- * without breaking existing implementations.
- * 
  * @author Alan Harder
  * @author Kohsuke Kawaguchi
  * @see "JENKINS-7753"
  */
-public abstract class Copier implements CopyMethod, ExtensionPoint {
-    /**
-     * @deprecated 
-     *      call/override {@link #init(Run, AbstractBuild, FilePath, FilePath)} instead.
-     */
-    public void init(FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
+public abstract class Copier implements ExtensionPoint {
 
     /**
      * Called before copy-artifact operation.
@@ -40,9 +31,7 @@ public abstract class Copier implements CopyMethod, ExtensionPoint {
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
      */
-    public void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
-        init(srcDir,baseTargetDir); // for backward compatibility with older subtypes
-    }
+    public abstract void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
     
     /**
      * Copy files matching the given file mask to the specified target.
@@ -82,33 +71,4 @@ public abstract class Copier implements CopyMethod, ExtensionPoint {
     @Override
     public abstract Copier clone();
 
-    /**
-     * Wraps a {@link CopyMethod} into {@link Copier} for backward compatibility.
-     */
-    public static Copier from(final CopyMethod legacy) {
-        if (legacy instanceof Copier)
-            return (Copier) legacy;
-
-        return new Copier() {
-            public void init(FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
-                legacy.init(srcDir, baseTargetDir);
-            }
-
-            public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
-                return legacy.copyAll(srcDir, filter, targetDir);
-            }
-
-            public void copyOne(FilePath source, FilePath target) throws IOException, InterruptedException {
-                legacy.copyOne(source, target);
-            }
-
-            /**
-             * {@link CopyMethod} had a singleton semantics.
-             */
-            @Override
-            public Copier clone() {
-                return this;
-            }
-        };
-    }
 }

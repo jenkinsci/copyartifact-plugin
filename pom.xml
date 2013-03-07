@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.424</version>
+        <version>1.466</version>
     </parent>
 
     <artifactId>copyartifact</artifactId>
@@ -12,13 +12,6 @@
     <name>Copy Artifact Plugin</name>
     <version>1.26-SNAPSHOT</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin</url>
-
-    <developers>
-      <developer>
-        <id>mindless</id>
-        <name>Alan Harder</name>
-      </developer>
-    </developers>
 
     <dependencies>
       <dependency>

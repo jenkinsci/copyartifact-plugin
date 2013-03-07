@@ -56,4 +56,7 @@ public class FilePathCopyMethod extends Copier {
     public Copier clone() {
         return this;
     }
+
+    @Override public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
+
 }
