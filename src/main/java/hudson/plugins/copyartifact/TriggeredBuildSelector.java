@@ -62,18 +62,19 @@ public class TriggeredBuildSelector extends BuildSelector {
                 ? ((MatrixRun)parent).getParentBuild().getCauses() : parent.getCauses()) {
             if (cause instanceof UpstreamCause) {
                 UpstreamCause upstream = (UpstreamCause) cause;
-                if (jobName.equals(upstream.getUpstreamProject())) {
-                    Run<?,?> run = job.getBuildByNumber(upstream.getUpstreamBuild());
+                String upstreamProject = upstream.getUpstreamProject();
+                int upstreamBuild = upstream.getUpstreamBuild();
+                if (jobName.equals(upstreamProject)) {
+                    Run<?,?> run = job.getBuildByNumber(upstreamBuild);
                     return (run != null && filter.isSelectable(run, env)) ? run : null;
                 } else {
                     // Figure out the parent job and do a recursive call to getBuild
-                    String parentJobName = upstream.getUpstreamProject();
-                    Job <?,?> parentJob = Jenkins.getInstance().getItemByFullName(parentJobName, Job.class);
+                    Job<?,?> parentJob = Jenkins.getInstance().getItemByFullName(upstreamProject, Job.class);
                     Run<?,?> run = getBuild(
                         job,
                         env,
                         filter,
-                        parentJob.getBuildByNumber(upstream.getUpstreamBuild()));
+                        parentJob.getBuildByNumber(upstreamBuild));
                     if (run != null && filter.isSelectable(run, env)) {
                         return run;
                     }
