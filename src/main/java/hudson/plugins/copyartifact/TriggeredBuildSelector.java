@@ -60,22 +60,23 @@ public class TriggeredBuildSelector extends BuildSelector {
         // Matrix run is triggered by its parent project, so check causes of parent build:
         for (Cause cause : parent instanceof MatrixRun
                 ? ((MatrixRun)parent).getParentBuild().getCauses() : parent.getCauses()) {
-            if (cause instanceof UpstreamCause
-                    && jobName.equals(((UpstreamCause)cause).getUpstreamProject())) {
-                Run<?,?> run = job.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild());
-                return (run != null && filter.isSelectable(run, env)) ? run : null;
-            }
-            else if (cause instanceof UpstreamCause) {
-                // Figure out the parent job and do a recursive call to getBuild
-                String parentJobName = ((UpstreamCause)cause).getUpstreamProject();
-                Job <?,?> parentJob = Jenkins.getInstance().getItemByFullName(parentJobName, Job.class);
-                Run<?,?> run = getBuild(
+            if (cause instanceof UpstreamCause) {
+                UpstreamCause upstream = (UpstreamCause) cause;
+                if (jobName.equals(upstream.getUpstreamProject())) {
+                    Run<?,?> run = job.getBuildByNumber(upstream.getUpstreamBuild());
+                    return (run != null && filter.isSelectable(run, env)) ? run : null;
+                } else {
+                    // Figure out the parent job and do a recursive call to getBuild
+                    String parentJobName = upstream.getUpstreamProject();
+                    Job <?,?> parentJob = Jenkins.getInstance().getItemByFullName(parentJobName, Job.class);
+                    Run<?,?> run = getBuild(
                         job,
                         env,
                         filter,
-                        parentJob.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild()));
-                if (run != null && filter.isSelectable(run, env)) {
-                    return run;
+                        parentJob.getBuildByNumber(upstream.getUpstreamBuild()));
+                    if (run != null && filter.isSelectable(run, env)) {
+                        return run;
+                    }
                 }
             }
         }
