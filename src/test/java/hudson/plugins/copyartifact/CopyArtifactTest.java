@@ -527,6 +527,45 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
+    public void testTriggeredBuildSelectorWithParentOfParent() throws Exception {
+        FreeStyleProject grandparent = createArtifactProject(),
+                         parent = createFreeStyleProject(),
+                         p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(grandparent.getName(), null, 
+                                    new TriggeredBuildSelector(false), "*.txt", "", false, false));
+        parent.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
+        grandparent.getPublishersList().add(new BuildTrigger(parent.getFullName(), false));
+        hudson.rebuildDependencyGraph();
+        assertBuildStatusSuccess(grandparent.scheduleBuild2(0, new UserCause()));
+        // parent#1 was triggered
+        FreeStyleBuild b = parent.getBuildByNumber(1);
+        for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        assertNotNull(b);
+        while (b.isBuilding()) Thread.sleep(10);
+        assertBuildStatusSuccess(b);
+        // p#1 was triggered, now building.
+        b = p.getBuildByNumber(1);
+        for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        assertNotNull(b);
+        while (b.isBuilding()) Thread.sleep(10);
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(false, "subdir/subfoo.txt", b);
+        // Verify error if build not triggered by upstream job:
+        assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
+        // test fallback
+        
+        //run a failing build to make sure the fallback selects the last successful build
+        grandparent.getPublishersList().clear();
+        grandparent.getBuildersList().add(new FailureBuilder());
+        assertBuildStatus(Result.FAILURE, grandparent.scheduleBuild2(0, new UserCause()).get());
+        
+        p.getBuildersList().remove(CopyArtifact.class);
+        p.getBuildersList().add(new CopyArtifact(grandparent.getName(), null,
+                new TriggeredBuildSelector(true), "*.txt", "", false, false));
+        assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
+    }
+
     /**
      * When copying from a particular matrix configuration, the upstream project
      * is the matrix parent.

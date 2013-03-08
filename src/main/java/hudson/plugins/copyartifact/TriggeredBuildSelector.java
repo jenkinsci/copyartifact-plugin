@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
@@ -59,10 +60,24 @@ public class TriggeredBuildSelector extends BuildSelector {
         // Matrix run is triggered by its parent project, so check causes of parent build:
         for (Cause cause : parent instanceof MatrixRun
                 ? ((MatrixRun)parent).getParentBuild().getCauses() : parent.getCauses()) {
-            if (cause instanceof UpstreamCause
-                    && jobName.equals(((UpstreamCause)cause).getUpstreamProject())) {
-                Run<?,?> run = job.getBuildByNumber(((UpstreamCause)cause).getUpstreamBuild());
-                return (run != null && filter.isSelectable(run, env)) ? run : null;
+            if (cause instanceof UpstreamCause) {
+                UpstreamCause upstream = (UpstreamCause) cause;
+                if (jobName.equals(upstream.getUpstreamProject())) {
+                    Run<?,?> run = job.getBuildByNumber(upstream.getUpstreamBuild());
+                    return (run != null && filter.isSelectable(run, env)) ? run : null;
+                } else {
+                    // Figure out the parent job and do a recursive call to getBuild
+                    String parentJobName = upstream.getUpstreamProject();
+                    Job <?,?> parentJob = Jenkins.getInstance().getItemByFullName(parentJobName, Job.class);
+                    Run<?,?> run = getBuild(
+                        job,
+                        env,
+                        filter,
+                        parentJob.getBuildByNumber(upstream.getUpstreamBuild()));
+                    if (run != null && filter.isSelectable(run, env)) {
+                        return run;
+                    }
+                }
             }
         }
         if (isFallbackToLastSuccessful()) {
