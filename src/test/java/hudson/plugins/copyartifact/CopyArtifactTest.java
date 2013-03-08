@@ -539,13 +539,13 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(grandparent.scheduleBuild2(0, new UserCause()));
         // parent#1 was triggered
         FreeStyleBuild b = parent.getBuildByNumber(1);
-        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) Thread.sleep(10);
         assertBuildStatusSuccess(b);
         // p#1 was triggered, now building.
         b = p.getBuildByNumber(1);
-        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
+        for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) Thread.sleep(10);
         assertBuildStatusSuccess(b);
