@@ -154,12 +154,10 @@ public class CopyArtifact extends Builder {
         return optional != null && optional;
     }
 
-    @Override
-    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
-            throws InterruptedException, IOException {
+    private void upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (projectName != null) {
             int i = projectName.lastIndexOf('/');
-            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, build.getProject().getParent(), Job.class) == null) {
+            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
                 parameters = projectName.substring(i + 1);
             } else {
@@ -168,8 +166,14 @@ public class CopyArtifact extends Builder {
             }
             Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
-            build.getParent().save();
+            job.save();
         }
+    }
+
+    @Override
+    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
+            throws InterruptedException, IOException {
+        upgradeIfNecessary(build.getProject());
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         try {
@@ -316,7 +320,8 @@ public class CopyArtifact extends Builder {
         public void onRenamed(Item item, String oldName, String newName) {
             for (AbstractProject<?,?> project
                     : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-                for (CopyArtifact ca : getCopiers(project)) try {
+                try {
+                for (CopyArtifact ca : getCopiers(project))
                     if (ca.getProjectName().equals(oldName))
                         ca.project = newName;
                     else if (ca.getProjectName().startsWith(oldName + '/'))
@@ -333,13 +338,17 @@ public class CopyArtifact extends Builder {
             }
         }
 
-        private static List<CopyArtifact> getCopiers(AbstractProject project) {
+        private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
             DescribableList<Builder,Descriptor<Builder>> list =
                     project instanceof Project ? ((Project<?,?>)project).getBuildersList()
                       : (project instanceof MatrixProject ?
                           ((MatrixProject)project).getBuildersList() : null);
             if (list == null) return Collections.emptyList();
-            return (List<CopyArtifact>)list.getAll(CopyArtifact.class);
+            List<CopyArtifact> copiers = list.getAll(CopyArtifact.class);
+            for (CopyArtifact copier : copiers) {
+                copier.upgradeIfNecessary(project);
+            }
+            return copiers;
         }
     }
 
