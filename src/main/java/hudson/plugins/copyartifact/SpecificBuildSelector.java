@@ -48,7 +48,9 @@ public class SpecificBuildSelector extends BuildSelector {
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(env.expand(buildNumber)));
+        String num = env.expand(buildNumber);
+        if (num.startsWith("$")) return null; // unresolved variable, probably unset
+        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(num));
         return (run != null && filter.isSelectable(run, env)) ? run : null;
     }
 
