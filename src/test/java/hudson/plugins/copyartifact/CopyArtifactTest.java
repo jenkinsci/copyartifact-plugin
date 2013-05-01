@@ -66,6 +66,7 @@ import jenkins.model.Jenkins;
 
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
@@ -928,6 +929,17 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(configXml, configXml.contains("<project>parameterized</project>"));
         assertTrue(configXml, configXml.contains("<parameters>good=true</parameters>"));
         assertTrue(configXml, configXml.contains("<project>matrix/which=two</project>"));
+    }
+
+    @Bug(17447)
+    @LocalData
+    public void testRenameBeforeProjectNameSplit() throws Exception {
+        jenkins.getItemByFullName("old", FreeStyleProject.class).renameTo("new");
+        FreeStyleProject nue = jenkins.getItemByFullName("new", FreeStyleProject.class);
+        assertBuildStatusSuccess(nue.scheduleBuild2(0));
+        FreeStyleProject copier = jenkins.getItemByFullName("copier", FreeStyleProject.class);
+        assertBuildStatusSuccess(copier.scheduleBuild2(0));
+        assertEquals("jenkins-new-1\n", copier.getLastBuild().getWorkspace().child("stuff").readToString());
     }
 
 }
