@@ -210,7 +210,7 @@ public class CopyArtifact extends Builder {
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
             if (envData != null) {
-                envData.add(build.getProject().getParent(), expandedProject, src.getNumber());
+                envData.add(getItemGroup(build), expandedProject, src.getNumber());
             }
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
@@ -246,6 +246,18 @@ public class CopyArtifact extends Builder {
             return false;
         }
     }
+
+    // retrieve the "folder" (jenkins root if no folder used) for this build
+    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
+        ItemGroup group = build.getProject().getParent();
+        if (group instanceof Job) {
+            // MatrixProject, MavenModuleSet, IvyModuleSet or comparable
+            return ((Job) group).getParent();
+        }
+        return group;
+
+    }
+
 
     private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, FilePath targetDir,
             FilePath baseTargetDir, Copier copier, PrintStream console)
@@ -385,10 +397,8 @@ public class CopyArtifact extends Builder {
             for (String part : parts) {
                 if (part == null) continue;
                 Item i = ctx.getItem(part);
-                if (i instanceof ItemGroup) ctx = (ItemGroup) i;
-                if (i instanceof Job) {
-                    return (Job) i;
-                }
+                if (i instanceof Job) return (Job) i;
+                ctx = (ItemGroup) i;
             }
             return null;
         }
