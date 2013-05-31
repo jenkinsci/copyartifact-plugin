@@ -50,6 +50,7 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
+import hudson.security.ACL;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
@@ -63,6 +64,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Callable;
 import jenkins.model.Jenkins;
+import org.acegisecurity.context.SecurityContext;
 
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -686,12 +688,16 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(b);
         // Build step should fail for a job not accessible to all authenticated users,
         // even when accessible to the user starting the job, as in this case:
-        SecurityContextHolder.getContext().setAuthentication(
+        SecurityContext old = ACL.impersonate(
                 new UsernamePasswordAuthenticationToken("joe","joe"));
+        try {
         b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("JOB", "Job"))).get();
         assertFile(false, "foo.txt", b);
         assertBuildStatus(Result.FAILURE, b);
+        } finally {
+            SecurityContextHolder.setContext(old);
+        }
     }
 
     @LocalData
