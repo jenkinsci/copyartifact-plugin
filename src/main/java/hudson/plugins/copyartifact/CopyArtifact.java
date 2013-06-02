@@ -386,7 +386,7 @@ public class CopyArtifact extends Builder {
         private void add(ItemGroup ctx, String projectName, int buildNumber) {
             if (data==null) return;
             Item item = getProject(ctx, projectName);
-            projectName = item.getFullName();
+            projectName = item.getRelativeNameFrom(ctx);
             data.put("COPYARTIFACT_BUILD_NUMBER_"
                        + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
                      Integer.toString(buildNumber));
