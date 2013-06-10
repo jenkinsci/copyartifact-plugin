@@ -126,6 +126,15 @@ public class CopyArtifact extends Builder {
         }
     }
 
+    public Object readResolve() {
+        if (project == null) {
+            // migration from Copy Artifact < 1.26
+            project = projectName;
+            projectName = null;
+        }
+        return this;
+    }
+
     public String getProjectName() {
         return project;
     }

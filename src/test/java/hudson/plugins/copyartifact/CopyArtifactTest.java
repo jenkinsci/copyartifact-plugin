@@ -75,6 +75,12 @@ import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+import org.xml.sax.SAXException;
+
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlInput;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -948,4 +954,34 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertEquals("jenkins-new-1\n", copier.getLastBuild().getWorkspace().child("stuff").readToString());
     }
 
+    @LocalData
+    @Bug(17680)
+    public void testMigrationFrom1_25() throws IOException, SAXException {
+        // project saved with Copy Artifact plugin 1.25
+        FreeStyleProject project = (FreeStyleProject)hudson.getItem("copyartifact_test");
+        assertNotNull(project);
+        CopyArtifact copyArtifact = project.getBuildersList().get(CopyArtifact.class);
+        assertNotNull(copyArtifact);
+        
+        // projectName is migrated correctly.
+        assertNotNull(copyArtifact.getProjectName());
+        assertTrue(copyArtifact.getProjectName().length() != 0);
+        
+        // Verify a field in configure page is filled.
+        WebClient wc = createWebClient();
+        HtmlPage configPage = wc.getPage(project, "configure");
+        HtmlForm configForm = configPage.getFormByName("config");
+        // Ad-hoc method to find out the projectName field.
+        HtmlTextInput projectNameInput = null;
+        for (HtmlInput input: configForm.getInputsByName("_.projectName")) {
+            if(input instanceof HtmlTextInput && input.hasAttribute("checkurl")
+                    && input.getAttribute("checkurl").contains("CopyArtifact")) {
+                projectNameInput = (HtmlTextInput)input;
+                break;
+            }
+        }
+        assertNotNull(projectNameInput);
+        assertNotNull(projectNameInput.getValueAttribute());
+        assertTrue(projectNameInput.getValueAttribute().length() != 0);
+    }
 }
