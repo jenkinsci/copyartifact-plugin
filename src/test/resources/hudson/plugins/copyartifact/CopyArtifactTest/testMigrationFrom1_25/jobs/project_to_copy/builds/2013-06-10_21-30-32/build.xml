@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.ParametersAction>
+      <parameters>
+        <hudson.model.StringParameterValue>
+          <name>PARAM1</name>
+          <description></description>
+          <value>value1</value>
+        </hudson.model.StringParameterValue>
+      </parameters>
+    </hudson.model.ParametersAction>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-UserCause>
+          <authenticationName>anonymous</authenticationName>
+        </hudson.model.Cause_-UserCause>
+      </causes>
+    </hudson.model.CauseAction>
+  </actions>
+  <number>1</number>
+  <result>SUCCESS</result>
+  <duration>93</duration>
+  <charset>windows-31j</charset>
+  <keepLog>false</keepLog>
+  <builtOn></builtOn>
+  <workspace>project_to_copy</workspace>
+  <hudsonVersion>1.424</hudsonVersion>
+  <scm class="hudson.scm.NullChangeLogParser"/>
+  <culprits/>
+</build>
