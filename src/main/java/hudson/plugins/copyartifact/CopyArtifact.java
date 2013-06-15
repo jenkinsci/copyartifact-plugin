@@ -126,8 +126,24 @@ public class CopyArtifact extends Builder {
         }
     }
 
+    /**
+     * Returns projectName.
+     * 
+     * when not configured, return a deprecated field for backword compatibility.
+     * 
+     * @return project name
+     */
     public String getProjectName() {
-        return project;
+        return (project != null)?project:projectName;
+    }
+    
+    /**
+     * Returns whether configured in the version < 1.26, and needed to be migrated.
+     * 
+     * @return whether need migration from version < 1.26
+     */
+    public boolean isNeedMigrationFrom0125() {
+        return (project == null && projectName != null && projectName.indexOf('/') >= 0);
     }
     
     public String getParameters() {
@@ -310,6 +326,14 @@ public class CopyArtifact extends Builder {
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
             return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
+        }
+        
+        /**
+         * @return a short HTML message prompting to migrate settings from version < 1.26
+         */
+        public String getMessageForMigrationFrom0125() {
+            String helpUrl = String.format("%s%s", Jenkins.getInstance().getRootUrl(), getHelpFile("migrationFrom0125"));
+            return FormValidation.warningWithMarkup(Messages.CopyArtifact_MessageForMigrationFrom0125(helpUrl)).renderHtml();
         }
     }
 
