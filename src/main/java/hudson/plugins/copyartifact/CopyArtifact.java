@@ -396,8 +396,13 @@ public class CopyArtifact extends Builder {
 
         private Job getProject(ItemGroup ctx, String projectName) {
             String[] parts = projectName.split("/");
+            if (projectName.startsWith("/")) ctx = Jenkins.getInstance();
             for (String part : parts) {
-                if (part == null) continue;
+                if (part.length() == 0) continue;
+                if (part.equals("..")) {
+                    ctx = ((Item) ctx).getParent();
+                    continue;
+                }
                 Item i = ctx.getItem(part);
                 if (i instanceof Job) return (Job) i;
                 ctx = (ItemGroup) i;
