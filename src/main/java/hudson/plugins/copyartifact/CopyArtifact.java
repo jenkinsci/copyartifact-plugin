@@ -36,20 +36,7 @@ import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractItem;
-import hudson.model.AbstractProject;
-import hudson.model.Build;
-import hudson.model.BuildListener;
-import hudson.model.Descriptor;
-import hudson.model.EnvironmentContributingAction;
-import hudson.model.Hudson;
-import hudson.model.ItemGroup;
-import hudson.model.Job;
-import hudson.model.Item;
-import hudson.model.Project;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.RunListener;
 import hudson.security.SecurityRealm;
@@ -318,17 +305,30 @@ public class CopyArtifact extends Builder {
     public static final class ListenerImpl extends ItemListener {
         @Override
         public void onRenamed(Item item, String oldName, String newName) {
+            String oldFullName = Items.getCanonicalName(item.getParent(), oldName);
+            String newFullName = Items.getCanonicalName(item.getParent(), newName);
             for (AbstractProject<?,?> project
                     : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                 try {
-                for (CopyArtifact ca : getCopiers(project))
-                    if (ca.getProjectName().equals(oldName))
-                        ca.project = newName;
-                    else if (ca.getProjectName().startsWith(oldName + '/'))
-                        // Support rename for "MatrixJobName/AxisName=value" type of name
-                        ca.project = newName + ca.project.substring(oldName.length());
-                    else continue;
-                    project.save();
+                for (CopyArtifact ca : getCopiers(project)) {
+                    String projectName = ca.getProjectName();
+
+                    String suffix = "";
+                    // Support rename for "MatrixJobName/AxisName=value" type of name
+                    int i = projectName.indexOf('=');
+                    if (i > 0) {
+                        int end = projectName.substring(0,i).lastIndexOf('/');
+                        suffix = projectName.substring(end);
+                        projectName = projectName.substring(0, end);
+                    }
+
+                    ItemGroup context = project.getParent();
+                    String newProjectName = Items.computeRelativeNamesAfterRenaming(oldFullName, newFullName, projectName, context);
+                    if (!projectName.equals(newProjectName)) {
+                        ca.project = newProjectName + suffix;
+                        project.save();
+                    }
+                }
                 } catch (IOException ex) {
                     Logger.getLogger(ListenerImpl.class.getName()).log(Level.WARNING,
                             "Failed to resave project " + project.getName()
