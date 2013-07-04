@@ -321,14 +321,15 @@ public class CopyArtifact extends Builder {
             for (AbstractProject<?,?> project
                     : Hudson.getInstance().getAllItems(AbstractProject.class)) {
                 try {
-                for (CopyArtifact ca : getCopiers(project))
-                    if (ca.getProjectName().equals(oldName))
-                        ca.project = newName;
-                    else if (ca.getProjectName().startsWith(oldName + '/'))
-                        // Support rename for "MatrixJobName/AxisName=value" type of name
-                        ca.project = newName + ca.project.substring(oldName.length());
-                    else continue;
-                    project.save();
+                    for (CopyArtifact ca : getCopiers(project)) {
+                        if (ca.getProjectName().equals(oldName))
+                            ca.project = newName;
+                        else if (ca.getProjectName().startsWith(oldName + '/'))
+                            // Support rename for "MatrixJobName/AxisName=value" type of name
+                            ca.project = newName + ca.project.substring(oldName.length());
+                        else continue;
+                        project.save();
+                    }
                 } catch (IOException ex) {
                     Logger.getLogger(ListenerImpl.class.getName()).log(Level.WARNING,
                             "Failed to resave project " + project.getName()
