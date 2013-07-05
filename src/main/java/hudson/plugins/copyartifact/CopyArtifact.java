@@ -34,6 +34,7 @@ import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.maven.MavenModule;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.AbstractBuild;
@@ -209,7 +210,7 @@ public class CopyArtifact extends Builder {
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
             if (envData != null) {
-                envData.add(expandedProject, src.getNumber());
+                envData.add(getItemGroup(build), expandedProject, src.getNumber());
             }
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
@@ -245,6 +246,18 @@ public class CopyArtifact extends Builder {
             return false;
         }
     }
+
+    // retrieve the "folder" (jenkins root if no folder used) for this build
+    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
+        ItemGroup group = build.getProject().getParent();
+        if (group instanceof Job) {
+            // MatrixProject, MavenModuleSet, IvyModuleSet or comparable
+            return ((Job) group).getParent();
+        }
+        return group;
+
+    }
+
 
     private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, FilePath targetDir,
             FilePath baseTargetDir, Copier copier, PrintStream console)
@@ -371,13 +384,31 @@ public class CopyArtifact extends Builder {
         // Decided not to record this data in build.xml, so marked transient:
         private transient Map<String,String> data = new HashMap<String,String>();
 
-        private void add(String projectName, int buildNumber) {
+        private void add(ItemGroup ctx, String projectName, int buildNumber) {
             if (data==null) return;
-            int i = projectName.indexOf('/'); // Omit any detail after a /
-            if (i > 0) projectName = projectName.substring(0, i);
+            Item item = getProject(ctx, projectName);
+            // Use full name if configured with absolute path
+            // and relative otherwise
+            projectName = projectName.startsWith("/") ? item.getFullName() : item.getRelativeNameFrom(ctx);
             data.put("COPYARTIFACT_BUILD_NUMBER_"
                        + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
                      Integer.toString(buildNumber));
+        }
+
+        private Job getProject(ItemGroup ctx, String projectName) {
+            String[] parts = projectName.split("/");
+            if (projectName.startsWith("/")) ctx = Jenkins.getInstance();
+            for (String part : parts) {
+                if (part.length() == 0) continue;
+                if (part.equals("..")) {
+                    ctx = ((Item) ctx).getParent();
+                    continue;
+                }
+                Item i = ctx.getItem(part);
+                if (i instanceof Job) return (Job) i;
+                ctx = (ItemGroup) i;
+            }
+            return null;
         }
 
         public void buildEnvVars(AbstractBuild<?,?> build, EnvVars env) {
