@@ -1,0 +1,19 @@
+<div>
+<p>
+Since Copy Artifact 1.26, you should specify parameters to select builds not in <tt>Project name</tt>, but in <tt>Parameter filters</tt>.
+Reconfigure <tt>Project name</tt> and <tt>Parameter filters</tt> in a proper way if you want to filter builds with parameters.
+Saving the configuration without reconfiguring may cause sequential builds fail. 
+Axes of multi-configuration projects and modules of maven2/3 projects are specified in <tt>Project name</tt> as in Copy Artifact 1.25.
+</p>
+<p>
+Projects configured with Copy Artifact 1.25 behaves as followings:
+<dl>
+  <dt>Running a build without reconfiguration after update</dt>
+    <dd>Migration of the configuration is done automatically with information retrieved in building.</dd>
+  <dt>Copying a project without reconfiguration after update</dt>
+    <dd>Migration of the configuration is done automatically with information retrieved in copying.</dd>
+  <dt>Browse the project configuration page after update</dt>
+    <dd>No migration is done for sufficient information about the project cannot be retrieved for the design of Jenkins. <b>Saving the configuration without verifying may break the configuration, and cause build errors.</b></dd>
+</dl>
+</p>
+</div>

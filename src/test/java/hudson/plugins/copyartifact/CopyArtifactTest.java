@@ -25,6 +25,7 @@ package hudson.plugins.copyartifact;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.matrix.Axis;
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
@@ -62,6 +63,7 @@ import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.Callable;
 import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
@@ -75,6 +77,10 @@ import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+
+import com.gargoylesoftware.htmlunit.html.HtmlAnchor;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -946,6 +952,149 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject copier = jenkins.getItemByFullName("copier", FreeStyleProject.class);
         assertBuildStatusSuccess(copier.scheduleBuild2(0));
         assertEquals("jenkins-new-1\n", copier.getLastBuild().getWorkspace().child("stuff").readToString());
+    }
+    
+    /**
+     * Tests that migration alerts are shown as expected.
+     * @throws Exception 
+     */
+    @LocalData
+    public void testConfigurationFrom0125() throws Exception {
+        WebClient wc = createWebClient();
+        
+        // a project name without parameters
+        {
+            FreeStyleProject project = jenkins.getItem("copy_from_freestyle_wo_parameter", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            CopyArtifact copyArtifact = Util.filter(project.getBuilders(), CopyArtifact.class).get(0);
+            assertEquals("freestyle_to_copyfrom", copyArtifact.getProjectName());    // backward compatibility.
+            assertNull(copyArtifact.getParameters());
+            
+            // indicates that migration is needed.
+            assertFalse(copyArtifact.isNeedMigrationFrom0125());
+            
+            // Test that an alert is not shown.
+            HtmlPage configPage = wc.getPage(project, "configure");
+            List<HtmlAnchor> nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(0, nodeList.size());
+        }
+        
+        // a project name with a parameter
+        {
+            FreeStyleProject project = jenkins.getItem("copy_from_freestyle_w_parameter", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            CopyArtifact copyArtifact = Util.filter(project.getBuilders(), CopyArtifact.class).get(0);
+            assertEquals("freestyle_to_copyfrom/PARAM1=value1", copyArtifact.getProjectName());    // backward compatibility.
+            assertNull(copyArtifact.getParameters());
+            
+            // indicates that migration is needed.
+            assertTrue(copyArtifact.isNeedMigrationFrom0125());
+            
+            // Test that an alert is shown.
+            HtmlPage configPage = wc.getPage(project, "configure");
+            List<HtmlAnchor> nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(1, nodeList.size());
+            
+            // Trigger a build. This migrates the configuration.
+            assertBuildStatusSuccess(project.scheduleBuild2(project.getQuietPeriod()));
+            
+            project = jenkins.getItem("copy_from_freestyle_w_parameter", jenkins, FreeStyleProject.class);
+            copyArtifact = Util.filter(project.getBuilders(), CopyArtifact.class).get(0);
+            assertEquals("freestyle_to_copyfrom", copyArtifact.getProjectName());
+            assertEquals("PARAM1=value1", copyArtifact.getParameters());
+            
+            // indicates that migration is not needed any more.
+            assertFalse(copyArtifact.isNeedMigrationFrom0125());
+            
+            // Test that an alert is suppressed.
+            configPage = wc.getPage(project, "configure");
+            nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(0, nodeList.size());
+        }
+        
+        // a project name for multi-configuration project.
+        {
+            FreeStyleProject project = jenkins.getItem("copy_from_multi", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            CopyArtifact copyArtifact = Util.filter(project.getBuilders(), CopyArtifact.class).get(0);
+            assertEquals("multi_to_copyfrom/AXIS1=value2", copyArtifact.getProjectName());    // backward compatibility.
+            assertNull(copyArtifact.getParameters());
+            
+            // indicates that migration is needed.
+            assertTrue(copyArtifact.isNeedMigrationFrom0125());
+            
+            // Test that an alert is shown.
+            HtmlPage configPage = wc.getPage(project, "configure");
+            List<HtmlAnchor> nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(1, nodeList.size());
+            
+            //// once saved, alerts are not shown
+            HtmlForm configForm = configPage.getFormByName("config");
+            submit(configForm);
+            
+            project = jenkins.getItem("copy_from_multi", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            copyArtifact = Util.filter(project.getBuilders(), CopyArtifact.class).get(0);
+            assertEquals("multi_to_copyfrom/AXIS1=value2", copyArtifact.getProjectName());
+            assertEquals(null, copyArtifact.getParameters());
+            
+            // indicates that migration is not needed any more.
+            assertFalse(copyArtifact.isNeedMigrationFrom0125());
+            
+            // Test that alerts are not shown.
+            configPage = wc.getPage(project, "configure");
+            nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(0, nodeList.size());
+        }
+        
+        // a project with two copy-artifact to be migrated.
+        {
+            FreeStyleProject project = jenkins.getItem("copy_from_freestyle2", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            List<CopyArtifact> copyArtifactList = Util.filter(project.getBuilders(), CopyArtifact.class);
+            CopyArtifact copyArtifact1 = copyArtifactList.get(0);
+            assertEquals("freestyle_to_copyfrom/PARAM1=value1", copyArtifact1.getProjectName());    // backward compatibility.
+            assertNull(copyArtifact1.getParameters());
+            assertTrue(copyArtifact1.isNeedMigrationFrom0125());
+            
+            CopyArtifact copyArtifact2 = copyArtifactList.get(1);
+            assertEquals("freestyle_to_copyfrom/PARAM1=value2", copyArtifact2.getProjectName());    // backward compatibility.
+            assertNull(copyArtifact2.getParameters());
+            assertTrue(copyArtifact2.isNeedMigrationFrom0125());
+            
+            // Test that alerts are shown.
+            HtmlPage configPage = wc.getPage(project, "configure");
+            List<HtmlAnchor> nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(2, nodeList.size());
+            
+            //// once saved, alerts are not shown
+            HtmlForm configForm = configPage.getFormByName("config");
+            submit(configForm);
+            
+            project = jenkins.getItem("copy_from_freestyle2", jenkins, FreeStyleProject.class);
+            assertNotNull(project);
+            
+            copyArtifactList = Util.filter(project.getBuilders(), CopyArtifact.class);
+            copyArtifact1 = copyArtifactList.get(0);
+            assertEquals("", copyArtifact1.getProjectName());   // projectName is reset to blank for it's invalid.
+            assertEquals(null, copyArtifact1.getParameters());
+            assertFalse(copyArtifact1.isNeedMigrationFrom0125());
+            
+            copyArtifact2 = copyArtifactList.get(1);
+            assertEquals("", copyArtifact2.getProjectName());   // projectName is reset to blank for it's invalid. 
+            assertEquals(null, copyArtifact2.getParameters());
+            assertFalse(copyArtifact2.isNeedMigrationFrom0125());
+            
+            // Test that alerts are not shown.
+            configPage = wc.getPage(project, "configure");
+            nodeList = configPage.getByXPath("//a[@class='copy-artifact-migration-from0125']");
+            assertEquals(0, nodeList.size());
+        }
     }
 
 }

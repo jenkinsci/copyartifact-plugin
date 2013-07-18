@@ -25,6 +25,11 @@ THE SOFTWARE.
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:ca="/hudson/plugins/copyartifact">
   <f:entry title="${%Project name}" field="projectName">
     <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
+    <j:if test="${instance.needMigrationFrom0125}">
+      <j:out value="${descriptor.messageForMigrationFrom0125}" />
+      <div class="help">Loading...</div>
+      <st:adjunct includes="hudson.plugins.copyartifact.CopyArtifact.messageForMigrationFrom0125"/>
+    </j:if>
   </f:entry>
   <ca:selectorList currentSelector="${instance.buildSelector}"
       name="selector" title="${%Which build}"/>
