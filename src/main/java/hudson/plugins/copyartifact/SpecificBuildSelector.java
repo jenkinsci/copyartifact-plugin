@@ -28,6 +28,8 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -35,7 +37,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * @author Alan Harder
  */
 public class SpecificBuildSelector extends BuildSelector {
-    private String buildNumber;
+
+    private static final Logger LOGGER = Logger.getLogger(SpecificBuildSelector.class.getName());
+
+    private final String buildNumber;
 
     @DataBoundConstructor
     public SpecificBuildSelector(String buildNumber) {
@@ -49,9 +54,20 @@ public class SpecificBuildSelector extends BuildSelector {
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         String num = env.expand(buildNumber);
-        if (num.startsWith("$")) return null; // unresolved variable, probably unset
+        if (num.startsWith("$")) {
+            LOGGER.log(Level.FINE, "unresolved variable {0}", num);
+            return null;
+        }
         Run<?,?> run = job.getBuildByNumber(Integer.parseInt(num));
-        return (run != null && filter.isSelectable(run, env)) ? run : null;
+        if (run == null) {
+            LOGGER.log(Level.FINE, "no such build {0} in {1}", new Object[] {num, job.getFullName()});
+            return null;
+        }
+        if (!filter.isSelectable(run, env)) {
+            LOGGER.log(Level.FINE, "{0} claims {1} is not selectable", new Object[] {filter, run});
+            return null;
+        }
+        return run;
     }
 
     @Extension(ordinal=-10)
