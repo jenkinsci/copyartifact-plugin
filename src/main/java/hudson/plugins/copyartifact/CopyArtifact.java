@@ -123,6 +123,12 @@ public class CopyArtifact extends Builder {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
+            if (obj.isUpgradeNeeded()) {
+                // A Copy Artifact to be upgraded.
+                // For information of the containing project is needed, 
+                // The upgrade will be performed by CopyArtifactUpgradeListener.
+                CopyArtifactUpgradeListener.setUpgradeNeeded();
+            }
         }
     }
 
@@ -154,20 +160,27 @@ public class CopyArtifact extends Builder {
         return optional != null && optional;
     }
 
-    private void upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
-        if (projectName != null) {
-            int i = projectName.lastIndexOf('/');
-            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
-                project = projectName.substring(0, i);
-                parameters = projectName.substring(i + 1);
-            } else {
-                project = projectName;
-                parameters = null;
-            }
-            Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
-            projectName = null;
-            job.save();
+    /* package scope */
+    boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
+        if (!isUpgradeNeeded()) {
+            return false;
         }
+        int i = projectName.lastIndexOf('/');
+        if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
+            project = projectName.substring(0, i);
+            parameters = projectName.substring(i + 1);
+        } else {
+            project = projectName;
+            parameters = null;
+        }
+        Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
+        projectName = null;
+        job.save();
+        return true;
+    }
+
+    private boolean isUpgradeNeeded() {
+        return (projectName != null);
     }
 
     @Override
