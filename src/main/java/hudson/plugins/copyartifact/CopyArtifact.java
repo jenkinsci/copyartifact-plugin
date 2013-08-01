@@ -34,7 +34,6 @@ import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
-import hudson.maven.MavenModule;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
@@ -174,6 +173,8 @@ public class CopyArtifact extends Builder {
                 // Would like to check if user who started build has permission, but unable to get
                 // Authentication object for arbitrary user.. instead, only allow use of parameters
                 // to select jobs which are accessible to all authenticated users.
+                // TODO JENKINS-16956 would obsolete this block, since getItem above would return null if unauthorized.
+                // Cf.: https://github.com/jenkinsci/github-oauth-plugin/pull/9
                 && !job.getACL().hasPermission(
                         new UsernamePasswordAuthenticationToken("authenticated", "",
                                 new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
