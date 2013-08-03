@@ -33,6 +33,7 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.model.BooleanParameterDefinition;
 import hudson.model.BooleanParameterValue;
 import hudson.model.Action;
@@ -55,6 +56,7 @@ import hudson.security.GlobalMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
+import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
@@ -69,6 +71,7 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.TestExtension;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
@@ -930,6 +933,47 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(configXml, configXml.contains("<parameters>which=${which}</parameters>"));
     }
 
+    // A builder wrapping another builder.
+    public static class WrapBuilder extends Builder {
+        private Builder wrappedBuilder;
+        
+        @Override
+        public boolean perform(AbstractBuild<?, ?> build, Launcher launcher,
+                BuildListener listener) throws InterruptedException, IOException {
+            return wrappedBuilder.perform(build, launcher, listener);
+        }
+        
+        public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
+            @Override
+            public boolean isApplicable(Class<? extends AbstractProject> jobType) {
+                return true;
+            }
+            
+            @Override
+            public String getDisplayName() {
+                return "WrapBuilder";
+            }
+        }
+    }
+    
+    @LocalData
+    public void testWrappedCopierProjectNameSplit() throws Exception {
+        // Project "copier" is configured with CopyArtifact wrapped with WrapBuilder.
+        // This causes failure of upgrading on loaded.
+        // Upgrading is performed when build is triggered.
+        FreeStyleProject copier = Jenkins.getInstance().getItemByFullName("copier", FreeStyleProject.class);
+        assertNotNull(copier);
+        String configXml = copier.getConfigFile().asString();
+        // not upgraded on loaded
+        assertTrue(configXml, configXml.contains("<projectName>plain</projectName>"));
+        
+        // upgraded when a build is triggered.
+        assertBuildStatusSuccess(copier.scheduleBuild2(0));
+        configXml = copier.getConfigFile().asString();
+        assertFalse(configXml, configXml.contains("<projectName>"));
+        assertTrue(configXml, configXml.contains("<project>plain</project>"));
+    }
+    
     @Bug(17447)
     @LocalData
     public void testRenameBeforeProjectNameSplit() throws Exception {
