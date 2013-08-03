@@ -32,6 +32,8 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
@@ -83,6 +85,10 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class CopyArtifact extends Builder {
 
+    // specifies upgradeCopyArtifact is needed to work.
+    private static boolean upgradeNeeded = false;
+    private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
+
     @Deprecated private String projectName;
     private String project;
     private String parameters;
@@ -126,9 +132,42 @@ public class CopyArtifact extends Builder {
             if (obj.isUpgradeNeeded()) {
                 // A Copy Artifact to be upgraded.
                 // For information of the containing project is needed, 
-                // The upgrade will be performed by CopyArtifactUpgradeListener.
-                CopyArtifactUpgradeListener.setUpgradeNeeded();
+                // The upgrade will be performed by upgradeCopyArtifact.
+                setUpgradeNeeded();
             }
+        }
+    }
+
+    private static synchronized void setUpgradeNeeded() {
+        if (!upgradeNeeded) {
+            LOGGER.info("Upgrade for Copy Artifact is scheduled.");
+            upgradeNeeded = true;
+        }
+    }
+
+    @Initializer(after=InitMilestone.JOB_LOADED)
+    public static void upgradeCopyArtifact() {
+        if (!upgradeNeeded) {
+            return;
+        }
+        upgradeNeeded = false;
+        
+        boolean isUpgraded = false;
+        for (Project<?,?> project: Jenkins.getInstance().getAllItems(Project.class)) {
+            for (CopyArtifact target: Util.filter(project.getBuilders(), CopyArtifact.class)) {
+                try {
+                    if (target.upgradeIfNecessary(project)) {
+                        isUpgraded = true;
+                    }
+                } catch(IOException e) {
+                    LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
+                }
+            }
+        }
+        
+        if (!isUpgraded) {
+            // No CopyArtifact is upgraded.
+            LOGGER.warning("Update of CopyArtifact is scheduled, but no CopyArtifact to upgrade was found!");
         }
     }
 
@@ -160,8 +199,7 @@ public class CopyArtifact extends Builder {
         return optional != null && optional;
     }
 
-    /* package scope */
-    boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
+    private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
             int i = projectName.lastIndexOf('/');
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
@@ -171,7 +209,7 @@ public class CopyArtifact extends Builder {
                 project = projectName;
                 parameters = null;
             }
-            Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
+            LOGGER.log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
             job.save();
             return true;
