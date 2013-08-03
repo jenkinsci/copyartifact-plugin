@@ -145,6 +145,16 @@ public class CopyArtifact extends Builder {
         }
     }
 
+    // get all CopyArtifacts configured to AbstractProject. This works both for Project and MatrixProject.
+    private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
+        DescribableList<Builder,Descriptor<Builder>> list =
+                project instanceof Project ? ((Project<?,?>)project).getBuildersList()
+                  : (project instanceof MatrixProject ?
+                      ((MatrixProject)project).getBuildersList() : null);
+        if (list == null) return Collections.emptyList();
+        return list.getAll(CopyArtifact.class);
+    }
+
     @Initializer(after=InitMilestone.JOB_LOADED)
     public static void upgradeCopyArtifact() {
         if (!upgradeNeeded) {
@@ -153,15 +163,19 @@ public class CopyArtifact extends Builder {
         upgradeNeeded = false;
         
         boolean isUpgraded = false;
-        for (Project<?,?> project: Jenkins.getInstance().getAllItems(Project.class)) {
-            for (CopyArtifact target: Util.filter(project.getBuilders(), CopyArtifact.class)) {
-                try {
-                    if (target.upgradeIfNecessary(project)) {
-                        isUpgraded = true;
+        for (AbstractProject<?,?> project: Jenkins.getInstance().getAllItems(AbstractProject.class)) {
+            try {
+                for (CopyArtifact target: getCopiers(project)) {
+                    try {
+                        if (target.upgradeIfNecessary(project)) {
+                            isUpgraded = true;
+                        }
+                    } catch(IOException e) {
+                        LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
                     }
-                } catch(IOException e) {
-                    LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
                 }
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
             }
         }
         
@@ -391,12 +405,7 @@ public class CopyArtifact extends Builder {
         }
 
         private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
-            DescribableList<Builder,Descriptor<Builder>> list =
-                    project instanceof Project ? ((Project<?,?>)project).getBuildersList()
-                      : (project instanceof MatrixProject ?
-                          ((MatrixProject)project).getBuildersList() : null);
-            if (list == null) return Collections.emptyList();
-            List<CopyArtifact> copiers = list.getAll(CopyArtifact.class);
+            List<CopyArtifact> copiers = CopyArtifact.getCopiers(project);
             for (CopyArtifact copier : copiers) {
                 copier.upgradeIfNecessary(project);
             }

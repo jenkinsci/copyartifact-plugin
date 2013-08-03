@@ -920,6 +920,14 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(configXml, configXml.contains("<project>parameterized</project>"));
         assertTrue(configXml, configXml.contains("<parameters>good=true</parameters>"));
         assertTrue(configXml, configXml.contains("<project>matrix/which=two</project>"));
+        
+        MatrixProject matrixCopier = Jenkins.getInstance().getItemByFullName("matrix-copier", MatrixProject.class);
+        assertNotNull(matrixCopier);
+        configXml = matrixCopier.getConfigFile().asString();
+        assertFalse(configXml, configXml.contains("<projectName>"));
+        // When a project is specified with a variable, it is split improperly.
+        assertTrue(configXml, configXml.contains("<project>matrix</project>"));
+        assertTrue(configXml, configXml.contains("<parameters>which=${which}</parameters>"));
     }
 
     @Bug(17447)
