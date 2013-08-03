@@ -162,21 +162,22 @@ public class CopyArtifact extends Builder {
 
     /* package scope */
     boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
-        if (!isUpgradeNeeded()) {
+        if (isUpgradeNeeded()) {
+            int i = projectName.lastIndexOf('/');
+            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
+                project = projectName.substring(0, i);
+                parameters = projectName.substring(i + 1);
+            } else {
+                project = projectName;
+                parameters = null;
+            }
+            Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
+            projectName = null;
+            job.save();
+            return true;
+        } else {
             return false;
         }
-        int i = projectName.lastIndexOf('/');
-        if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
-            project = projectName.substring(0, i);
-            parameters = projectName.substring(i + 1);
-        } else {
-            project = projectName;
-            parameters = null;
-        }
-        Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
-        projectName = null;
-        job.save();
-        return true;
     }
 
     private boolean isUpgradeNeeded() {
