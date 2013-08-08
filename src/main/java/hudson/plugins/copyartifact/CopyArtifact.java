@@ -32,6 +32,8 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
@@ -69,6 +71,10 @@ import org.kohsuke.stapler.StaplerRequest;
  * @author Alan Harder
  */
 public class CopyArtifact extends Builder {
+
+    // specifies upgradeCopyArtifact is needed to work.
+    private static boolean upgradeNeeded = false;
+    private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
 
     @Deprecated private String projectName;
     private String project;
@@ -110,6 +116,59 @@ public class CopyArtifact extends Builder {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
+            if (obj.isUpgradeNeeded()) {
+                // A Copy Artifact to be upgraded.
+                // For information of the containing project is needed, 
+                // The upgrade will be performed by upgradeCopyArtifact.
+                setUpgradeNeeded();
+            }
+        }
+    }
+
+    private static synchronized void setUpgradeNeeded() {
+        if (!upgradeNeeded) {
+            LOGGER.info("Upgrade for Copy Artifact is scheduled.");
+            upgradeNeeded = true;
+        }
+    }
+
+    // get all CopyArtifacts configured to AbstractProject. This works both for Project and MatrixProject.
+    private static List<CopyArtifact> getCopyArtifactsInProject(AbstractProject<?,?> project) throws IOException {
+        DescribableList<Builder,Descriptor<Builder>> list =
+                project instanceof Project ? ((Project<?,?>)project).getBuildersList()
+                  : (project instanceof MatrixProject ?
+                      ((MatrixProject)project).getBuildersList() : null);
+        if (list == null) return Collections.emptyList();
+        return list.getAll(CopyArtifact.class);
+    }
+
+    @Initializer(after=InitMilestone.JOB_LOADED)
+    public static void upgradeCopyArtifact() {
+        if (!upgradeNeeded) {
+            return;
+        }
+        upgradeNeeded = false;
+        
+        boolean isUpgraded = false;
+        for (AbstractProject<?,?> project: Jenkins.getInstance().getAllItems(AbstractProject.class)) {
+            try {
+                for (CopyArtifact target: getCopyArtifactsInProject(project)) {
+                    try {
+                        if (target.upgradeIfNecessary(project)) {
+                            isUpgraded = true;
+                        }
+                    } catch(IOException e) {
+                        LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
+                    }
+                }
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
+            }
+        }
+        
+        if (!isUpgraded) {
+            // No CopyArtifact is upgraded.
+            LOGGER.warning("Update of CopyArtifact is scheduled, but no CopyArtifact to upgrade was found!");
         }
     }
 
@@ -141,8 +200,8 @@ public class CopyArtifact extends Builder {
         return optional != null && optional;
     }
 
-    private void upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
-        if (projectName != null) {
+    private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
+        if (isUpgradeNeeded()) {
             int i = projectName.lastIndexOf('/');
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
@@ -151,10 +210,17 @@ public class CopyArtifact extends Builder {
                 project = projectName;
                 parameters = null;
             }
-            Logger.getLogger(CopyArtifact.class.getName()).log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
+            LOGGER.log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
             job.save();
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    private boolean isUpgradeNeeded() {
+        return (projectName != null);
     }
 
     @Override
@@ -353,12 +419,7 @@ public class CopyArtifact extends Builder {
         }
 
         private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
-            DescribableList<Builder,Descriptor<Builder>> list =
-                    project instanceof Project ? ((Project<?,?>)project).getBuildersList()
-                      : (project instanceof MatrixProject ?
-                          ((MatrixProject)project).getBuildersList() : null);
-            if (list == null) return Collections.emptyList();
-            List<CopyArtifact> copiers = list.getAll(CopyArtifact.class);
+            List<CopyArtifact> copiers = CopyArtifact.getCopyArtifactsInProject(project);
             for (CopyArtifact copier : copiers) {
                 copier.upgradeIfNecessary(project);
             }
