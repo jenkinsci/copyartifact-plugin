@@ -146,7 +146,7 @@ public class CopyArtifact extends Builder {
     }
 
     // get all CopyArtifacts configured to AbstractProject. This works both for Project and MatrixProject.
-    private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
+    private static List<CopyArtifact> getCopyArtifactsInProject(AbstractProject<?,?> project) throws IOException {
         DescribableList<Builder,Descriptor<Builder>> list =
                 project instanceof Project ? ((Project<?,?>)project).getBuildersList()
                   : (project instanceof MatrixProject ?
@@ -165,7 +165,7 @@ public class CopyArtifact extends Builder {
         boolean isUpgraded = false;
         for (AbstractProject<?,?> project: Jenkins.getInstance().getAllItems(AbstractProject.class)) {
             try {
-                for (CopyArtifact target: getCopiers(project)) {
+                for (CopyArtifact target: getCopyArtifactsInProject(project)) {
                     try {
                         if (target.upgradeIfNecessary(project)) {
                             isUpgraded = true;
@@ -405,7 +405,7 @@ public class CopyArtifact extends Builder {
         }
 
         private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
-            List<CopyArtifact> copiers = CopyArtifact.getCopiers(project);
+            List<CopyArtifact> copiers = CopyArtifact.getCopyArtifactsInProject(project);
             for (CopyArtifact copier : copiers) {
                 copier.upgradeIfNecessary(project);
             }
