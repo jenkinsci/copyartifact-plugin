@@ -419,7 +419,7 @@ public class CopyArtifact extends Builder {
         }
 
         private static List<CopyArtifact> getCopiers(AbstractProject<?,?> project) throws IOException {
-            List<CopyArtifact> copiers = CopyArtifact.getCopyArtifactsInProject(project);
+            List<CopyArtifact> copiers = getCopyArtifactsInProject(project);
             for (CopyArtifact copier : copiers) {
                 copier.upgradeIfNecessary(project);
             }

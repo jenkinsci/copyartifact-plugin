@@ -73,7 +73,6 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
-import org.jvnet.hudson.test.TestExtension;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.UnstableBuilder;
