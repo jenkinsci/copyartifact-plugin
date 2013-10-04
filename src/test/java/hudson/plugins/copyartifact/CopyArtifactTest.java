@@ -32,25 +32,8 @@ import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BooleanParameterDefinition;
-import hudson.model.BooleanParameterValue;
-import hudson.model.Action;
-import hudson.model.Build;
-import hudson.model.BuildListener;
-import hudson.model.Fingerprint;
-import hudson.model.Item;
+import hudson.model.*;
 import hudson.model.Cause.UserCause;
-import hudson.model.ChoiceParameterDefinition;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.Hudson;
-import hudson.model.ParametersAction;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Result;
-import hudson.model.StringParameterDefinition;
-import hudson.model.StringParameterValue;
 import hudson.security.ACL;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
@@ -75,6 +58,7 @@ import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
+import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -114,7 +98,7 @@ public class CopyArtifactTest extends HudsonTestCase {
     private FreeStyleProject createArtifactProject(String name) throws IOException {
         FreeStyleProject p = name != null ? createFreeStyleProject(name) : createFreeStyleProject();
         p.getBuildersList().add(new ArtifactBuilder());
-        p.getPublishersList().add(new ArtifactArchiver("**", "", false));
+        p.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
         return p;
     }
 
@@ -126,7 +110,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         MatrixProject p = createMatrixProject();
         p.setAxes(new AxisList(new Axis("FOO", "one", "two")));
         p.getBuildersList().add(new ArtifactBuilder());
-        p.getPublishersList().add(new ArtifactArchiver("**", "", false));
+        p.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
         return p;
     }
 
@@ -289,7 +273,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         MatrixProject mp = createMatrixProject();
         mp.setAxes(new AxisList(new Axis("ARCH", "sparc", "x86")));
         mp.getBuildersList().add(new ArchMatrixBuilder());
-        mp.getPublishersList().add(new ArtifactArchiver("target/*", "", false));
+        mp.getPublishersList().add(new ArtifactArchiver("target/*", "", false, false));
         assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName(), null, "", "", true, false, false);
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
@@ -358,7 +342,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         // Turn off automatic archiving and use a post-build step instead.
         // Artifacts will be stored with the parent build instead of the child module builds.
         mp.setIsArchivingDisabled(true);
-        mp.getPublishersList().add(new ArtifactArchiver("moduleB/*.xml", "", false));
+        mp.getPublishersList().add(new ArtifactArchiver("moduleB/*.xml", "", false, false));
         assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName(), null, "", "", true, false, false);
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
@@ -988,6 +972,65 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleProject copier = jenkins.getItemByFullName("copier", FreeStyleProject.class);
         assertBuildStatusSuccess(copier.scheduleBuild2(0));
         assertEquals("jenkins-new-1\n", copier.getLastBuild().getWorkspace().child("stuff").readToString());
+    }
+
+    public void testRelative() throws Exception {
+        MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
+        FreeStyleProject other = folder.createProject(FreeStyleProject.class, "foo");
+        other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+
+        FreeStyleProject p = createProject("folder/foo", null, "", "", true, false, false);
+
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+    }
+
+    @Bug(19833)
+    public void testAbsolute() throws Exception {
+        MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
+        FreeStyleProject other = folder.createProject(FreeStyleProject.class, "foo");
+        other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+
+        FreeStyleProject p = createProject("/folder/foo", null, "", "", true, false, false);
+
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+    }
+
+    public void testAbsoluteFromFolder() throws Exception {
+        FreeStyleProject other = jenkins.createProject(FreeStyleProject.class, "foo");
+        other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+
+        MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
+        FreeStyleProject p = folder.createProject(FreeStyleProject.class, "bar");
+        p.getBuildersList().add(new CopyArtifact("/foo", null, new StatusBuildSelector(true), "", "", false, false));
+
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+    }
+
+    public void testRelativeFromFolder() throws Exception {
+        FreeStyleProject other = jenkins.createProject(FreeStyleProject.class, "foo");
+        other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+
+        MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
+        FreeStyleProject p = folder.createProject(FreeStyleProject.class, "bar");
+        p.getBuildersList().add(new CopyArtifact("../foo", null, new StatusBuildSelector(true), "", "", false, false));
+
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
     }
 
 }

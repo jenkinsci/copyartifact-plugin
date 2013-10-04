@@ -468,7 +468,7 @@ public class CopyArtifact extends Builder {
                 Item i = ctx.getItem(part);
                 if (i == null) {
                     // not a relative job name, fall back to "classic" interpretation
-                    return (Job) Jenkins.getInstance().getItemByFullName(part);
+                    return Jenkins.getInstance().getItemByFullName(part, Job.class);
                 }
                 if (i instanceof Job) return (Job) i;
                 ctx = (ItemGroup) i;
