@@ -270,7 +270,6 @@ public class CopyArtifact extends Builder {
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
 
-            // for backward compatibility, look up the copier as CopyMethod
             Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
 
             if (src instanceof MavenModuleSetBuild) {
