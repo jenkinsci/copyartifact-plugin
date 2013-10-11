@@ -456,22 +456,28 @@ public class CopyArtifact extends Builder {
                      Integer.toString(buildNumber));
         }
 
-        private Job getProject(ItemGroup ctx, String projectName) {
-            String[] parts = projectName.split("/");
-            if (projectName.startsWith("/")) ctx = Jenkins.getInstance();
-            for (String part : parts) {
+        /**
+         * Retrieve root Job identified by this projectPath. For legacy reason, projectPath uses '/' as separator for
+         * job name and parameters or matrix axe, so can't just use {@link Jenkins#getItemByFullName(String)}.
+         * As a workaround, we split the path into parts and retrieve the item(group)s up to a Job.
+         */
+        private Job getProject(ItemGroup ctx, String projectPath) {
+            String[] parts = projectPath.split("/");
+            if (projectPath.startsWith("/")) ctx = Jenkins.getInstance();
+            for (int i =0; i<parts.length; i++) {
+                String part = parts[i];
                 if (part.length() == 0) continue;
                 if (part.equals("..")) {
                     ctx = ((Item) ctx).getParent();
                     continue;
                 }
-                Item i = ctx.getItem(part);
-                if (i == null) {
-                    // not a relative job name, fall back to "classic" interpretation
-                    return Jenkins.getInstance().getItemByFullName(part, Job.class);
+                Item item = ctx.getItem(part);
+                if (item == null && i == 0) {
+                    // not a relative job name, fall back to "classic" interpretation to consider absolute
+                    item = Jenkins.getInstance().getItem(part);
                 }
-                if (i instanceof Job) return (Job) i;
-                ctx = (ItemGroup) i;
+                if (item instanceof Job) return (Job) item;
+                ctx = (ItemGroup) item;
             }
             return null;
         }

@@ -988,7 +988,6 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
     }
 
-    @Bug(19833)
     public void testAbsolute() throws Exception {
         MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
         FreeStyleProject other = folder.createProject(FreeStyleProject.class, "foo");
@@ -996,6 +995,25 @@ public class CopyArtifactTest extends HudsonTestCase {
         other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
 
         FreeStyleProject p = createProject("/folder/foo", null, "", "", true, false, false);
+
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+    }
+
+    @Bug(19833)
+    public void testMostlyAbsolute() throws Exception {
+        MockFolder folder = jenkins.createProject(MockFolder.class, "folder");
+        FreeStyleProject other = folder.createProject(FreeStyleProject.class, "foo");
+        other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+
+        MockFolder folder2 = jenkins.createProject(MockFolder.class, "other");
+        FreeStyleProject p = folder2.createProject(FreeStyleProject.class, "bar");
+
+        // "folder/foo" should be resolved as "/folder/foo" even from "/other/bar", for backward compatibility
+        p.getBuildersList().add(new CopyArtifact("folder/foo", null, new StatusBuildSelector(true), "", "", false, false));
 
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
