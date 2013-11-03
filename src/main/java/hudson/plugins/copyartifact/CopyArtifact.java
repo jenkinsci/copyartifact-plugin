@@ -233,18 +233,10 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(project);
-            Job job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
+            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
             if (job != null && !expandedProject.equals(project)
                 // If projectName is parameterized, need to do permission check on source project.
-                // Would like to check if user who started build has permission, but unable to get
-                // Authentication object for arbitrary user.. instead, only allow use of parameters
-                // to select jobs which are accessible to all authenticated users.
-                // TODO JENKINS-16956 would obsolete this block, since getItem above would return null if unauthorized.
-                // Cf.: https://github.com/jenkinsci/github-oauth-plugin/pull/9
-                && !job.getACL().hasPermission(
-                        new UsernamePasswordAuthenticationToken("authenticated", "",
-                                new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
-                        Item.READ)) {
+                && !canReadFrom(job, build)) {
                 job = null; // Disallow access
             }
             if (job == null) {
@@ -298,6 +290,35 @@ public class CopyArtifact extends Builder {
                     Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
             return false;
         }
+    }
+
+    private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
+        // TODO JENKINS-16956 would obsolete this block, since getItem above would return null if unauthorized.
+        // Cf.: https://github.com/jenkinsci/github-oauth-plugin/pull/9
+        Cause.UserIdCause cause = getRootUserIdCause(build);
+        if (cause != null) {
+            // If triggered from a user, test the permission as that user.
+            return job.getACL().hasPermission(User.get(cause.getUserId()).impersonate(), Item.READ);
+        }
+
+        // If not (triggered from SCM polling, or as a scheduled task),
+        // test the permission as an anonymous authenticated user.
+        return job.getACL().hasPermission(
+                new UsernamePasswordAuthenticationToken("authenticated", "",
+                        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
+                Item.READ);
+    }
+
+    private Cause.UserIdCause getRootUserIdCause(Run<?, ?> build) {
+        while (build != null) {
+            Cause.UserIdCause cause = build.getCause(Cause.UserIdCause.class);
+            if (cause != null) {
+                return cause;
+            }
+            Cause.UpstreamCause upstreamCause = build.getCause(Cause.UpstreamCause.class);
+            build = (upstreamCause != null)?upstreamCause.getUpstreamRun():null;
+        }
+        return null;
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
