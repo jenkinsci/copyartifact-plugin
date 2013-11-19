@@ -37,7 +37,6 @@ import hudson.model.Cause.UserCause;
 import hudson.security.ACL;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
-import hudson.security.Permission;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
@@ -48,9 +47,6 @@ import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
@@ -65,11 +61,6 @@ import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
-import org.xml.sax.SAXException;
-
-import com.gargoylesoftware.htmlunit.ElementNotFoundException;
-import com.gargoylesoftware.htmlunit.WebResponse;
-import com.google.common.collect.Sets;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -1060,127 +1051,4 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
     }
 
-    private class Allow405WebClient extends WebClient {
-        @Override
-        public void throwFailingHttpStatusCodeExceptionIfNecessary(
-                WebResponse webResponse) {
-            // 405 Method Not Allowed is returned when parameter is required.
-            if (webResponse.getStatusCode() == 405) {
-                return;
-            }
-            super.throwFailingHttpStatusCodeExceptionIfNecessary(webResponse);
-        }
-    }
-
-    private void submitBuildForProjectWithoutParameters(WebClient wc, FreeStyleProject project) throws ElementNotFoundException, IOException, SAXException {
-        // This code may get not to work in future versions of Jenkins.
-        // There are several problems:
-        // * A form to resend a request with POST method has no name attribute.
-        // * A button to submit is differ from that of other forms in Jenkins.
-        //   (other forms is with <BUTTON>, but this form is with <SUBMIT>.
-        wc.getPage(project, "build").getFormByName("").submit();
-    }
-
-    @LocalData
-    public void testPerProjectPermissionTriggeredByUser() throws Exception {
-        /*
-         *  LocalData provides following user/password pairs:
-         *   admin/admin : have all privileges
-         *   test1/test1 : have all privileges except accessing jobs.
-         *   test2/test2 : have all privileges except accessing jobs.
-         */
-        User admin = User.get("admin");
-        User test1 = User.get("test1");
-        User test2 = User.get("test2");
-        
-        /*
-         * Prepare projects:
-         *   copiee: a project creates an artifact.
-         *   copier: a project copies an artifact from copiee.
-         *   trigger: a project triggers copier
-         * permissions:
-         *   test1 can access copiee, copier, trigger
-         *   test2 can access copier, trigger
-         */
-        FreeStyleProject copiee = createArtifactProject();
-        Map<Permission, Set<String>> copieePermissions = new HashMap<Permission, Set<String>>();
-        copieePermissions.put(Item.READ, Sets.newHashSet("test1"));
-        copieePermissions.put(Item.BUILD, Sets.newHashSet("test1"));
-        copiee.addProperty(new AuthorizationMatrixProperty(copieePermissions));
-        
-        FreeStyleProject copier = createProject("${copyfrom}", null, "foo.txt", "", false, false, false);
-        copier.addProperty(new ParametersDefinitionProperty(
-                new StringParameterDefinition("copyfrom",  copiee.getFullName())
-        ));
-        Map<Permission, Set<String>> copierPermissions = new HashMap<Permission, Set<String>>();
-        copierPermissions.put(Item.READ, Sets.newHashSet("test1", "test2"));
-        copierPermissions.put(Item.BUILD, Sets.newHashSet("test1", "test2"));
-        copier.addProperty(new AuthorizationMatrixProperty(copierPermissions));
-        
-        FreeStyleProject trigger = createFreeStyleProject();
-        trigger.getPublishersList().add(new BuildTrigger(copier.getFullName(), Result.SUCCESS));
-        Map<Permission, Set<String>> triggerPermissions = new HashMap<Permission, Set<String>>();
-        triggerPermissions.put(Item.READ, Sets.newHashSet("test1", "test2"));
-        triggerPermissions.put(Item.BUILD, Sets.newHashSet("test1", "test2"));
-        trigger.addProperty(new AuthorizationMatrixProperty(triggerPermissions));
-        
-        Jenkins.getInstance().rebuildDependencyGraph();
-        
-        // test permissions
-        assertTrue(copiee.getACL().hasPermission(test1.impersonate(), Item.READ));
-        assertFalse(copiee.getACL().hasPermission(test2.impersonate(), Item.READ));
-        assertTrue(copier.getACL().hasPermission(test1.impersonate(), Item.BUILD));
-        assertTrue(copier.getACL().hasPermission(test2.impersonate(), Item.BUILD));
-        assertTrue(trigger.getACL().hasPermission(test1.impersonate(), Item.BUILD));
-        assertTrue(trigger.getACL().hasPermission(test2.impersonate(), Item.BUILD));
-        
-        // prepare an artifact
-        assertBuildStatusSuccess(copiee.scheduleBuild2(0));
-        
-        // connect to Jenkins with each user.
-        WebClient wcTest1 = new Allow405WebClient().login("test1", "test1");
-        WebClient wcTest2 = new Allow405WebClient().login("test2", "test2");
-        
-        // test1 succeeds to run copier.
-        {
-            assertNull(copier.getLastBuild());
-            submit(wcTest1.getPage(copier, "build").getFormByName("parameters"));
-            waitUntilNoActivityUpTo(60000);
-            FreeStyleBuild b = copier.getLastBuild();
-            assertBuildStatusSuccess(b);
-            assertFile(true, "foo.txt", b);
-            b.delete();
-        }
-        
-        // test2 fails to run copier.
-        {
-            assertNull(copier.getLastBuild());
-            submit(wcTest2.getPage(copier, "build").getFormByName("parameters"));
-            waitUntilNoActivityUpTo(60000);
-            FreeStyleBuild b = copier.getLastBuild();
-            assertBuildStatus(Result.FAILURE, b);
-            b.delete();
-        }
-        
-        // test1 succeeds to run copier via trigger.
-        {
-            assertNull(copier.getLastBuild());
-            submitBuildForProjectWithoutParameters(wcTest1, trigger);
-            waitUntilNoActivityUpTo(60000);
-            FreeStyleBuild b = copier.getLastBuild();
-            assertBuildStatusSuccess(b);
-            assertFile(true, "foo.txt", b);
-            b.delete();
-        }
-        
-        // test2 fails to run copier via trigger.
-        {
-            assertNull(copier.getLastBuild());
-            submitBuildForProjectWithoutParameters(wcTest2, trigger);
-            waitUntilNoActivityUpTo(60000);
-            FreeStyleBuild b = copier.getLastBuild();
-            assertBuildStatus(Result.FAILURE, b);
-            b.delete();
-        }
-    }
 }
