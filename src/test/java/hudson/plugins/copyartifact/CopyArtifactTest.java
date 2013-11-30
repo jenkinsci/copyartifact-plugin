@@ -62,6 +62,17 @@ import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
+/*
+// classes used only in testQueueItemAuthenticator
+import hudson.security.Permission;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import jenkins.security.QueueItemAuthenticatorConfiguration;
+import com.google.common.collect.Sets;
+*/
+
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
  * @author Alan Harder
@@ -1051,4 +1062,127 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
     }
 
+    /* This test is available only for Jenkins >= 1.521.
+     * As I do not upgrade target Jenkins version to preserve compatibility
+     * (the feature supporting QueueItemAuthenticator itself does not need to upgrade target version),
+     * I comment out this test for now.
+     * 
+    private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
+        private final org.acegisecurity.Authentication auth;
+        
+        public TestQueueItemAuthenticator(org.acegisecurity.Authentication auth) {
+            this.auth = auth;
+        }
+        
+        @Override
+        @javax.annotation.CheckForNull
+        public org.acegisecurity.Authentication authenticate(Queue.Item item) {
+            return auth;
+        }
+        
+    }
+    
+    @LocalData
+    public void testQueueItemAuthenticator() throws Exception {
+        
+        // This test may hang without timeout with improper authorization configuration.
+        int TIMEOUT = 60;
+        
+        // LocalData provides following user/password pairs:
+        //  admin/admin : have all privileges
+        //  test1/test1 : have all privileges except accessing jobs.
+        //  test2/test2 : have all privileges except accessing jobs.
+        
+        User admin = User.get("admin");
+        User test1 = User.get("test1");
+        User test2 = User.get("test2");
+        
+        // Prepare projects:
+        //   copiee: a project creates an artifact.
+        //   copier: a project copies an artifact from copiee.
+        // permissions:
+        //   test1 can access copiee, copier
+        //   test2 can access copier
+        //
+        FreeStyleProject copiee = createArtifactProject();
+        Map<Permission, Set<String>> copieePermissions
+                = new HashMap<Permission, Set<String>>();
+        copieePermissions.put(Item.READ, Sets.newHashSet(test1.getId()));
+        copiee.addProperty(new AuthorizationMatrixProperty(copieePermissions));
+        
+        FreeStyleProject copier = createProject("${copyfrom}", null, "foo.txt", "", false, false, false);
+        copier.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("copyfrom",  copiee.getFullName())
+        ));
+        Map<Permission, Set<String>> copierPermissions
+                = new HashMap<Permission, Set<String>>();
+        copierPermissions.put(Item.READ, Sets.newHashSet(test1.getId(), test2.getId()));
+        copierPermissions.put(Item.BUILD, Sets.newHashSet(test1.getId(), test2.getId(), Jenkins.ANONYMOUS.getName()));
+        copier.addProperty(new AuthorizationMatrixProperty(copierPermissions));
+        
+        // test permissions
+        assertTrue (copiee.getACL().hasPermission(admin.impersonate(), Item.READ));
+        assertTrue (copiee.getACL().hasPermission(test1.impersonate(), Item.READ));
+        assertFalse(copiee.getACL().hasPermission(test2.impersonate(), Item.READ));
+        
+        assertTrue (copier.getACL().hasPermission(admin.impersonate(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission(test1.impersonate(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission(test2.impersonate(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission(Jenkins.ANONYMOUS, Item.BUILD));
+        
+        // Computer.BUILD is required since Jenkins 1.521.
+        assertTrue (Jenkins.getInstance().getACL().hasPermission(admin.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.getInstance().getACL().hasPermission(test1.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.getInstance().getACL().hasPermission(test2.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.getInstance().getACL().hasPermission(Jenkins.ANONYMOUS, Computer.BUILD));
+        
+        // prepare an artifact
+        assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+        
+        // Without QueueItemAuthenticator, build fails with access check.
+        {
+            assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+        
+        // Set QueueItemAuthenticator to run with authorization of admin.
+        // This succeeds.
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                    new TestQueueItemAuthenticator(admin.impersonate())
+            );
+            assertBuildStatus(Result.SUCCESS, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+        
+        // Set QueueItemAuthenticator to run with authorization of test1.
+        // This succeeds.
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                    new TestQueueItemAuthenticator(test1.impersonate())
+            );
+            assertBuildStatus(Result.SUCCESS, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+        
+        // Set QueueItemAuthenticator to run with authorization of test2.
+        // This fails.
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                    new TestQueueItemAuthenticator(test2.impersonate())
+            );
+            assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+        
+        // Set QueueItemAuthenticator to run with anonymous authentication.
+        // This fails.
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                    new TestQueueItemAuthenticator(Jenkins.ANONYMOUS)
+            );
+            assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+    }
+    */
 }
