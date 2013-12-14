@@ -306,6 +306,13 @@ public class CopyArtifact extends Builder {
     }
 
     private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
+        if ((job instanceof AbstractProject) && CopyArtifactPermissionProperty.canCopyArtifact(
+                build.getProject().getRootProject(),
+                ((AbstractProject<?,?>)job).getRootProject()
+        )) {
+            return true;
+        }
+        
         if (!ACL.SYSTEM.equals(Jenkins.getAuthentication())) {
             // if the build does not run on SYSTEM authorization,
             // Jenkins is configured to use QueueItemAuthenticator.
