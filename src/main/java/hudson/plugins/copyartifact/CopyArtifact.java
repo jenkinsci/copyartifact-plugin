@@ -41,6 +41,7 @@ import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
 import hudson.model.listeners.RunListener;
+import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -233,18 +234,10 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(project);
-            Job job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
+            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
             if (job != null && !expandedProject.equals(project)
                 // If projectName is parameterized, need to do permission check on source project.
-                // Would like to check if user who started build has permission, but unable to get
-                // Authentication object for arbitrary user.. instead, only allow use of parameters
-                // to select jobs which are accessible to all authenticated users.
-                // TODO JENKINS-16956 would obsolete this block, since getItem above would return null if unauthorized.
-                // Cf.: https://github.com/jenkinsci/github-oauth-plugin/pull/9
-                && !job.getACL().hasPermission(
-                        new UsernamePasswordAuthenticationToken("authenticated", "",
-                                new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
-                        Item.READ)) {
+                && !canReadFrom(job, build)) {
                 job = null; // Disallow access
             }
             if (job == null) {
@@ -298,6 +291,26 @@ public class CopyArtifact extends Builder {
                     Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
             return false;
         }
+    }
+
+    private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
+        if (!ACL.SYSTEM.equals(Jenkins.getAuthentication())) {
+            // if the build does not run on SYSTEM authorization,
+            // Jenkins is configured to use QueueItemAuthenticator.
+            // In this case, builds are configured to run with a proper authorization
+            // (for example, builds run with the authorization of the user who triggered the build),
+            // and we should check access permission with that authorization.
+            // QueueItemAuthenticator is available from Jenkins 1.520.
+            // See also JENKINS-14999, JENKINS-16956, JENKINS-18285.
+            return job.getACL().hasPermission(Item.READ);
+        }
+        
+        // for the backward compatibility, 
+        // test the permission as an anonymous authenticated user.
+        return job.getACL().hasPermission(
+                new UsernamePasswordAuthenticationToken("authenticated", "",
+                        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
+                Item.READ);
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
