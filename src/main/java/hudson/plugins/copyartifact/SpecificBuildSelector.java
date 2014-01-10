@@ -27,6 +27,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.PermalinkProjectAction;
 import hudson.model.Run;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,7 +59,15 @@ public class SpecificBuildSelector extends BuildSelector {
             LOGGER.log(Level.FINE, "unresolved variable {0}", num);
             return null;
         }
-        Run<?,?> run = job.getBuildByNumber(Integer.parseInt(num));
+
+        Run<?,?> run;
+        PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
+        if (p!=null) {
+            run = p.resolve(job);
+            return (run != null && filter.isSelectable(run, env)) ? run : null;
+        }
+
+        run = job.getBuildByNumber(Integer.parseInt(num));
         if (run == null) {
             LOGGER.log(Level.FINE, "no such build {0} in {1}", new Object[] {num, job.getFullName()});
             return null;
