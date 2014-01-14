@@ -60,14 +60,29 @@ public class SpecificBuildSelector extends BuildSelector {
             return null;
         }
 
-        Run<?,?> run;
-        PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
-        if (p!=null) {
-            run = p.resolve(job);
-            return (run != null && filter.isSelectable(run, env)) ? run : null;
+        Run<?,?> run = null;
+
+        if(num.matches("[0-9]*")) {
+            //If its a number, retrieve the build.
+            run = job.getBuildByNumber(Integer.parseInt(num));
+        } else {
+            //Otherwise, check if the buildNumber value is a permalink or a display name.
+            PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
+            if (p == null) {
+                //Not a permalink so check if the buildNumber value is a display name.
+                for(Run<?,?> build: job.getBuilds()){
+                    if(num.equals(build.getDisplayName())) {
+                        //First named build found is the right one, going from latest build to oldest.
+                        run = build;
+                        break;
+                    }
+                }
+            } else {
+                //Retrieve the permalink
+                run = p.resolve(job);
+            }
         }
 
-        run = job.getBuildByNumber(Integer.parseInt(num));
         if (run == null) {
             LOGGER.log(Level.FINE, "no such build {0} in {1}", new Object[] {num, job.getFullName()});
             return null;
