@@ -158,7 +158,9 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new UserCause()).get());
     }
 
-    public void testCopyAll() throws Exception {
+    public void testCopyAllPlusFingerprint() throws Exception {
+        // init fingerprint map
+        Hudson.getInstance().getFingerprintMap().getOrCreate(null, "test.txt", "00112233445566778899aabbccddeeff");
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false);
         FreeStyleBuild s = assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -173,6 +175,21 @@ public class CopyArtifactTest extends HudsonTestCase {
         Fingerprint f = Hudson.getInstance().getFingerprintMap().get(d);
         assertSame(f.getOriginal().getRun(),s);
         assertTrue(f.getRangeSet(p).includes(b.getNumber()));
+    }
+
+    public void testCopyAll() throws Exception {
+        assertFalse(Hudson.getInstance().getFingerprintMap().isReady());
+        FreeStyleProject other = createArtifactProject(),
+                         p = createProject(other.getName(), null, "", "", false, false, false);
+        FreeStyleBuild s = assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "subdir/subfoo.txt", b);
+        assertFile(true, "deepfoo/a/b/c.log", b);
+        
+        // testing that no fingerprint was created if none exist yet
+        assertFalse(Hudson.getInstance().getFingerprintMap().isReady());
     }
 
     public void testCopyWithFilter() throws Exception {
