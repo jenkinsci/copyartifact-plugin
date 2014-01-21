@@ -95,12 +95,15 @@ public class FingerprintingCopyMethod extends Copier {
 
             FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
 
-            Fingerprint f = map.getOrCreate(src, s.getName(), digest);
-            if (src!=null) {
-                f.add((AbstractBuild)src);
+            if (map.isReady()) {
+                // only create fingerprints if some exist already
+                Fingerprint f = map.getOrCreate(src, s.getName(), digest);
+                if (src!=null) {
+                    f.add((AbstractBuild)src);
+                }
+                f.add(dst);
+                fingerprints.put(s.getName(), digest);
             }
-            f.add(dst);
-            fingerprints.put(s.getName(), digest);
         } catch (IOException e) {
             throw new IOException2("Failed to copy "+s+" to "+d,e);
         }
