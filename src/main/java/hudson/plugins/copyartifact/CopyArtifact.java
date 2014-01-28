@@ -84,10 +84,11 @@ public class CopyArtifact extends Builder {
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
     private final Boolean flatten, optional;
+    private final Boolean fingerprintArtifacts;
 
     @DataBoundConstructor
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
-                        boolean flatten, boolean optional) {
+                        boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
@@ -107,6 +108,7 @@ public class CopyArtifact extends Builder {
         this.target = Util.fixNull(target).trim();
         this.flatten = flatten ? Boolean.TRUE : null;
         this.optional = optional ? Boolean.TRUE : null;
+        this.fingerprintArtifacts = fingerprintArtifacts ? Boolean.TRUE : null;
     }
 
     // Upgrade data from old format
@@ -224,6 +226,10 @@ public class CopyArtifact extends Builder {
         return (projectName != null);
     }
 
+    public boolean isFingerprintArtifacts() {
+        return fingerprintArtifacts != null && fingerprintArtifacts;
+    }
+
     @Override
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException, IOException {
@@ -337,12 +343,12 @@ public class CopyArtifact extends Builder {
         try {
             int cnt;
             if (!isFlatten())
-                cnt = copier.copyAll(srcDir, expandedFilter, targetDir);
+                cnt = copier.copyAll(srcDir, expandedFilter, targetDir, isFingerprintArtifacts());
             else {
                 targetDir.mkdirs();  // Create target if needed
                 FilePath[] list = srcDir.list(expandedFilter);
                 for (FilePath file : list)
-                    copier.copyOne(file, new FilePath(targetDir, file.getName()));
+                    copier.copyOne(file, new FilePath(targetDir, file.getName()), isFingerprintArtifacts());
                 cnt = list.length;
             }
 
