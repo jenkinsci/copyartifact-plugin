@@ -44,7 +44,7 @@ THE SOFTWARE.
     <f:checkbox field="optional"/>
     <label class="attach-previous">${%Optional}</label>
     <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="fingerprintArtifacts"/>
+    <f:checkbox field="fingerprintArtifacts" default="true"/>
     <label class="attach-previous">${%Fingerprint Artifacts}</label>
   </f:entry>
 </j:jelly>

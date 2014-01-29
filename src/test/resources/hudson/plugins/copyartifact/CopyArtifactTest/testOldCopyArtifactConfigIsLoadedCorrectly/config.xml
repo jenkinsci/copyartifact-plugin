@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<hudson>
+  <version>1.532</version>
+  <useSecurity>false</useSecurity>
+  <!--
+    admin has all privileges
+    test1 and test2 has all privileges except hudson.model.Item.*
+    anonymous has Computer.Build and Read privilege.
+  -->
+      <securityRealm class="hudson.security.HudsonPrivateSecurityRealm">
+        <disableSignup>true</disableSignup>
+        <enableCaptcha>false</enableCaptcha>
+      </securityRealm>
+    </hudson>

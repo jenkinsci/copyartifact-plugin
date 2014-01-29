@@ -53,6 +53,7 @@ import org.acegisecurity.context.SecurityContext;
 
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
@@ -61,6 +62,8 @@ import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+
+import static org.junit.Assert.assertTrue;
 
 /*
 // classes used only in testQueueItemAuthenticator
@@ -1075,6 +1078,15 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
+    }
+
+    @Test
+    @LocalData
+    public void testOldCopyArtifactConfigIsLoadedCorrectly() throws Exception {
+        FreeStyleProject p = (FreeStyleProject) jenkins.getItem("copy-artifact");
+        CopyArtifact trigger = (CopyArtifact) p.getBuilders().get(0);
+
+        assertTrue(trigger.isFingerprintArtifacts());
     }
 
     /* This test is available only for Jenkins >= 1.521.

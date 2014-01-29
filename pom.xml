@@ -21,7 +21,15 @@
         <optional>true</optional>
       </dependency>
     </dependencies>
-
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jenkins-ci.tools</groupId>
+                <artifactId>maven-hpi-plugin</artifactId>
+                <version>1.95</version>
+            </plugin>
+        </plugins>
+    </build>
     <reporting>
       <plugins>
         <plugin>

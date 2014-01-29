@@ -84,7 +84,7 @@ public class CopyArtifact extends Builder {
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
     private final Boolean flatten, optional;
-    private final Boolean fingerprintArtifacts;
+    private final boolean doNotFingerprintArtifacts;
 
     @DataBoundConstructor
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -108,7 +108,7 @@ public class CopyArtifact extends Builder {
         this.target = Util.fixNull(target).trim();
         this.flatten = flatten ? Boolean.TRUE : null;
         this.optional = optional ? Boolean.TRUE : null;
-        this.fingerprintArtifacts = fingerprintArtifacts ? Boolean.TRUE : null;
+        this.doNotFingerprintArtifacts = !fingerprintArtifacts;
     }
 
     // Upgrade data from old format
@@ -227,7 +227,7 @@ public class CopyArtifact extends Builder {
     }
 
     public boolean isFingerprintArtifacts() {
-        return fingerprintArtifacts != null && fingerprintArtifacts;
+        return !doNotFingerprintArtifacts;
     }
 
     @Override
