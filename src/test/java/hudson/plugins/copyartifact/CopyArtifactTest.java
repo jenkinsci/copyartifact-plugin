@@ -91,6 +91,13 @@ public class CopyArtifactTest extends HudsonTestCase {
         return p;
     }
 
+    @Deprecated
+    private FreeStyleProject createProject(String otherProject, String parameters, String filter,
+            String target, boolean stable, boolean flatten, boolean optional)
+            throws IOException {
+        return createProject(otherProject, parameters, filter, target, stable, flatten, optional, true);
+    }
+
     private static class ArtifactBuilder extends Builder {
         @Override
         public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
