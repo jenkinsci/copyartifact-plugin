@@ -86,6 +86,12 @@ public class CopyArtifact extends Builder {
     private final Boolean flatten, optional;
     private final boolean doNotFingerprintArtifacts;
 
+    @Deprecated
+    public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
+            boolean flatten, boolean optional) {
+        this(projectName, parameters, selector, filter, target, flatten, optional, true);
+    }
+
     @DataBoundConstructor
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
