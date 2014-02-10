@@ -24,6 +24,7 @@
 package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
+
 import hudson.DescriptorExtensionList;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -36,6 +37,7 @@ import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.maven.MavenBuild;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
@@ -53,12 +55,14 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
+
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
@@ -282,8 +286,12 @@ public class CopyArtifact extends Builder {
                 // Copy artifacts from the build (ArchiveArtifacts build step)
                 boolean ok = perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
                 // Copy artifacts from all modules of this Maven build (automatic archiving)
-                for (Run r : ((MavenModuleSetBuild)src).getModuleLastBuilds().values())
+                for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
+                    // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
+                    // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
+                    Run<?,?> r = it.next();
                     ok |= perform(r, build, expandedFilter, targetDir, baseTargetDir, copier, console);
+                }
                 return ok;
             } else if (src instanceof MatrixBuild) {
                 boolean ok = false;
