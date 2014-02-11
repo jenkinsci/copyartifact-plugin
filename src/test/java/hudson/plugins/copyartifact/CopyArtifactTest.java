@@ -48,6 +48,7 @@ import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
 
@@ -71,7 +72,6 @@ import hudson.security.Permission;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
 import com.google.common.collect.Sets;
 */
@@ -89,6 +89,13 @@ public class CopyArtifactTest extends HudsonTestCase {
         p.getBuildersList().add(new CopyArtifact(otherProject, parameters,
                 new StatusBuildSelector(stable), filter, target, flatten, optional, fingerprintArtifacts));
         return p;
+    }
+
+    @Deprecated
+    private FreeStyleProject createProject(String otherProject, String parameters, String filter,
+            String target, boolean stable, boolean flatten, boolean optional)
+            throws IOException {
+        return createProject(otherProject, parameters, filter, target, stable, flatten, optional, true);
     }
 
     private static class ArtifactBuilder extends Builder {
@@ -1087,6 +1094,58 @@ public class CopyArtifactTest extends HudsonTestCase {
         CopyArtifact trigger = (CopyArtifact) p.getBuilders().get(0);
 
         assertTrue(trigger.isFingerprintArtifacts());
+    }
+
+    @LocalData // enable Jenkins security
+    public void testCopyArtifactPermissionProperty() throws Exception {
+        // invalid permission configuration can hang builds.
+        final int TIMEOUT = 60;
+        
+        // LocalData provides following user/password pairs:
+        //  test1/test1 : have all privileges except accessing jobs.
+        
+        User test1 = User.get("test1");
+        
+        // Prepare projects:
+        //   copiee: a project creates an artifact.
+        //   copier: a project copies an artifact from copiee.
+        //   matrixCopiee: a matrix project creates an artifact.
+        //   matrixCopier: a matrix project copies an artifact from copiee.
+        // Only allowed users can access projects.
+        FreeStyleProject copiee = createArtifactProject();
+        FreeStyleProject copier = createProject("${copyfrom}", null, "foo.txt", "", false, false, false);
+        copier.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("copyfrom",  copiee.getFullName())
+        ));
+        
+        MatrixProject matrixCopiee = createMatrixArtifactProject();
+        MatrixProject matrixCopier = createMatrixProject();
+        matrixCopier.setAxes(new AxisList(new Axis("FOO", "one", "two"))); // this matches axes of matrixCopiee
+        matrixCopier.getBuildersList().add(new CopyArtifact(matrixCopiee.getName() + "/FOO=$FOO", null,
+                                  new StatusBuildSelector(true), "", "", false, false));
+        
+        // test permissions
+        // not all user can access projects.
+        assertFalse(copiee.getACL().hasPermission(test1.impersonate(), Item.READ));
+        assertFalse(copier.getACL().hasPermission(test1.impersonate(), Item.READ));
+        assertFalse(matrixCopiee.getACL().hasPermission(test1.impersonate(), Item.READ));
+        assertFalse(matrixCopier.getACL().hasPermission(test1.impersonate(), Item.READ));
+        
+        // prepare an artifact
+        assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+        assertBuildStatusSuccess(matrixCopiee.scheduleBuild2(0));
+        
+        // Without CopyArtifactPermissionProperty, build fails with access check.
+        assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        assertBuildStatus(Result.FAILURE, matrixCopier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        
+        copiee.addProperty(new CopyArtifactPermissionProperty(copier.getFullName()));
+        matrixCopiee.addProperty(new CopyArtifactPermissionProperty(matrixCopier.getFullName()));
+        
+        // By using CopyArtifactPermissionProperty,
+        // builds succeed.
+        assertBuildStatusSuccess(copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        assertBuildStatusSuccess(matrixCopier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
     }
 
     /* This test is available only for Jenkins >= 1.521.
