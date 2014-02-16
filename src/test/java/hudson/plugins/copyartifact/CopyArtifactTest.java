@@ -776,6 +776,208 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
     }
 
+    @Bug(21219)
+    public void testEnvDataInSameFolder() throws Exception {
+        // /folderA/projectDest copies from /folderA/projectSrc
+        MockFolder folderA = jenkins.createProject(MockFolder.class, "folderA");
+        
+        FreeStyleProject projectSrc = folderA.createProject(FreeStyleProject.class, "projectSrc");
+        projectSrc.getBuildersList().add(new ArtifactBuilder());
+        projectSrc.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        
+        FreeStyleProject projectDest = folderA.createProject(FreeStyleProject.class, "projectDest");
+        projectDest.getBuildersList().add(new CopyArtifact(
+                projectSrc.getName(),   // in the same folder.
+                null,
+                new StatusBuildSelector(true),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        projectDest.getBuildersList().add(envStep);
+        
+        // create an artifact.
+        for(int i = 0; i < 3; ++i) {
+            projectSrc.assignBuildNumber();
+        }
+        FreeStyleBuild bSrc = projectSrc.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(bSrc);
+        
+        // copy the artifact
+        FreeStyleBuild b = projectDest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        // test COPYARTIFACT_BUILD_NUMBER_* is available
+        assertEquals(Integer.toString(bSrc.getNumber()), envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_PROJECTSRC"));
+    }
+
+    @Bug(21219)
+    public void testEnvDataInDifferentFolder() throws Exception {
+        // /folderB/projectDest copies from /folderA/projectSrc
+        MockFolder folderA = jenkins.createProject(MockFolder.class, "folderA");
+        MockFolder folderB = jenkins.createProject(MockFolder.class, "folderB");
+        
+        FreeStyleProject projectSrc = folderA.createProject(FreeStyleProject.class, "projectSrc");
+        projectSrc.getBuildersList().add(new ArtifactBuilder());
+        projectSrc.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        
+        FreeStyleProject projectDest = folderB.createProject(FreeStyleProject.class, "projectDest");
+        projectDest.getBuildersList().add(new CopyArtifact(
+                String.format("../%s/%s", folderA.getName(), projectSrc.getName()),   // in the different folder.
+                null,
+                new StatusBuildSelector(true),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        projectDest.getBuildersList().add(envStep);
+        
+        // create an artifact.
+        for(int i = 0; i < 3; ++i) {
+            projectSrc.assignBuildNumber();
+        }
+        FreeStyleBuild bSrc = projectSrc.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(bSrc);
+        
+        // copy the artifact
+        FreeStyleBuild b = projectDest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        // test COPYARTIFACT_BUILD_NUMBER_* is available
+        // ../folderA/projectSrc -> _FOLDERA_PROJECTSRC
+        assertEquals(Integer.toString(bSrc.getNumber()), envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER__FOLDERA_PROJECTSRC"));
+    }
+
+
+    @Bug(21219)
+    public void testEnvDataInParentFolder() throws Exception {
+        // /folderA/projectDest copies from /projectSrc
+        MockFolder folderA = jenkins.createProject(MockFolder.class, "folderA");
+        
+        FreeStyleProject projectSrc = createFreeStyleProject("projectSrc");
+        projectSrc.getBuildersList().add(new ArtifactBuilder());
+        projectSrc.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        
+        FreeStyleProject projectDest = folderA.createProject(FreeStyleProject.class, "projectDest");
+        projectDest.getBuildersList().add(new CopyArtifact(
+                String.format("../%s", projectSrc.getName()),   // in the parent folder.
+                null,
+                new StatusBuildSelector(true),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        projectDest.getBuildersList().add(envStep);
+        
+        // create an artifact.
+        for(int i = 0; i < 3; ++i) {
+            projectSrc.assignBuildNumber();
+        }
+        FreeStyleBuild bSrc = projectSrc.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(bSrc);
+        
+        // copy the artifact
+        FreeStyleBuild b = projectDest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        // test COPYARTIFACT_BUILD_NUMBER_* is available
+        // ../projectSrc -> _PROJECTSRC
+        assertEquals(Integer.toString(bSrc.getNumber()), envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER__PROJECTSRC"));
+    }
+
+    @Bug(21219)
+    public void testEnvDataInGrandParentFolder() throws Exception {
+        // /folderA/folderB/projectDest copies from /projectSrc
+        MockFolder folderA = jenkins.createProject(MockFolder.class, "folderA");
+        MockFolder folderB = folderA.createProject(MockFolder.class, "folderB");
+        
+        FreeStyleProject projectSrc = createFreeStyleProject("projectSrc");
+        projectSrc.getBuildersList().add(new ArtifactBuilder());
+        projectSrc.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        
+        FreeStyleProject projectDest = folderB.createProject(FreeStyleProject.class, "projectDest");
+        projectDest.getBuildersList().add(new CopyArtifact(
+                String.format("../../%s", projectSrc.getName()),   // in the grand parent folder.
+                null,
+                new StatusBuildSelector(true),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        projectDest.getBuildersList().add(envStep);
+        
+        // create an artifact.
+        for(int i = 0; i < 3; ++i) {
+            projectSrc.assignBuildNumber();
+        }
+        FreeStyleBuild bSrc = projectSrc.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(bSrc);
+        
+        // copy the artifact
+        FreeStyleBuild b = projectDest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        // test COPYARTIFACT_BUILD_NUMBER_* is available
+        // ../../projectSrc -> _PROJECTSRC
+        assertEquals(Integer.toString(bSrc.getNumber()), envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER__PROJECTSRC"));
+    }
+
+    @Bug(21219)
+    public void testEnvDataInChildFolder() throws Exception {
+        // /projectDest copies from /folderA/projectSrc
+        MockFolder folderA = jenkins.createProject(MockFolder.class, "folderA");
+        
+        FreeStyleProject projectSrc = folderA.createProject(FreeStyleProject.class, "projectSrc");
+        projectSrc.getBuildersList().add(new ArtifactBuilder());
+        projectSrc.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        
+        FreeStyleProject projectDest = createFreeStyleProject("projectDest");
+        projectDest.getBuildersList().add(new CopyArtifact(
+                String.format("%s/%s", folderA.getName(), projectSrc.getName()),   // in the child folder.
+                null,
+                new StatusBuildSelector(true),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        projectDest.getBuildersList().add(envStep);
+        
+        // create an artifact.
+        for(int i = 0; i < 3; ++i) {
+            projectSrc.assignBuildNumber();
+        }
+        FreeStyleBuild bSrc = projectSrc.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(bSrc);
+        
+        // copy the artifact
+        FreeStyleBuild b = projectDest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        // test COPYARTIFACT_BUILD_NUMBER_* is available
+        // folderA/projectSrc -> FOLDERA_PROJECTSRC
+        assertEquals(Integer.toString(bSrc.getNumber()), envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_FOLDERA_PROJECTSRC"));
+    }
+
     /**
      * Test filtering on parameters, ie. last stable build with parameter FOO=bar.
      */
