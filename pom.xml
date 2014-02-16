@@ -13,6 +13,14 @@
     <version>1.30-SNAPSHOT</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Copy+Artifact+Plugin</url>
 
+    <licenses>
+      <license>
+        <name>The MIT license</name>
+        <url>http://www.opensource.org/licenses/mit-license.php</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+
     <dependencies>
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
