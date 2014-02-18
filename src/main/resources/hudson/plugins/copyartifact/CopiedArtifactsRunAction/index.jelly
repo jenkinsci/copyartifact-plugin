@@ -1,0 +1,43 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <l:layout title="${%Copied Artifacts}" norefresh="true">
+    <j:invokeStatic var="currentThread" className="java.lang.Thread" method="currentThread"/>
+    <j:invoke var="buildClass" on="${currentThread.contextClassLoader}" method="loadClass">
+        <j:arg value="hudson.model.AbstractBuild"/>
+    </j:invoke>
+    <j:set var="build" value="${request.findAncestorObject(buildClass)}"/>
+    <st:include page="sidepanel.jelly" it="${build}" />
+    <l:main-panel>
+      <h1>${%Copied Artifacts}</h1>
+      <p>${%This build copied artifacts from the following other builds:}</p>
+      
+      <j:forEach var="source" items="${it.copiedArtifacts}">
+        <h3 id="${source.sourceJobName}-${source.sourceBuildNumber}">
+          <j:set var="job" value="${app.getItemByFullName(source.sourceJobName)}"/>
+          <j:choose>
+            <j:when test="${job!=null}">
+              <a href="${rootURL}/${job.url}" class="model-link inside">${job.fullDisplayName}</a>
+            </j:when>
+            <j:otherwise>
+              ${source.sourceJobName}
+            </j:otherwise>
+          </j:choose>
+          <j:set var="run" value="${job.getBuildByNumber(source.sourceBuildNumber)}"/>
+          <j:choose>
+            <j:when test="${run!=null}">
+              <st:nbsp/><a href="${rootURL}/${run.url}" class="model-link inside">#${source.sourceBuildNumber}</a>
+            </j:when>
+            <j:otherwise>
+              <st:nbsp/>#${source.sourceBuildNumber}
+            </j:otherwise>
+          </j:choose>
+        </h3>
+        <p>Copied ${source.files.size()} file(s):</p>
+        <ul>
+          <j:forEach var="f" items="${source.files}">
+            <li>${f}</li>
+          </j:forEach>
+        </ul>
+      </j:forEach>
+    </l:main-panel>
+  </l:layout>
+</j:jelly>

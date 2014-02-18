@@ -1,0 +1,31 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <t:summary icon="package.png">
+    <p>${%This build copied artifacts from the following other builds:}</p>
+    <ul>
+      <j:forEach var="source" items="${it.copiedArtifacts}">
+        <li>
+          <a href="copiedArtifacts/#${source.sourceJobName}-${source.sourceBuildNumber}">${source.files.size()} file(s)</a> from
+          <j:set var="job" value="${app.getItemByFullName(source.sourceJobName)}"/>
+          <j:choose>
+            <j:when test="${job!=null}">
+              <a href="${rootURL}/${job.url}" class="model-link inside">${job.fullDisplayName}</a>
+            </j:when>
+            <j:otherwise>
+              ${source.sourceJobName}
+            </j:otherwise>
+          </j:choose>
+          <j:set var="run" value="${job.getBuildByNumber(source.sourceBuildNumber)}"/>
+          <j:choose>
+            <j:when test="${run!=null}">
+              <st:nbsp/><a href="${rootURL}/${run.url}" class="model-link inside">#${source.sourceBuildNumber}</a>
+            </j:when>
+            <j:otherwise>
+              <st:nbsp/>#${source.sourceBuildNumber}
+            </j:otherwise>
+          </j:choose>
+        </li>
+      </j:forEach>
+    </ul>
+  </t:summary>
+</j:jelly>
