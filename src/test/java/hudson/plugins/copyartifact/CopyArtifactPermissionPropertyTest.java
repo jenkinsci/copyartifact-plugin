@@ -152,6 +152,12 @@ public class CopyArtifactPermissionPropertyTest {
             copiee.addProperty(new CopyArtifactPermissionProperty("sameCopier"));
             
             assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
+            
+            // absolute
+            copiee.removeProperty(CopyArtifactPermissionProperty.class);
+            copiee.addProperty(new CopyArtifactPermissionProperty("/folder/sameCopier"));
+            
+            assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
         }
         
         // parent folder
@@ -161,13 +167,25 @@ public class CopyArtifactPermissionPropertyTest {
             copiee.addProperty(new CopyArtifactPermissionProperty("../parentCopier"));
             
             assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
+            
+            // absolute
+            copiee.removeProperty(CopyArtifactPermissionProperty.class);
+            copiee.addProperty(new CopyArtifactPermissionProperty("/parentCopier"));
+            
+            assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
         }
         
-        // same folder
+        // child folder
         {
             FreeStyleProject copiee = j.jenkins.createProject(FreeStyleProject.class, "childCopiee");
             FreeStyleProject copier = folder.createProject(FreeStyleProject.class, "childCopier");
             copiee.addProperty(new CopyArtifactPermissionProperty(String.format("%s/childCopier", folder.getName())));
+            
+            assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
+            
+            // absolute
+            copiee.removeProperty(CopyArtifactPermissionProperty.class);
+            copiee.addProperty(new CopyArtifactPermissionProperty("/folder/childCopier"));
             
             assertTrue(CopyArtifactPermissionProperty.canCopyArtifact(copier, copiee));
         }

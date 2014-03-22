@@ -96,8 +96,10 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
      */
     public boolean canCopiedBy(AbstractProject<?,?> copier) {
         String copierName = copier.getRelativeNameFrom(owner.getParent());
+        String absoluteName = String.format("/%s", copier.getFullName()); 
+            // Note: getFullName() returns not an absolute path, but a relative path from root...
         for (String projectName: getProjectNameList()) {
-            if (isNameMatch(copierName, projectName)) {
+            if (isNameMatch(copierName, projectName) || isNameMatch(absoluteName, projectName)) {
                 return true;
             }
         }
