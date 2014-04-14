@@ -30,8 +30,7 @@ import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
-import hudson.util.ListBoxModel;
-import hudson.util.ListBoxModel.Option;
+import hudson.util.ComboBoxModel;
 import jenkins.model.Jenkins;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -65,15 +64,14 @@ public class PermalinkBuildSelector extends BuildSelector {
             return Messages.PermalinkBuildSelector_DisplayName();
         }
 
-        public ListBoxModel doFillIdItems(@AncestorInPath Job defaultJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
-            // gracefully fall back to some job, if none is given
+        public ComboBoxModel doFillIdItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             Job j = null;
-            if (projectName!=null)  j = Jenkins.getInstance().getItem(projectName,defaultJob,Job.class);
-            if (j==null)    j = defaultJob;
-
-            ListBoxModel r = new ListBoxModel();
-            for (Permalink p : j.getPermalinks()) {
-                r.add(new Option(p.getDisplayName(),p.getId()));
+            if (projectName != null) {
+                j = Jenkins.getInstance().getItem(projectName, copyingJob, Job.class);
+            }
+            ComboBoxModel r = new ComboBoxModel();
+            for (Permalink p : j != null ? j.getPermalinks() : Permalink.BUILTIN) {
+                r.add(p.getId());
             }
             return r;
         }
