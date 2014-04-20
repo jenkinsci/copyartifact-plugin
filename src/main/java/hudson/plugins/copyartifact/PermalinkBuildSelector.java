@@ -23,6 +23,8 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.Map;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.RelativePath;
@@ -30,6 +32,7 @@ import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
+import hudson.util.ComboBoxModel;
 import hudson.util.ListBoxModel;
 import hudson.util.ListBoxModel.Option;
 import jenkins.model.Jenkins;
@@ -72,10 +75,34 @@ public class PermalinkBuildSelector extends BuildSelector {
             if (j==null)    j = defaultJob;
 
             ListBoxModel r = new ListBoxModel();
-            for (Permalink p : j.getPermalinks()) {
+            for (Permalink p : j != null ? j.getPermalinks() : Permalink.BUILTIN) {
                 r.add(new Option(p.getDisplayName(),p.getId()));
             }
             return r;
+        }
+
+        public ComboBoxModel doFillIdForComboItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
+            Job j = null;
+            if (projectName != null) {
+                j = Jenkins.getInstance().getItem(projectName, copyingJob, Job.class);
+            }
+            ComboBoxModel r = new ComboBoxModel();
+            for (Permalink p : j != null ? j.getPermalinks() : Permalink.BUILTIN) {
+                r.add(p.getId());
+            }
+            return r;
+        }
+
+        /**
+         * Allow use another field name with attribute "fillField"
+         * 
+         * @param field
+         * @param attributes
+         * @see hudson.model.Descriptor#calcFillSettings(java.lang.String, java.util.Map)
+         */
+        @Override
+        public void calcFillSettings(String field, Map<String, Object> attributes) {
+            super.calcFillSettings(attributes.containsKey("fillField")?(String)attributes.get("fillField"):field, attributes);
         }
     }
 }
