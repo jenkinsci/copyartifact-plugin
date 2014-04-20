@@ -125,7 +125,7 @@ var onFilledSwitchSelect = function(e) {
     return;
   }
   
-  checkbox.checked = (combobox.value != select.value);
+  checkbox.checked = (combobox.value != "" && combobox.value != select.value);
   onChangeSwitchCheckbox(checkbox);
 }
 
