@@ -387,7 +387,7 @@ public class CopyArtifact extends Builder {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AbstractItem anc, @QueryParameter String value) {
+                @AncestorInPath AbstractProject anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
