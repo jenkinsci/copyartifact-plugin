@@ -24,6 +24,6 @@ THE SOFTWARE.
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
   <f:entry title="${%Permalink}" field="id">
-    <f:select />
+    <f:combobox/>
   </f:entry>
 </j:jelly>
