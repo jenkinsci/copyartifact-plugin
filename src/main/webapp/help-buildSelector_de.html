@@ -8,5 +8,15 @@
   als Referenz f&uuml;r weitere Buildschritte gespeichert. Der Name der Umgebungsvariable
   ist <tt>COPYARTIFACT_BUILD_NUMBER_</tt> mit dem Namen des Quellprojekts angeh&auml;ngt
   (alles in Gro&szlig;buchstaben, alle Zeichen au&szlig;er A-Z werden durch Unterstriche
-  ersetzt).
+  ersetzt, wobei statt mehrerer aufeinanderfolgender Unterstriche nur ein einziger
+  verwendet wird).
+  <p><strong>Beispiel</strong>:
+  <ul>
+    <li>
+      Die Umgebungsvariable <code>COPYARTIFACT_BUILD_NUMBER_PROJECT_ABC</code> enth&auml;lt
+      die Buildnummer des aus dem Projekt <code>Project-ABC</code> kopierten Builds.
+    <li>
+      Die Umgebungsvariable <code>COPYARTIFACT_BUILD_NUMBER_TOOL_RELEASE_</code> enth&auml;lt
+      die Buildnummer des aus dem Projekt <code>tool1-release1.2</code> kopierten Builds.
+  </ul>
 </div>
