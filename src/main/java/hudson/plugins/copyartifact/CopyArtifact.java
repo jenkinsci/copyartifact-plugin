@@ -63,6 +63,7 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
+import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.kohsuke.stapler.AncestorInPath;
@@ -321,8 +322,9 @@ public class CopyArtifact extends Builder {
         )) {
             return true;
         }
-        
-        if (!ACL.SYSTEM.equals(Jenkins.getAuthentication())) {
+
+        Authentication a = Jenkins.getAuthentication();
+        if (!ACL.SYSTEM.equals(a)) {
             // if the build does not run on SYSTEM authorization,
             // Jenkins is configured to use QueueItemAuthenticator.
             // In this case, builds are configured to run with a proper authorization
@@ -330,15 +332,21 @@ public class CopyArtifact extends Builder {
             // and we should check access permission with that authorization.
             // QueueItemAuthenticator is available from Jenkins 1.520.
             // See also JENKINS-14999, JENKINS-16956, JENKINS-18285.
-            return job.getACL().hasPermission(Item.READ);
+            boolean b = job.getACL().hasPermission(Item.READ);
+            if (!b)
+                LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because %s lacks Item.READ access",job,build, a));
+            return b;
         }
         
         // for the backward compatibility, 
         // test the permission as an anonymous authenticated user.
-        return job.getACL().hasPermission(
+        boolean b = job.getACL().hasPermission(
                 new UsernamePasswordAuthenticationToken("authenticated", "",
                         new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
                 Item.READ);
+        if (!b)
+            LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because 'authenticated' lacks Item.READ access",job,build));
+        return b;
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
