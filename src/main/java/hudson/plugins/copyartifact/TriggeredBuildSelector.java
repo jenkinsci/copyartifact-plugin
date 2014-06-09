@@ -34,7 +34,9 @@ import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
 import hudson.model.Run;
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Copy artifacts from the build that triggered this build.
@@ -52,8 +54,37 @@ public class TriggeredBuildSelector extends BuildSelector {
         return fallbackToLastSuccessful != null && fallbackToLastSuccessful.booleanValue();
     }
     
+//    @Extension
+//    public static class DescriptorImpl extends Descriptor<BuildSelector> {
+//        private boolean newestBuildFirst;
+//        @Override
+//        public String getDisplayName() {
+//            return Messages.TriggeredBuildSelector_DisplayName();
+//        }
+//    
+//        public boolean getNewestBuildFirst() {
+//            return newestBuildFirst;
+//        }
+//        
+//        @Override
+//        public boolean configure(StaplerRequest req, JSONObject formData) throws Descriptor.FormException {
+//            // To persist global configuration information,
+//            // set that to properties and call save().
+//            
+//            newestBuildFirst = formData.getBoolean("NewestBuildFirst");
+//            
+//            // Can also use req.bindJSON(this, formData);
+//            //  (easier when there are many fields; need set* methods for this, like setUseFrench)
+//            save();
+//            return super.configure(req,formData);
+//        }
+//    
+//    }
+//    
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+    	Run<?,?> result = null;
+        //boolean newestBuildFirst = getDescriptor().getNewestbuildfirst();
         // Upstream job for matrix will be parent project, not individual configuration:
         String jobName = job instanceof MatrixConfiguration
             ? job.getParent().getFullName() : job.getFullName();
@@ -66,7 +97,11 @@ public class TriggeredBuildSelector extends BuildSelector {
                 int upstreamBuild = upstream.getUpstreamBuild();
                 if (jobName.equals(upstreamProject)) {
                     Run<?,?> run = job.getBuildByNumber(upstreamBuild);
-                    return (run != null && filter.isSelectable(run, env)) ? run : null;
+                    if (run != null && filter.isSelectable(run, env)){
+                        if ((result == null) || (result.getNumber() < run.getNumber())) {
+                	    result = run;
+                	}
+                    }
                 } else {
                     // Figure out the parent job and do a recursive call to getBuild
                     Job<?,?> parentJob = Jenkins.getInstance().getItemByFullName(upstreamProject, Job.class);
@@ -81,11 +116,12 @@ public class TriggeredBuildSelector extends BuildSelector {
                 }
             }
         }
-        if (isFallbackToLastSuccessful()) {
+        
+        if (result == null && isFallbackToLastSuccessful()) {
             //TODO: Write to console, that fallback is used.
-            return super.getBuild(job, env, filter, parent);
+            result = super.getBuild(job, env, filter, parent);
         }
-        return null;
+        return result;
     }
     
     @Override
