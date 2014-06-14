@@ -27,4 +27,7 @@ THE SOFTWARE.
     <f:checkbox name="fallback" checked="${selector.isFallbackToLastSuccessful()}"/>
     <label class="attach-previous">${%Use "Last successful build" as fallback}</label>
   </f:entry>
+  <f:entry field="useNewest">
+    <f:checkbox title="${%Use the newest build if there are multiple upstream builds}" />
+  </f:entry>
 </j:jelly>

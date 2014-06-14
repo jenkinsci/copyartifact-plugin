@@ -34,9 +34,7 @@ import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
 import hudson.model.Run;
-import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Copy artifacts from the build that triggered this build.
@@ -44,47 +42,33 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class TriggeredBuildSelector extends BuildSelector {
     private Boolean fallbackToLastSuccessful;
+    private final boolean useNewest;
 
     @DataBoundConstructor
-    public TriggeredBuildSelector(boolean fallback) {
+    public TriggeredBuildSelector(boolean fallback, boolean useNewest) {
         this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
+        this.useNewest = useNewest;
     }
 
+    @Deprecated
+    public TriggeredBuildSelector(boolean fallback) {
+        this(fallback, false);
+    }
+    
     public boolean isFallbackToLastSuccessful() {
         return fallbackToLastSuccessful != null && fallbackToLastSuccessful.booleanValue();
     }
     
-//    @Extension
-//    public static class DescriptorImpl extends Descriptor<BuildSelector> {
-//        private boolean newestBuildFirst;
-//        @Override
-//        public String getDisplayName() {
-//            return Messages.TriggeredBuildSelector_DisplayName();
-//        }
-//    
-//        public boolean getNewestBuildFirst() {
-//            return newestBuildFirst;
-//        }
-//        
-//        @Override
-//        public boolean configure(StaplerRequest req, JSONObject formData) throws Descriptor.FormException {
-//            // To persist global configuration information,
-//            // set that to properties and call save().
-//            
-//            newestBuildFirst = formData.getBoolean("NewestBuildFirst");
-//            
-//            // Can also use req.bindJSON(this, formData);
-//            //  (easier when there are many fields; need set* methods for this, like setUseFrench)
-//            save();
-//            return super.configure(req,formData);
-//        }
-//    
-//    }
-//    
+    /**
+     * @return whether to use the newest upstream or not (use the oldest) when there are multiple upstreams.
+     */
+    public boolean isUseNewest() {
+        return useNewest;
+    }
+    
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-    	Run<?,?> result = null;
-        //boolean newestBuildFirst = getDescriptor().getNewestbuildfirst();
+        Run<?,?> result = null;
         // Upstream job for matrix will be parent project, not individual configuration:
         String jobName = job instanceof MatrixConfiguration
             ? job.getParent().getFullName() : job.getFullName();
@@ -98,9 +82,13 @@ public class TriggeredBuildSelector extends BuildSelector {
                 if (jobName.equals(upstreamProject)) {
                     Run<?,?> run = job.getBuildByNumber(upstreamBuild);
                     if (run != null && filter.isSelectable(run, env)){
-                        if ((result == null) || (result.getNumber() < run.getNumber())) {
-                	    result = run;
-                	}
+                        if (
+                                (result == null)
+                                || (isUseNewest() && result.getNumber() < run.getNumber())
+                                || (!isUseNewest() && result.getNumber() > run.getNumber())
+                        ) {
+                            result = run;
+                        }
                     }
                 } else {
                     // Figure out the parent job and do a recursive call to getBuild
@@ -111,7 +99,13 @@ public class TriggeredBuildSelector extends BuildSelector {
                         filter,
                         parentJob.getBuildByNumber(upstreamBuild));
                     if (run != null && filter.isSelectable(run, env)) {
-                        return run;
+                        if (
+                                (result == null)
+                                || (isUseNewest() && result.getNumber() < run.getNumber())
+                                || (!isUseNewest() && result.getNumber() > run.getNumber())
+                        ) {
+                            result = run;
+                        }
                     }
                 }
             }
