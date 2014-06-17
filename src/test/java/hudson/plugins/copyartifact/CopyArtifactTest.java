@@ -36,8 +36,10 @@ import hudson.maven.MavenModuleSet;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
+import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
@@ -46,13 +48,18 @@ import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
+
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import jenkins.model.Jenkins;
-import org.acegisecurity.context.SecurityContext;
 
+import jenkins.model.Jenkins;
+
+import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.junit.Test;
@@ -66,6 +73,8 @@ import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.google.common.collect.Sets;
 
 import static org.junit.Assert.assertTrue;
 
@@ -673,27 +682,83 @@ public class CopyArtifactTest extends HudsonTestCase {
      * Test that a user is prevented from bypassing permissions on other jobs when configuring
      * a copyartifact build step.
      */
-    @LocalData
     public void testPermission() throws Exception {
-        executeOnServer(new Callable<Object>() {
-            public Object call() throws Exception {
-                assertNull("Job should not be accessible to anonymous", hudson.getItem("testJob"));
-                assertEquals("Should ignore/clear value for inaccessible project", "",
-                        new CopyArtifact("testJob", null, null, null, null, false, false, true).getProjectName());
-                return null;
+        // any users can be authenticated with the password same to the user id.
+        jenkins.setSecurityRealm(createDummySecurityRealm());
+        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
+        pmas.add(Jenkins.READ, Jenkins.ANONYMOUS.getName());
+        pmas.add(Jenkins.READ, "joe");
+        jenkins.setAuthorizationStrategy(pmas);
+        
+        // only joe can access project "src"
+        FreeStyleProject src = createFreeStyleProject();
+        {
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            auths.put(Item.READ, Sets.newHashSet("joe"));
+            src.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        
+        // test access from anonymous
+        {
+            FreeStyleProject dest = createFreeStyleProject();
+            dest.getBuildersList().add(new CopyArtifact(
+                    src.getName(),
+                    "",
+                    new StatusBuildSelector(true),
+                    "",
+                    "",
+                    false,
+                    false,
+                    true
+            ));
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            auths.put(Item.READ, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
+            auths.put(Item.CONFIGURE, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
+            dest.addProperty(new AuthorizationMatrixProperty(auths));
+            
+            WebClient wc = createWebClient();
+            try {
+                wc.getPage(src);
+                fail("Job should not be accessible to anonymous");
+            } catch(FailingHttpStatusCodeException e) {
+                assertEquals("Job should not be accessible to anonymous", 404, e.getStatusCode());
             }
-        });
-
-        // Login as user with access to testJob:
-        WebClient wc = createWebClient();
-        wc.login("joe", "joe");
-        wc.executeOnServer(new Callable<Object>() {
-            public Object call() throws Exception {
-                assertEquals("Should allow use of testJob for joe", "testJob",
-                             new CopyArtifact("testJob", null, null, null, null, false, false, true).getProjectName());
-                return null;
-            }
-        });
+            
+            submit(wc.getPage(dest, "configure").getFormByName("config"));
+            
+            dest = jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
+            CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
+            assertEquals("Should ignore/clear value for inaccessible project", "", ca.getProjectName());
+        }
+        
+        // test access from joe
+        {
+            FreeStyleProject dest = createFreeStyleProject();
+            dest.getBuildersList().add(new CopyArtifact(
+                    src.getName(),
+                    "",
+                    new StatusBuildSelector(true),
+                    "",
+                    "",
+                    false,
+                    false,
+                    true
+            ));
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            auths.put(Item.READ, Sets.newHashSet("joe"));
+            auths.put(Item.CONFIGURE, Sets.newHashSet("joe"));
+            dest.addProperty(new AuthorizationMatrixProperty(auths));
+            
+            WebClient wc = createWebClient();
+            wc.login("joe", "joe");
+            assertNotNull(wc.getPage(src));
+            
+            submit(wc.getPage(dest, "configure").getFormByName("config"));
+            
+            dest = jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
+            CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
+            assertEquals("Should ignore/clear value for inaccessible project", src.getName(), ca.getProjectName());
+        }
     }
 
     /**
