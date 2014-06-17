@@ -30,6 +30,7 @@ import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
 import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
+import hudson.matrix.TextAxis;
 import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
 import hudson.model.*;
@@ -63,6 +64,8 @@ import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+
+import com.cloudbees.hudson.plugins.folder.Folder;
 
 import static org.junit.Assert.assertTrue;
 
@@ -1085,6 +1088,75 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
+    }
+
+    public void testSameFolder() throws Exception {
+        Folder folder = jenkins.createProject(Folder.class, "folder");
+        FreeStyleProject src = folder.createProject(FreeStyleProject.class, "src");
+        src.getBuildersList().add(new ArtifactBuilder());
+        src.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        assertBuildStatusSuccess(src.scheduleBuild2(0));
+        
+        FreeStyleProject dest = folder.createProject(FreeStyleProject.class, "dest");
+        dest.getBuildersList().add(new CopyArtifact(src.getName(), null, new StatusBuildSelector(true), "", "", false, false, true));
+        FreeStyleBuild b = dest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        WebClient wc = createWebClient();
+        submit(wc.getPage(dest, "configure").getFormByName("config"));
+        
+        dest = jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
+        CopyArtifact ca = (CopyArtifact)dest.getBuildersList().get(0);
+        assertEquals(src.getName(), ca.getProjectName());
+    }
+
+    public void testSameFolderFromMatrix() throws Exception {
+        Folder folder = jenkins.createProject(Folder.class, "folder");
+        MatrixProject src = folder.createProject(MatrixProject.class, "src");
+        src.setAxes(new AxisList(new TextAxis("axis1", "value1", "value2")));
+        src.getBuildersList().add(new ArtifactBuilder());
+        src.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        assertBuildStatusSuccess(src.scheduleBuild2(0));
+        
+        String projectNameToCopyFrom = String.format("%s/axis1=value1", src.getName());
+        FreeStyleProject dest = folder.createProject(FreeStyleProject.class, "dest");
+        dest.getBuildersList().add(new CopyArtifact(projectNameToCopyFrom, null, new StatusBuildSelector(true), "", "", false, false, true));
+        FreeStyleBuild b = dest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        
+        WebClient wc = createWebClient();
+        submit(wc.getPage(dest, "configure").getFormByName("config"));
+        
+        dest = jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
+        CopyArtifact ca = (CopyArtifact)dest.getBuildersList().get(0);
+        assertEquals(projectNameToCopyFrom, ca.getProjectName());
+    }
+
+    @Bug(20940)
+    public void testSameFolderToMatrix() throws Exception {
+        Folder folder = jenkins.createProject(Folder.class, "foler");
+        FreeStyleProject src = folder.createProject(FreeStyleProject.class, "src");
+        src.getBuildersList().add(new ArtifactBuilder());
+        src.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        assertBuildStatusSuccess(src.scheduleBuild2(0));
+        
+        MatrixProject dest = folder.createProject(MatrixProject.class, "dest");
+        dest.setAxes(new AxisList(new TextAxis("axis1", "value1", "value2")));
+        dest.getBuildersList().add(new CopyArtifact(src.getName(), null, new StatusBuildSelector(true), "", "", false, false, true));
+        MatrixBuild b = dest.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        for(MatrixRun r: b.getExactRuns()) {
+            assertFile(true, "foo.txt", r);
+        }
+        
+        WebClient wc = createWebClient();
+        submit(wc.getPage(dest, "configure").getFormByName("config"));
+        
+        dest = jenkins.getItemByFullName(dest.getFullName(), MatrixProject.class);
+        CopyArtifact ca = (CopyArtifact)dest.getBuildersList().get(0);
+        assertEquals(src.getName(), ca.getProjectName());
     }
 
     @Test
