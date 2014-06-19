@@ -25,6 +25,7 @@ package hudson.plugins.copyartifact;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.cli.CLI;
 import hudson.matrix.Axis;
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
@@ -35,8 +36,10 @@ import hudson.maven.MavenModuleSet;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
 import hudson.security.ACL;
+import hudson.security.Permission;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.GlobalMatrixAuthorizationStrategy;
+import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
@@ -45,15 +48,31 @@ import hudson.tasks.BuildTrigger;
 import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import jenkins.model.Jenkins;
-import org.acegisecurity.context.SecurityContext;
 
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import jenkins.model.Jenkins;
+
+import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.apache.commons.io.input.NullInputStream;
 import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
@@ -63,6 +82,13 @@ import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+import org.w3c.dom.Document;
+
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.WebRequestSettings;
+import com.gargoylesoftware.htmlunit.xml.XmlPage;
+import com.google.common.collect.Sets;
 
 import static org.junit.Assert.assertTrue;
 
@@ -1146,6 +1172,198 @@ public class CopyArtifactTest extends HudsonTestCase {
         // builds succeed.
         assertBuildStatusSuccess(copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         assertBuildStatusSuccess(matrixCopier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+    }
+
+    private String getConfigXml(XmlPage page) throws TransformerException {
+        // {@link XmlPage#asXml} does unneccessary indentations.
+        Document doc = page.getXmlDocument();
+        TransformerFactory tfactory = TransformerFactory.newInstance(); 
+        Transformer transformer = tfactory.newTransformer(); 
+        
+        StringWriter sw = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(sw)); 
+        
+        return sw.toString();
+    }
+    
+    public void testRestInterfaceCanBypassPermission() throws Exception {
+        // This allows any users authenticate name == password
+        jenkins.setSecurityRealm(createDummySecurityRealm());
+        
+        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
+        authorization.add(Jenkins.READ, "devel");
+        jenkins.setAuthorizationStrategy(authorization);
+        
+        FreeStyleProject srcProject = createFreeStyleProject();
+        {
+            // devel is not allowed to access srcProject.
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        srcProject.getBuildersList().add(new ArtifactBuilder());
+        srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
+        
+        FreeStyleProject destProject = createFreeStyleProject();
+        {
+            // devel is allowed to access and configure destProject.
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            auths.put(Item.READ, Sets.newHashSet("devel"));
+            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
+            destProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        destProject.getBuildersList().add(new CopyArtifact(
+                "${SRC}",
+                "",
+                new StatusBuildSelector(true),
+                "**/*",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // destProject fails as runtime access check is performed.
+        assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(
+                0,
+                new Cause.UserCause(),
+                new ParametersAction(new StringParameterValue("SRC", srcProject.getName()))
+        ).get());
+        
+        WebClient wc = createWebClient();
+        wc.login("devel", "devel");
+        
+        // devel cannot access srcProject
+        try {
+            wc.getPage(srcProject);
+            fail("devel should not access srcProject");
+        } catch(FailingHttpStatusCodeException e) {
+            assertEquals(404, e.getStatusCode());
+        }
+        
+        // GET config.xml of destProject
+        String configXml = getConfigXml(wc.goToXml(String.format("%s/config.xml", destProject.getUrl())));
+        
+        // POST config.xml to destProject, replacing ${SRC} to srcProject.
+        // This should success.
+        WebRequestSettings req = new WebRequestSettings(
+                wc.createCrumbedUrl(String.format("%s/config.xml", destProject.getUrl())),
+                HttpMethod.POST
+        );
+        req.setRequestBody(configXml.replace("${SRC}", srcProject.getName()));
+        wc.getPage(req);
+        
+        // destProject should fail, but succeeds.
+        assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
+    }
+    
+    @Test
+    public void testCliCanBypassPermission() throws Exception {
+        // This allows any users authenticate name == password
+        jenkins.setSecurityRealm(createDummySecurityRealm());
+        
+        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
+        authorization.add(Jenkins.READ, "devel");
+        
+        // This is required for CLI, JENKINS-12543.
+        authorization.add(Jenkins.READ, "anonymous");
+        //authorization.add(Item.READ, "anonymous");
+        
+        jenkins.setAuthorizationStrategy(authorization);
+        
+        FreeStyleProject srcProject = createFreeStyleProject();
+        {
+            // devel is not allowed to access srcProject.
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        srcProject.getBuildersList().add(new ArtifactBuilder());
+        srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
+        
+        FreeStyleProject destProject = createFreeStyleProject();
+        {
+            // devel is allowed to access and configure destProject.
+            // READ for anonumous is required for CLI, JENKINS-12543.
+            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            auths.put(Item.READ, Sets.newHashSet("devel", "anonymous"));
+            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
+            destProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        destProject.getBuildersList().add(new CopyArtifact(
+                "${SRC}",
+                "",
+                new StatusBuildSelector(true),
+                "**/*",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // destProject fails as runtime access check is performed.
+        assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(
+                0,
+                new Cause.UserCause(),
+                new ParametersAction(new StringParameterValue("SRC", srcProject.getName()))
+        ).get());
+        
+        // devel cannot access srcProject
+        // TODO: replace with CLI.
+        try {
+            WebClient wc = createWebClient();
+            wc.login("devel", "devel");
+            wc.getPage(srcProject);
+            fail("devel should not access srcProject");
+        } catch(FailingHttpStatusCodeException e) {
+            assertEquals(404, e.getStatusCode());
+        }
+        
+        // GET config.xml of destProject
+        String configXml = null;
+        {
+            CLI cli = new CLI(getURL());
+            ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+            ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+            int ret = cli.execute(Arrays.asList(
+                    "get-job",
+                    destProject.getFullName(),
+                    "--username",
+                    "devel",
+                    "--password",
+                    "devel"
+                ),
+                new NullInputStream(0),
+                stdout,
+                stderr
+            );
+            assertEquals(stderr.toString(), 0, ret);
+            configXml = stdout.toString();
+        }
+        
+        // POST config.xml to destProject, replacing ${SRC} to srcProject.
+        // This should success.
+        {
+            CLI cli = new CLI(getURL());
+            ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+            ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+            int ret = cli.execute(Arrays.asList(
+                    "update-job",
+                    destProject.getFullName(),
+                    "--username",
+                    "devel",
+                    "--password",
+                    "devel"
+                ),
+                new ByteArrayInputStream(configXml.replace("${SRC}", srcProject.getName()).getBytes()),
+                stdout,
+                stderr
+            );
+            assertEquals(stderr.toString(), 0, ret);
+        }
+        
+        // destProject should fail, but succeeds.
+        assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
     }
 
     /* This test is available only for Jenkins >= 1.521.
