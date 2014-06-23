@@ -493,11 +493,27 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
         b.keepLog(true);
         b = p.scheduleBuild2(0, new UserCause(),
-                new ParametersAction(new StringParameterValue("PBS", "<SavedBuildSelector/>"))).get();
+                new ParametersAction(new BuildSelectorParameterValue("PBS", new SavedBuildSelector()))).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
+    }
+
+    public void testParameterizedBuildSelectorMissingParameter() throws Exception {
+        FreeStyleProject other = createArtifactProject(),
+                         p = createFreeStyleProject();
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("PBS");
+        assertEquals("PBS", pbs.getParameterName());
+
+        p.getBuildersList().add(new CopyArtifact(other.getName(), pbs, "*.txt", "", false, false));
+        FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
+                new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
+        assertBuildStatusSuccess(b);
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
+        b.keepLog(true);
+        b = p.scheduleBuild2(0, new UserCause()).get();
+        assertEquals(b.getResult(), Result.FAILURE);
     }
 
     public void testPermalinkBuildSelector() throws Exception {

@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder,Chris Johnson
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@ import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.ParameterValue;
 import hudson.model.SimpleParameterDefinition;
-import hudson.model.StringParameterValue;
 import hudson.util.XStream2;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -37,6 +36,7 @@ import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * @author Alan Harder
+ * @author Chris Johnson
  */
 public class BuildSelectorParameter extends SimpleParameterDefinition {
     private BuildSelector defaultSelector;
@@ -53,24 +53,18 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     @Override
     public ParameterValue getDefaultParameterValue() {
-        return toStringValue(defaultSelector);
+        return new BuildSelectorParameterValue(getName(), defaultSelector, getDescription());
     }
 
     @Override
     public ParameterValue createValue(String value) {
-        getSelectorFromXml(value); // validate the input
-        return new StringParameterValue(getName(), value, getDescription());
+        return new BuildSelectorParameterValue(getName(), getSelectorFromXml(value), getDescription());
     }
 
     @Override
     public ParameterValue createValue(StaplerRequest req, JSONObject jo) {
-        return toStringValue(req.bindJSON(BuildSelector.class, jo));
-    }
-
-    private StringParameterValue toStringValue(BuildSelector selector) {
-        return new StringParameterValue(
-                getName(), XSTREAM.toXML(selector).replaceAll("[\n\r]+", ""), getDescription());
-    }
+        return new BuildSelectorParameterValue(getName(), req.bindJSON(BuildSelector.class, jo), getDescription());
+   }
 
     /**
      * Convert xml fragment into a BuildSelector object.

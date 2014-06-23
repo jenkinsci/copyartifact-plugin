@@ -1,7 +1,7 @@
 <!--
 The MIT License
 
-Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
+Copyright (c) 2004-2012, Chris Johnson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -20,15 +20,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+ xmlns:d="jelly:define"
+	xmlns:l="/lib/layout" xmlns:t="/lib/hudson" 
+	xmlns:i="jelly:fmt" xmlns:p="/lib/hudson/project"
+
 -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:ca="/hudson/plugins/copyartifact">
-  <f:entry title="${%Name}" field="name">
-    <f:textbox/>
-  </f:entry>
-  <ca:selectorList currentSelector="${instance.defaultSelector}"
-      name="defaultSelector" title="${%Default Selector}" omit="ParameterizedBuildSelector"/>
-  <f:entry title="${%Description}" field="description" help="/help/parameter/description.html">
-    <f:textarea/>
-  </f:entry>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
+	<f:entry title="${it.name}" description="${it.description}">
+		<f:textbox name="value" value="${it.buildSelectorName}" readonly="true" />
+	</f:entry>
 </j:jelly>
