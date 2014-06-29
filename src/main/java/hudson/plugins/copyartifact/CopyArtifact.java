@@ -103,13 +103,15 @@ public class CopyArtifact extends Builder {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
-            ItemGroup context = req.findAncestorObject(ItemGroup.class);
-            if (context == null) context = Jenkins.getInstance();
+            AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
+            if (p != null) {
+                ItemGroup<?> context = p.getParent();
 
-            // Prevents both invalid values and access to artifacts of projects which this user cannot see.
-            // If value is parameterized, it will be checked when build runs.
-            if (projectName.indexOf('$') < 0 && Jenkins.getInstance().getItem(projectName, context, Job.class) == null)
-                projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+                // Prevents both invalid values and access to artifacts of projects which this user cannot see.
+                // If value is parameterized, it will be checked when build runs.
+                if (projectName.indexOf('$') < 0 && Jenkins.getInstance().getItem(projectName, context, Job.class) == null)
+                    projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+            }
         }
 
         this.project = projectName;
@@ -251,7 +253,7 @@ public class CopyArtifact extends Builder {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(project);
-            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getParent(), Job.class);
+            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getRootProject().getParent(), Job.class);
             if (job != null && !expandedProject.equals(project)
                 // If projectName is parameterized, need to do permission check on source project.
                 && !canReadFrom(job, build)) {
