@@ -29,30 +29,75 @@ import hudson.Extension;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixRun;
 import hudson.model.Result;
-import hudson.model.Descriptor;
 import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
 import hudson.model.Run;
+import net.sf.json.JSONObject;
+
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Copy artifacts from the build that triggered this build.
  * @author Alan Harder
  */
 public class TriggeredBuildSelector extends BuildSelector {
+    /**
+     * Which build should be used if triggered by multiple upstream builds.
+     * 
+     * Specified in buildstep configurations and the global configuration.
+     */
+    public enum UpstreamFilterStrategy {
+        /**
+         * Use global configuration.
+         * 
+         * The default value for buildstep configurations.
+         * Should not be specified in the global configuration.
+         * 
+         */
+        UseGlobalSetting(false, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseGlobalSetting()),
+        /**
+         * Use the oldest build.
+         * 
+         * The default value for the global configuration.
+         */
+        UseOldest(true,  Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseOldest()),
+        /**
+         * Use the newest build.
+         */
+        UseNewest(true, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseNewest()),
+        ;
+        
+        private final boolean forGlobalSetting;
+        private final Localizable displayName;
+        
+        UpstreamFilterStrategy(boolean forGlobalSetting, Localizable displayName) {
+            this.forGlobalSetting = forGlobalSetting;
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() {
+            return displayName.toString();
+        }
+        
+        public boolean isForGlobalSetting() {
+            return forGlobalSetting;
+        }
+    };
     private Boolean fallbackToLastSuccessful;
-    private final boolean useNewest;
+    private final UpstreamFilterStrategy upstreamFilterStrategy;
 
     @DataBoundConstructor
-    public TriggeredBuildSelector(boolean fallback, boolean useNewest) {
+    public TriggeredBuildSelector(boolean fallback, UpstreamFilterStrategy upstreamFilterStrategy) {
         this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
-        this.useNewest = useNewest;
+        this.upstreamFilterStrategy = upstreamFilterStrategy;
     }
 
     @Deprecated
     public TriggeredBuildSelector(boolean fallback) {
-        this(fallback, false);
+        this(fallback, UpstreamFilterStrategy.UseGlobalSetting);
     }
     
     public boolean isFallbackToLastSuccessful() {
@@ -60,10 +105,29 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     /**
+     * @return Which build should be used if triggered by multiple upstream builds.
+     */
+    public UpstreamFilterStrategy getUpstreamFilterStrategy() {
+        return upstreamFilterStrategy;
+    }
+    
+    /**
      * @return whether to use the newest upstream or not (use the oldest) when there are multiple upstreams.
      */
     public boolean isUseNewest() {
-        return useNewest;
+        UpstreamFilterStrategy strategy = getUpstreamFilterStrategy();
+        if(strategy == null || strategy == UpstreamFilterStrategy.UseGlobalSetting) {
+            strategy = ((DescriptorImpl)getDescriptor()).getGlobalUpstreamFilterStrategy();
+        }
+        switch(strategy) {
+        case UseOldest:
+            return false;
+        case UseNewest:
+            return true;
+        default:
+            // default behavior
+            return false;
+        }
     }
     
     @Override
@@ -124,7 +188,29 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
 
     @Extension(ordinal=25)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                TriggeredBuildSelector.class, Messages._TriggeredBuildSelector_DisplayName());
+    public static class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        private UpstreamFilterStrategy globalUpstreamFilterStrategy;
+        
+        public DescriptorImpl() {
+            super(TriggeredBuildSelector.class, Messages._TriggeredBuildSelector_DisplayName());
+            globalUpstreamFilterStrategy = UpstreamFilterStrategy.UseOldest;
+            load();
+        }
+        
+        public void setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy globalUpstreamFilterStrategy) {
+            this.globalUpstreamFilterStrategy = globalUpstreamFilterStrategy;
+        }
+        
+        public UpstreamFilterStrategy getGlobalUpstreamFilterStrategy() {
+            return globalUpstreamFilterStrategy;
+        }
+        
+        @Override
+        public boolean configure(StaplerRequest req, JSONObject json)
+                throws hudson.model.Descriptor.FormException {
+            setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy.valueOf(json.getString("globalUpstreamFilterStrategy")));
+            save();
+            return super.configure(req, json);
+        }
+    }
 }
