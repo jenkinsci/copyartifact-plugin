@@ -119,6 +119,9 @@ public class TriggeredBuildSelector extends BuildSelector {
         if(strategy == null || strategy == UpstreamFilterStrategy.UseGlobalSetting) {
             strategy = ((DescriptorImpl)getDescriptor()).getGlobalUpstreamFilterStrategy();
         }
+        if(strategy == null){
+            return false;
+        }
         switch(strategy) {
         case UseOldest:
             return false;

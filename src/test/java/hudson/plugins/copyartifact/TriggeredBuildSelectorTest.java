@@ -61,7 +61,7 @@ public class TriggeredBuildSelectorTest {
             p.getBuildersList().add(new CopyArtifact(
                     "${upstream}",
                     "",
-                    new TriggeredBuildSelector(true, false),
+                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
                     "",
                     "",
                     false,
@@ -84,7 +84,7 @@ public class TriggeredBuildSelectorTest {
             TriggeredBuildSelector selector = (TriggeredBuildSelector)copyArtifact.getBuildSelector();
             
             assertTrue(selector.isFallbackToLastSuccessful());
-            assertFalse(selector.isUseNewest());
+            assertEquals(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, selector.getUpstreamFilterStrategy());
         }
         
         {
@@ -92,7 +92,7 @@ public class TriggeredBuildSelectorTest {
             p.getBuildersList().add(new CopyArtifact(
                     "${upstream}",
                     "",
-                    new TriggeredBuildSelector(false, true),
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
                     "",
                     "",
                     false,
@@ -115,7 +115,54 @@ public class TriggeredBuildSelectorTest {
             TriggeredBuildSelector selector = (TriggeredBuildSelector)copyArtifact.getBuildSelector();
             
             assertFalse(selector.isFallbackToLastSuccessful());
-            assertTrue(selector.isUseNewest());
+            assertEquals(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, selector.getUpstreamFilterStrategy());
+        }
+        
+        {
+            FreeStyleProject p = j.createFreeStyleProject();
+            p.getBuildersList().add(new CopyArtifact(
+                    "${upstream}",
+                    "",
+                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    "",
+                    "",
+                    false,
+                    false, 
+                    false
+            ));
+            p.save();
+            
+            j.submit(wc.getPage(p, "configure").getFormByName("config"));
+            
+            p = j.jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
+            assertNotNull(p);
+            
+            CopyArtifact copyArtifact = p.getBuildersList().get(CopyArtifact.class);
+            assertNotNull(p);
+            
+            assertNotNull(copyArtifact.getBuildSelector());
+            assertEquals(TriggeredBuildSelector.class, copyArtifact.getBuildSelector().getClass());
+            
+            TriggeredBuildSelector selector = (TriggeredBuildSelector)copyArtifact.getBuildSelector();
+            
+            assertTrue(selector.isFallbackToLastSuccessful());
+            assertEquals(TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, selector.getUpstreamFilterStrategy());
+        }
+    }
+    
+    @Test
+    public void testGlobalConfiguration() throws Exception {
+        WebClient wc = j.createWebClient();
+        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        {
+            d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
+            j.submit(wc.getPage(j.jenkins, "configure").getFormByName("config"));
+            assertEquals(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, d.getGlobalUpstreamFilterStrategy());
+        }
+        {
+            d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
+            j.submit(wc.getPage(j.jenkins, "configure").getFormByName("config"));
+            assertEquals(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, d.getGlobalUpstreamFilterStrategy());
         }
     }
     
@@ -131,7 +178,56 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(new CopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, false),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
+                "artifact.txt",
+                "",
+                false,
+                false,
+                true
+        ));
+        downstream.setQuietPeriod(5); // this allows upstream trigger can be merged.
+        
+        upstream.save();
+        downstream.save();
+        j.jenkins.rebuildDependencyGraph();
+        
+        // 3 upstream builds.
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        
+        // wait till downstream will be triggered and completed
+        j.waitUntilNoActivity();
+        
+        FreeStyleBuild b = downstream.getLastBuild();
+        assertNotNull(b);
+        j.assertBuildStatusSuccess(b);
+        
+        assertEquals(
+                String.format("upstream triggers seem not to be merged into one downstream build. This means quietPeriod of downstream is too short in this environment: %s", b.getCauses()),
+                3,
+                Util.filter(b.getCauses(), Cause.UpstreamCause.class).size()
+        );
+        
+        assertEquals("value1", b.getWorkspace().child("artifact.txt").readToString());
+    }
+    
+    @Test
+    public void testUseOldestByGlobalSetting() throws Exception {
+        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
+        
+        FreeStyleProject upstream = j.createFreeStyleProject();
+        FreeStyleProject downstream = j.createFreeStyleProject();
+        
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
+        upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
+        upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
+        
+        downstream.getBuildersList().add(new CopyArtifact(
+                upstream.getName(),
+                "",
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
                 "artifact.txt",
                 "",
                 false,
@@ -178,7 +274,56 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(new CopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, true),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
+                "artifact.txt",
+                "",
+                false,
+                false,
+                true
+        ));
+        downstream.setQuietPeriod(5); // this allows upstream trigger can be merged.
+        
+        upstream.save();
+        downstream.save();
+        j.jenkins.rebuildDependencyGraph();
+        
+        // 3 upstream builds.
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        
+        // wait till downstream will be triggered and completed
+        j.waitUntilNoActivity();
+        
+        FreeStyleBuild b = downstream.getLastBuild();
+        assertNotNull(b);
+        j.assertBuildStatusSuccess(b);
+        
+        assertEquals(
+                String.format("upstream triggers seem not to be merged into one downstream build. This means quietPeriod of downstream is too short in this environment: %s", b.getCauses()),
+                3,
+                Util.filter(b.getCauses(), Cause.UpstreamCause.class).size()
+        );
+        
+        assertEquals("value3", b.getWorkspace().child("artifact.txt").readToString());
+    }
+    
+    @Test
+    public void testUseNewestByGlobalSetting() throws Exception {
+        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
+        
+        FreeStyleProject upstream = j.createFreeStyleProject();
+        FreeStyleProject downstream = j.createFreeStyleProject();
+        
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
+        upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
+        upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
+        
+        downstream.getBuildersList().add(new CopyArtifact(
+                upstream.getName(),
+                "",
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
                 "artifact.txt",
                 "",
                 false,
@@ -235,7 +380,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(new CopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, false),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
                 "artifact.txt",
                 "",
                 false,
@@ -322,7 +467,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(new CopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, true),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
                 "artifact.txt",
                 "",
                 false,
@@ -385,5 +530,85 @@ public class TriggeredBuildSelectorTest {
         );
         
         assertEquals("value4", b.getWorkspace().child("artifact.txt").readToString());
+    }
+    
+    @Test
+    public void testBackwardCompatibility() throws Exception {
+        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
+        
+        FreeStyleProject upstream = j.createFreeStyleProject();
+        FreeStyleProject downstream = j.createFreeStyleProject();
+        
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
+        upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
+        upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
+        
+        downstream.getBuildersList().add(new CopyArtifact(
+                upstream.getName(),
+                "",
+                new TriggeredBuildSelector(false, null),
+                "artifact.txt",
+                "",
+                false,
+                false,
+                true
+        ));
+        downstream.setQuietPeriod(5); // this allows upstream trigger can be merged.
+        
+        upstream.save();
+        downstream.save();
+        j.jenkins.rebuildDependencyGraph();
+        
+        // 3 upstream builds.
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        
+        // wait till downstream will be triggered and completed
+        j.waitUntilNoActivity();
+        
+        FreeStyleBuild b = downstream.getLastBuild();
+        assertNotNull(b);
+        j.assertBuildStatusSuccess(b);
+        
+        assertEquals(
+                String.format("upstream triggers seem not to be merged into one downstream build. This means quietPeriod of downstream is too short in this environment: %s", b.getCauses()),
+                3,
+                Util.filter(b.getCauses(), Cause.UpstreamCause.class).size()
+        );
+        
+        assertEquals("value1", b.getWorkspace().child("artifact.txt").readToString());
+    }
+    
+    @Test
+    public void testIsUseNewest() throws Exception {
+        // |Descriptor      |BuildSelector   |Result|
+        // |:---------------|:---------------|:-----|
+        // |null            |null            |false |
+        // |UseGlobalSetting|UseGlobalSetting|false |
+        // |UseOldest       |UseGlobalSetting|false |
+        // |UseNewest       |UseGlobalSetting|true  |
+        // |UseOldest       |UseNewest       |true  |
+        // |UseNewest       |UseOldest       |false |
+        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        
+        d.setGlobalUpstreamFilterStrategy(null);
+        assertFalse(new TriggeredBuildSelector(false, null).isUseNewest());
+        
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting);
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
+        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
+        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest).isUseNewest());
+        
+        d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest).isUseNewest());
     }
 }
