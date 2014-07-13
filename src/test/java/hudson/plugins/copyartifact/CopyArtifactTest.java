@@ -436,6 +436,18 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, ".hg/defaultexclude.txt", b);
     }
 
+    public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(), "", new WorkspaceSelector(),
+                "", "", true, false));
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "defaultexclude.txt", b);
+    }
+
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
     public void testJobRename() throws Exception {
         FreeStyleProject other = createFreeStyleProject(),
