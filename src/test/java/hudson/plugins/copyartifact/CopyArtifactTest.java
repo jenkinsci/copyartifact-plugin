@@ -121,6 +121,8 @@ public class CopyArtifactTest extends HudsonTestCase {
             ws.child("subdir/subfoo.txt").touch(System.currentTimeMillis());
             ws.child("deepfoo/a/b").mkdirs();
             ws.child("deepfoo/a/b/c.log").touch(System.currentTimeMillis());
+            ws.child(".hg").mkdirs();
+            ws.child(".hg/defaultexclude.txt").touch(System.currentTimeMillis());
             // For matrix tests write one more file:
             String foo = build.getBuildVariables().get("FOO");
             if (foo != null) ws.child(foo + ".txt").touch(System.currentTimeMillis());
@@ -419,6 +421,19 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subfoo.txt", b);
         assertFile(false, "c.log", b);
+    }
+
+    /** Test copy from workspace containing default ant excludes */
+    public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(), "", new WorkspaceSelector(),
+                "", "", false, false));
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, ".hg/defaultexclude.txt", b);
     }
 
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
