@@ -378,7 +378,7 @@ public class CopyArtifact extends Builder {
                 cnt = copier.copyAll(srcDir, expandedFilter, targetDir, isFingerprintArtifacts());
             else {
                 targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = srcDir.list(expandedFilter);
+                FilePath[] list = srcDir.list(expandedFilter, null, false);
                 for (FilePath file : list)
                     copier.copyOne(file, new FilePath(targetDir, file.getName()), isFingerprintArtifacts());
                 cnt = list.length;
