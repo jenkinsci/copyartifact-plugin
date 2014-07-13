@@ -52,6 +52,7 @@ import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -436,6 +437,19 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertFile(true, ".hg/defaultexclude.txt", b);
     }
 
+    public void testExcludes() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(), "", new WorkspaceSelector(),
+                "**", ".hg/**", "", false, false, true));
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "subdir/subfoo.txt", b);
+        assertFile(false, ".hg/defaultexclude.txt", b);
+    }
+
     public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {
         FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
         p.getBuildersList().add(new CopyArtifact(other.getName(), "", new WorkspaceSelector(),
@@ -446,6 +460,19 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
         assertFile(true, "defaultexclude.txt", b);
+    }
+
+    public void testExcludesWithFlatten() throws Exception {
+        FreeStyleProject other = createFreeStyleProject(), p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(other.getName(), "", new WorkspaceSelector(),
+                "**", ".hg/**", "", true, false, true));
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        assertBuildStatusSuccess(b);
+        assertFile(true, "subfoo.txt", b);
+        assertFile(false, "defaultexclude.txt", b);
     }
 
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
@@ -1312,6 +1339,67 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(matrixCopier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
     }
 
+    public void testWebConfiguration() throws Exception {
+        FreeStyleProject upstream1 = createFreeStyleProject();
+        FreeStyleProject upstream2 = createFreeStyleProject();
+        FreeStyleProject p = createFreeStyleProject();
+        p.getBuildersList().add(new CopyArtifact(
+                upstream1.getName(),
+                "",
+                new StatusBuildSelector(true),
+                "",
+                "",
+                "",
+                false,
+                true,
+                true
+        ));
+        p.getBuildersList().add(new CopyArtifact(
+                upstream2.getName(),
+                "param=value",
+                new TriggeredBuildSelector(false),
+                "**",
+                "foobar.txt",
+                "targetdir",
+                true,
+                false,
+                false
+        ));
+        p.save();
+        
+        WebClient wc = createWebClient();
+        submit(wc.getPage(p, "configure").getFormByName("config"));
+        
+        p = jenkins.getItemByFullName(p.getFullName(), FreeStyleProject.class);
+        
+        List<CopyArtifact> caList = p.getBuildersList().getAll(CopyArtifact.class);
+        assertEquals(2, caList.size());
+        {
+            CopyArtifact ca = caList.get(0);
+            assertEquals(upstream1.getName(), ca.getProjectName());
+            assertEquals(null, ca.getParameters());
+            assertEquals(StatusBuildSelector.class, ca.getBuildSelector().getClass());
+            assertEquals("", ca.getFilter());
+            assertEquals("", ca.getExcludes());
+            assertEquals("", ca.getTarget());
+            assertFalse(ca.isFlatten());
+            assertTrue(ca.isOptional());
+            assertTrue(ca.isFingerprintArtifacts());
+        }
+        {
+            CopyArtifact ca = caList.get(1);
+            assertEquals(upstream2.getName(), ca.getProjectName());
+            assertEquals("param=value", ca.getParameters());
+            assertEquals(TriggeredBuildSelector.class, ca.getBuildSelector().getClass());
+            assertEquals("**", ca.getFilter());
+            assertEquals("foobar.txt", ca.getExcludes());
+            assertEquals("targetdir", ca.getTarget());
+            assertTrue(ca.isFlatten());
+            assertFalse(ca.isOptional());
+            assertFalse(ca.isFingerprintArtifacts());
+        }
+    }
+    
     /* This test is available only for Jenkins >= 1.521.
      * As I do not upgrade target Jenkins version to preserve compatibility
      * (the feature supporting QueueItemAuthenticator itself does not need to upgrade target version),
