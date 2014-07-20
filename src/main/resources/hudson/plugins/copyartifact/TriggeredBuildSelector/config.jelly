@@ -27,4 +27,9 @@ THE SOFTWARE.
     <f:checkbox name="fallback" checked="${selector.isFallbackToLastSuccessful()}"/>
     <label class="attach-previous">${%Use "Last successful build" as fallback}</label>
   </f:entry>
+  <f:advanced>
+  <f:entry field="upstreamFilterStrategy" title="${%Which for multiple upstream}">
+    <f:enum field="upstreamFilterStrategy">${it.displayName}</f:enum>
+  </f:entry>
+  </f:advanced>
 </j:jelly>
