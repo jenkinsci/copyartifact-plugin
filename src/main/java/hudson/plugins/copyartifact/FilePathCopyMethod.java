@@ -40,9 +40,9 @@ import java.io.IOException;
 public class FilePathCopyMethod extends Copier {
     /** @see FilePath#recursiveCopyTo(String,FilePath) */
     @Override
-    public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts)
+    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)
             throws IOException, InterruptedException {
-        return srcDir.copyRecursiveTo(filter, targetDir);
+        return srcDir.copyRecursiveTo(filter, excludes, targetDir);
     }
 
     /** @see FilePath#copyTo(FilePath) */

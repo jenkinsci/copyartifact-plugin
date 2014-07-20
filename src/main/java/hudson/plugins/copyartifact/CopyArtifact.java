@@ -66,6 +66,7 @@ import jenkins.model.Jenkins;
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -86,6 +87,7 @@ public class CopyArtifact extends Builder {
     private String project;
     private String parameters;
     private final String filter, target;
+    private final String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
     private final Boolean flatten, optional;
@@ -97,8 +99,14 @@ public class CopyArtifact extends Builder {
         this(projectName, parameters, selector, filter, target, flatten, optional, true);
     }
 
-    @DataBoundConstructor
+    @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
+            boolean flatten, boolean optional, boolean fingerprintArtifacts) {
+        this(projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts);
+    }
+
+    @DataBoundConstructor
+    public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
@@ -118,6 +126,7 @@ public class CopyArtifact extends Builder {
         this.parameters = Util.fixEmptyAndTrim(parameters);
         this.selector = selector;
         this.filter = Util.fixNull(filter).trim();
+        this.excludes = Util.fixNull(excludes).trim();
         this.target = Util.fixNull(target).trim();
         this.flatten = flatten ? Boolean.TRUE : null;
         this.optional = optional ? Boolean.TRUE : null;
@@ -204,6 +213,10 @@ public class CopyArtifact extends Builder {
         return filter;
     }
 
+    public String getExcludes() {
+        return excludes;
+    }
+
     public String getTarget() {
         return target;
     }
@@ -249,6 +262,7 @@ public class CopyArtifact extends Builder {
         upgradeIfNecessary(build.getProject());
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
+        String expandedExcludes = getExcludes();
         try {
             EnvVars env = build.getEnvironment(listener);
             env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
@@ -281,19 +295,23 @@ public class CopyArtifact extends Builder {
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+            expandedExcludes = env.expand(expandedExcludes);
+            if (StringUtils.isBlank(expandedExcludes)) {
+                expandedExcludes = null;
+            }
 
             Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
 
             if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) { 
             // use classes in the "maven-plugin" plugin as might not be installed
                 // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
+                boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
                 // Copy artifacts from all modules of this Maven build (automatic archiving)
                 for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
                     // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
                     // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
                     Run<?,?> r = it.next();
-                    ok |= perform(r, build, expandedFilter, targetDir, baseTargetDir, copier, console);
+                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
                 }
                 return ok;
             } else if (src instanceof MatrixBuild) {
@@ -302,11 +320,11 @@ public class CopyArtifact extends Builder {
                 // Use MatrixBuild.getExactRuns if available
                 for (Run r : ((MatrixBuild) src).getExactRuns())
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                    ok |= perform(r, build, expandedFilter, targetDir.child(r.getParent().getName()),
+                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
                 return ok;
             } else {
-                return perform(src, build, expandedFilter, targetDir, baseTargetDir, copier, console);
+                return perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
             }
         }
         catch (IOException ex) {
@@ -363,7 +381,7 @@ public class CopyArtifact extends Builder {
     }
 
 
-    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, FilePath targetDir,
+    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
             FilePath baseTargetDir, Copier copier, PrintStream console)
             throws IOException, InterruptedException {
         FilePath srcDir = selector.getSourceDirectory(src, console);
@@ -375,10 +393,10 @@ public class CopyArtifact extends Builder {
         try {
             int cnt;
             if (!isFlatten())
-                cnt = copier.copyAll(srcDir, expandedFilter, targetDir, isFingerprintArtifacts());
+                cnt = copier.copyAll(srcDir, expandedFilter, expandedExcludes, targetDir, isFingerprintArtifacts());
             else {
                 targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = srcDir.list(expandedFilter);
+                FilePath[] list = srcDir.list(expandedFilter, expandedExcludes, false);
                 for (FilePath file : list)
                     copier.copyOne(file, new FilePath(targetDir, file.getName()), isFingerprintArtifacts());
                 cnt = list.length;

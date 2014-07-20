@@ -4,9 +4,10 @@ import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.model.AbstractBuild;
 import hudson.model.Run;
-import org.apache.jackrabbit.webdav.client.methods.CopyMethod;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Extension point for how files are copied.
@@ -22,6 +23,8 @@ import java.io.IOException;
  */
 public abstract class Copier implements ExtensionPoint {
 
+    private static Logger LOG = Logger.getLogger(Copier.class.getName());
+
     /**
      * Called before copy-artifact operation.
      * @param src
@@ -36,22 +39,49 @@ public abstract class Copier implements ExtensionPoint {
 
     /**
      * @deprecated 
-     *      call/override {@link #copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts)} instead.
+     *      call/override {@link #copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)} instead.
      */
     public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
-        return copyAll(srcDir, filter, targetDir, true);
+        return copyAll(srcDir, filter, null, targetDir, true);
     }
 
     /**
+     * @deprecated 
+     *      call/override {@link #copyAll(FilePath, String, String, FilePath, boolean)} instead.
+     */
+    @Deprecated
+    public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
+        return copyAll(srcDir, filter, null, targetDir, fingerprintArtifacts);
+    }
+    
+    /**
      * Copy files matching the given file mask to the specified target.
+     * 
+     * You must override this when deriving {@link Copier}.
+     * 
      * @param srcDir Source directory
      * @param filter Ant GLOB pattern
+     * @param excludes Ant GLOB pattern. Can be null.
      * @param targetDir Target directory
      * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
      * @return Number of files that were copied
      * @see FilePath#copyRecursiveTo(String,FilePath)
      */
-    public abstract int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException;
+    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
+        try {
+            Class<?> classOfCopyAll = getClass().getMethod("copyAll", FilePath.class, String.class, FilePath.class, boolean.class).getDeclaringClass();
+            if (!Copier.class.equals(classOfCopyAll)) {
+                // For backward compatibility.
+                // avoid cyclic invocation.
+                return copyAll(srcDir, filter, targetDir, fingerprintArtifacts);
+            }
+        } catch(SecurityException e) {
+            LOG.log(Level.WARNING, "Unexpected exception in copyartifact-plugin", e);
+        } catch(NoSuchMethodException e) {
+            LOG.log(Level.WARNING, "Unexpected exception in copyartifact-plugin", e);
+        }
+        throw new AbstractMethodError("You need override Copier#copyAll(FilePath, String, String, FilePath, boolean)");
+    }
     
     /**
      * @deprecated 

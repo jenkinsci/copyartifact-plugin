@@ -58,9 +58,9 @@ public class FingerprintingCopyMethod extends Copier {
     }
 
     @Override
-    public int copyAll(FilePath srcDir, String filter, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
+    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
         targetDir.mkdirs();  // Create target if needed
-        FilePath[] list = srcDir.list(filter);
+        FilePath[] list = srcDir.list(filter, excludes, false);
         for (FilePath file : list) {
             String tail = file.getRemote().substring(srcDir.getRemote().length());
             if (tail.startsWith("\\") || tail.startsWith("/"))

@@ -31,6 +31,9 @@ THE SOFTWARE.
   <f:entry title="${%Artifacts to copy}" field="filter">
     <f:textbox/>
   </f:entry>
+  <f:entry title="${%Artifacts not to copy}" field="excludes">
+    <f:textbox/>
+  </f:entry>
   <f:entry title="${%Target directory}" field="target">
     <f:textbox/>
   </f:entry>
