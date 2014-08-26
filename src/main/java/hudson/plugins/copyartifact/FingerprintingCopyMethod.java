@@ -36,15 +36,15 @@ public class FingerprintingCopyMethod extends Copier {
     /**
      * Null if the source of the copy operation isn't {@link AbstractBuild} but some other Run type.
      */
-    private AbstractBuild<?,?> src;
+    private Run<?,?> src;
     
-    private AbstractBuild<?,?> dst;
+    private Run<?,?> dst;
     private final MessageDigest md5 = newMD5();
     private final Map<String,String> fingerprints = new HashMap<String, String>();
 
     @Override
-    public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
-        this.src = src instanceof AbstractBuild ? (AbstractBuild)src : null;
+    public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        this.src = src;
         this.dst = dst;
         fingerprints.clear();
     }
@@ -100,7 +100,7 @@ public class FingerprintingCopyMethod extends Copier {
                 if (src!=null) {
                     f.add((AbstractBuild)src);
                 }
-                f.add(dst);
+                f.addFor(dst);
                 fingerprints.put(s.getName(), digest);
             }
         } catch (IOException e) {
@@ -111,7 +111,7 @@ public class FingerprintingCopyMethod extends Copier {
     @Override
     public void end() {
         // add action
-        for (AbstractBuild r : new AbstractBuild[]{src,dst}) {
+        for (Run r : new Run[]{src, dst}) {
             if (r == null)
                 continue;
 

@@ -63,6 +63,7 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
+import jenkins.tasks.SimpleBuildStep;
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -73,11 +74,13 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
+
 /**
  * Build step to copy artifacts from another project.
  * @author Alan Harder
  */
-public class CopyArtifact extends Builder {
+public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
@@ -257,134 +260,184 @@ public class CopyArtifact extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
-            throws InterruptedException, IOException {
+    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
         upgradeIfNecessary(build.getProject());
-        PrintStream console = listener.getLogger();
-        String expandedProject = project, expandedFilter = filter;
-        String expandedExcludes = getExcludes();
+        return _perform(build, build.getWorkspace(), listener, selector);
+    }
+
+    @Override
+    public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        if (selector != null) {
+            _perform(run, workspace, listener, selector);
+        } else {
+            // TODO: what selector to use?
+            _perform(run, workspace, listener, new WorkspaceSelector());
+        }
+    }
+
+    private boolean _perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull TaskListener listener, BuildSelector buildSelector) throws InterruptedException, IOException {
+        CopyParams copyParams = new CopyParams(run, workspace, listener, buildSelector);
+
         try {
-            EnvVars env = build.getEnvironment(listener);
-            env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
-            expandedProject = env.expand(project);
-            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getRootProject().getParent(), Job.class);
-            if (job != null && !expandedProject.equals(project)
-                // If projectName is parameterized, need to do permission check on source project.
-                && !canReadFrom(job, build)) {
-                job = null; // Disallow access
+            if (!copyParams.expand()) {
+                // Something went wrong expanding the copy parameters.
+                return isOptional();
             }
-            if (job == null) {
+
+            // Copy...
+            return perform(copyParams, listener);
+        }
+        catch (IOException ex) {
+            Util.displayIOException(ex, listener);
+            ex.printStackTrace(listener.error(
+                    Messages.CopyArtifact_FailedToCopy(copyParams.expandedProject, copyParams.expandedFilter)));
+            return false;
+        }
+    }
+
+    private boolean perform(CopyParams copyParams, TaskListener listener) throws IOException, InterruptedException {
+        Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
+        PrintStream console = listener.getLogger();
+
+        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (copyParams.src instanceof MavenModuleSetBuild) ) {
+            // use classes in the "maven-plugin" plugin as might not be installed
+            // Copy artifacts from the build (ArchiveArtifacts build step)
+            boolean ok = perform(copyParams.src, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+            // Copy artifacts from all modules of this Maven build (automatic archiving)
+            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)copyParams.src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
+                // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
+                // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
+                Run<?,?> r = it.next();
+                ok |= perform(r, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+            }
+            return ok;
+        } else if (copyParams.src instanceof MatrixBuild) {
+            boolean ok = false;
+            // Copy artifacts from all configurations of this matrix build
+            // Use MatrixBuild.getExactRuns if available
+            for (Run r : ((MatrixBuild) copyParams.src).getExactRuns())
+                // Use subdir of targetDir with configuration name (like "jdk=java6u20")
+                ok |= perform(r, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir.child(r.getParent().getName()),
+                        copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+            return ok;
+        } else {
+            return perform(copyParams.src, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+        }
+    }
+
+    private class CopyParams {
+        private final Run<?, ?> run;
+        private final TaskListener listener;
+        private final FilePath workspace;
+        private final BuildSelector buildSelector;
+        private String expandedProject = project;
+        private String expandedFilter = filter;
+        private String expandedExcludes = getExcludes();
+        private Run src;
+        private FilePath targetDir;
+        private FilePath baseTargetDir;
+
+        private CopyParams(Run<?, ?> run, FilePath workspace, TaskListener listener, BuildSelector buildSelector) {
+            this.run = run;
+            this.workspace = workspace;
+            this.listener = listener;
+            this.buildSelector = buildSelector;
+        }
+
+        private boolean expand() throws IOException, InterruptedException {
+            PrintStream console = listener.getLogger();
+            EnvVars env = getEnvVars(run, listener);
+
+            expandedProject = env.expand(project);
+
+            // Get the src job
+            Job<?, ?> srcJob = getJob(run, expandedProject);
+            if (srcJob == null) {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
-            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
+
+            // Get the src Run associated with the src Job
+            src = getRun(srcJob, run, env);
             if (src == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
-                return isOptional();  // Fail build unless copy is optional
+                return false;
             }
-            FilePath targetDir = build.getWorkspace(), baseTargetDir = targetDir;
-            if (targetDir == null || !targetDir.exists()) {
+
+            // Work out the target dir
+            targetDir = workspace;
+            if (!targetDirExists()) {
                 console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
-                return isOptional();  // Fail build unless copy is optional
+                return false;
             }
+            baseTargetDir = targetDir;
+
+            // Expand the target dir
+            if (target.length() > 0) {
+                targetDir = new FilePath(targetDir, env.expand(target));
+            }
+
             // Add info about the selected build into the environment
-            EnvAction envData = build.getAction(EnvAction.class);
+            EnvAction envData = run.getAction(EnvAction.class);
             if (envData != null) {
-                envData.add(getItemGroup(build), expandedProject, src.getNumber());
+                envData.add(getItemGroup(run), expandedProject, src.getNumber());
             }
-            if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
+
+            // Expand the filter
             expandedFilter = env.expand(filter);
-            if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+            if (expandedFilter.trim().length() == 0) {
+                expandedFilter = "**";
+            }
+
+            // Expand the excludes
             expandedExcludes = env.expand(expandedExcludes);
             if (StringUtils.isBlank(expandedExcludes)) {
                 expandedExcludes = null;
             }
 
-            Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
-
-            if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) { 
-            // use classes in the "maven-plugin" plugin as might not be installed
-                // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                // Copy artifacts from all modules of this Maven build (automatic archiving)
-                for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
-                    // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
-                    // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
-                    Run<?,?> r = it.next();
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                }
-                return ok;
-            } else if (src instanceof MatrixBuild) {
-                boolean ok = false;
-                // Copy artifacts from all configurations of this matrix build
-                // Use MatrixBuild.getExactRuns if available
-                for (Run r : ((MatrixBuild) src).getExactRuns())
-                    // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
-                                  baseTargetDir, copier, console);
-                return ok;
-            } else {
-                return perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-            }
-        }
-        catch (IOException ex) {
-            Util.displayIOException(ex, listener);
-            ex.printStackTrace(listener.error(
-                    Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
-            return false;
-        }
-    }
-
-    private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
-        if ((job instanceof AbstractProject) && CopyArtifactPermissionProperty.canCopyArtifact(
-                build.getProject().getRootProject(),
-                ((AbstractProject<?,?>)job).getRootProject()
-        )) {
             return true;
         }
 
-        Authentication a = Jenkins.getAuthentication();
-        if (!ACL.SYSTEM.equals(a)) {
-            // if the build does not run on SYSTEM authorization,
-            // Jenkins is configured to use QueueItemAuthenticator.
-            // In this case, builds are configured to run with a proper authorization
-            // (for example, builds run with the authorization of the user who triggered the build),
-            // and we should check access permission with that authorization.
-            // QueueItemAuthenticator is available from Jenkins 1.520.
-            // See also JENKINS-14999, JENKINS-16956, JENKINS-18285.
-            boolean b = job.getACL().hasPermission(Item.READ);
-            if (!b)
-                LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because %s lacks Item.READ access",job,build, a));
-            return b;
+        private boolean targetDirExists() throws IOException, InterruptedException {
+            return (targetDir != null && targetDir.exists());
         }
-        
-        // for the backward compatibility, 
-        // test the permission as an anonymous authenticated user.
-        boolean b = job.getACL().hasPermission(
-                new UsernamePasswordAuthenticationToken("authenticated", "",
-                        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
-                Item.READ);
-        if (!b)
-            LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because 'authenticated' lacks Item.READ access",job,build));
-        return b;
+
+        private Run getRun(Job<?, ?> srcJob, Run<?, ?> build, EnvVars env) {
+            BuildFilter buildFilter = parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter();
+            return buildSelector.getBuild(srcJob, env, buildFilter, build);
+        }
+
+        private Job<?, ?> getJob(Run<?, ?> run, String expandedProjectName) {
+            ItemGroup itemGroup = getItemGroup(run);
+
+            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProjectName, itemGroup, Job.class);
+            if (job != null && !expandedProjectName.equals(project)
+                // If projectName is parameterized, need to do permission check on source project.  No need to perform the check if not parameterized.
+                && !canReadFrom(job, run)) {
+                job = null; // Disallow access
+            }
+            return job;
+        }
     }
 
-    // retrieve the "folder" (jenkins root if no folder used) for this build
-    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
-        ItemGroup group = build.getProject().getParent();
-        if (group instanceof Job) {
-            // MatrixProject, MavenModuleSet, IvyModuleSet or comparable
-            return ((Job) group).getParent();
+    /**
+     * Get the {@link ItemGroup} associated with the supplied {@link Run}.
+     * @param run The {@link Run} instance.
+     * @return The associated {@link ItemGroup}.
+     */
+    private ItemGroup getItemGroup(Run<?, ?> run) {
+        if (run instanceof AbstractBuild) {
+            return ((AbstractBuild)run).getProject().getRootProject().getParent();
+        } else {
+            // TODO: This feels wrong ?? :)
+            return run.getParent().getParent();
         }
-        return group;
-
     }
 
-
-    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
-            FilePath baseTargetDir, Copier copier, PrintStream console)
+    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
+                            FilePath baseTargetDir, Copier copier, PrintStream console, BuildSelector buildSelector)
             throws IOException, InterruptedException {
-        FilePath srcDir = selector.getSourceDirectory(src, console);
+        FilePath srcDir = buildSelector.getSourceDirectory(src, console);
         if (srcDir == null) {
             return isOptional();  // Fail build unless copy is optional
         }
@@ -409,6 +462,62 @@ public class CopyArtifact extends Builder {
         } finally {
             copier.end();
         }
+    }
+
+    private EnvVars getEnvVars(Run<?, ?> run, TaskListener listener) throws IOException, InterruptedException {
+        EnvVars env = run.getEnvironment(listener);
+        if (run instanceof AbstractBuild) {
+            env.overrideAll(((AbstractBuild)run).getBuildVariables()); // Add in matrix axes..
+        }
+        return env;
+    }
+
+    private boolean canReadFrom(Job<?, ?> job, Run<?, ?> run) {
+        if (run instanceof AbstractBuild) {
+            AbstractBuild build = (AbstractBuild) run;
+            if ((job instanceof AbstractProject) && CopyArtifactPermissionProperty.canCopyArtifact(
+                    build.getProject().getRootProject(),
+                    ((AbstractProject<?, ?>) job).getRootProject()
+            )) {
+                return true;
+            }
+        }
+
+        Authentication a = Jenkins.getAuthentication();
+        if (!ACL.SYSTEM.equals(a)) {
+            // if the build does not run on SYSTEM authorization,
+            // Jenkins is configured to use QueueItemAuthenticator.
+            // In this case, builds are configured to run with a proper authorization
+            // (for example, builds run with the authorization of the user who triggered the build),
+            // and we should check access permission with that authorization.
+            // QueueItemAuthenticator is available from Jenkins 1.520.
+            // See also JENKINS-14999, JENKINS-16956, JENKINS-18285.
+            boolean b = job.getACL().hasPermission(Item.READ);
+            if (!b)
+                LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because %s lacks Item.READ access",job,run, a));
+            return b;
+        }
+
+        // for the backward compatibility,
+        // test the permission as an anonymous authenticated user.
+        boolean b = job.getACL().hasPermission(
+                new UsernamePasswordAuthenticationToken("authenticated", "",
+                        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
+                Item.READ);
+        if (!b)
+            LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because 'authenticated' lacks Item.READ access",job,run));
+        return b;
+    }
+
+    // retrieve the "folder" (jenkins root if no folder used) for this build
+    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
+        ItemGroup group = build.getProject().getParent();
+        if (group instanceof Job) {
+            // MatrixProject, MavenModuleSet, IvyModuleSet or comparable
+            return ((Job) group).getParent();
+        }
+        return group;
+
     }
 
     @Extension

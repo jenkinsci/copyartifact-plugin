@@ -25,7 +25,6 @@ package hudson.plugins.copyartifact;
 
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.model.AbstractBuild;
 import hudson.model.Run;
 
 import java.io.IOException;
@@ -57,6 +56,6 @@ public class FilePathCopyMethod extends Copier {
         return this;
     }
 
-    @Override public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
+    @Override public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
 
 }

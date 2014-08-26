@@ -2,7 +2,6 @@ package hudson.plugins.copyartifact;
 
 import hudson.ExtensionPoint;
 import hudson.FilePath;
-import hudson.model.AbstractBuild;
 import hudson.model.Run;
 
 import java.io.IOException;
@@ -35,7 +34,7 @@ public abstract class Copier implements ExtensionPoint {
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
      */
-    public abstract void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
+    public abstract void init(Run src, Run<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
 
     /**
      * @deprecated 
@@ -102,14 +101,14 @@ public abstract class Copier implements ExtensionPoint {
     public abstract void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts) throws IOException, InterruptedException;
 
     /**
-     * Ends what's started by the {@link #init(Run, AbstractBuild, FilePath, FilePath)} method.
+     * Ends what's started by the {@link #init(Run, Run, FilePath, FilePath)} method.
      */
     public void end() throws IOException, InternalError {}
 
     /**
      * Creates a clone.
      * 
-     * This method is only called before the {@link #init(Run, AbstractBuild, FilePath, FilePath)} method
+     * This method is only called before the {@link #init(Run, Run, FilePath, FilePath)} method
      * to allow each init-end session to run against different objects, so you need not copy any state
      * that your {@link Copier} might maintain.
      * 
