@@ -281,6 +281,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         try {
             if (!copyParams.expand()) {
                 // Something went wrong expanding the copy parameters.
+
+                if (!copyParams.sourcePrjExists()) {
+                    // If the source project does not exist then isOptional() is not relevant.
+                    return false;
+                }
+
                 return isOptional();
             }
 
@@ -299,29 +305,29 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
         PrintStream console = listener.getLogger();
 
-        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (copyParams.src instanceof MavenModuleSetBuild) ) {
+        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (copyParams.srcRun instanceof MavenModuleSetBuild) ) {
             // use classes in the "maven-plugin" plugin as might not be installed
             // Copy artifacts from the build (ArchiveArtifacts build step)
-            boolean ok = perform(copyParams.src, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+            boolean ok = perform(copyParams.srcRun, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
             // Copy artifacts from all modules of this Maven build (automatic archiving)
-            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)copyParams.src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
+            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)copyParams.srcRun).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
                 // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
                 // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
                 Run<?,?> r = it.next();
                 ok |= perform(r, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
             }
             return ok;
-        } else if (copyParams.src instanceof MatrixBuild) {
+        } else if (copyParams.srcRun instanceof MatrixBuild) {
             boolean ok = false;
             // Copy artifacts from all configurations of this matrix build
             // Use MatrixBuild.getExactRuns if available
-            for (Run r : ((MatrixBuild) copyParams.src).getExactRuns())
+            for (Run r : ((MatrixBuild) copyParams.srcRun).getExactRuns())
                 // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                 ok |= perform(r, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir.child(r.getParent().getName()),
                         copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
             return ok;
         } else {
-            return perform(copyParams.src, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
+            return perform(copyParams.srcRun, copyParams.run, copyParams.expandedFilter, copyParams.expandedExcludes, copyParams.targetDir, copyParams.baseTargetDir, copier, console, copyParams.buildSelector);
         }
     }
 
@@ -333,7 +339,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         private String expandedProject = project;
         private String expandedFilter = filter;
         private String expandedExcludes = getExcludes();
-        private Run src;
+        private Job<?, ?> srcJob;
+        private Run srcRun;
         private FilePath targetDir;
         private FilePath baseTargetDir;
 
@@ -351,15 +358,15 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             expandedProject = env.expand(project);
 
             // Get the src job
-            Job<?, ?> srcJob = getJob(run, expandedProject);
+            srcJob = getJob(run, expandedProject);
             if (srcJob == null) {
                 console.println(Messages.CopyArtifact_MissingProject(expandedProject));
                 return false;
             }
 
             // Get the src Run associated with the src Job
-            src = getRun(srcJob, run, env);
-            if (src == null) {
+            srcRun = getRun(srcJob, run, env);
+            if (srcRun == null) {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return false;
             }
@@ -380,7 +387,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             // Add info about the selected build into the environment
             EnvAction envData = run.getAction(EnvAction.class);
             if (envData != null) {
-                envData.add(getItemGroup(run), expandedProject, src.getNumber());
+                envData.add(getItemGroup(run), expandedProject, srcRun.getNumber());
             }
 
             // Expand the filter
@@ -396,6 +403,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             }
 
             return true;
+        }
+
+        private boolean sourcePrjExists() throws IOException, InterruptedException {
+            return (srcJob != null);
         }
 
         private boolean targetDirExists() throws IOException, InterruptedException {
