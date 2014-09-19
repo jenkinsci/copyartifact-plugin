@@ -26,7 +26,7 @@ THE SOFTWARE.
     <f:entry title="${%Upstream Project Name}" field="upstreamProjectName">
       <f:textbox />
     </f:entry>
-    <f:entry title="${%Upstream Project Number}" field="upstreamBuildNumber">
+    <f:entry title="${%Upstream Build Number}" field="upstreamBuildNumber">
       <f:textbox />
     </f:entry>
 </j:jelly>

@@ -29,7 +29,9 @@ import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 
 import hudson.EnvVars;
 import hudson.Extension;
@@ -37,6 +39,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
 import hudson.model.Run;
+import hudson.util.FormValidation;
 
 /**
  * Select a build which is a downstream of a specified build.
@@ -52,8 +55,8 @@ public class DownstreamBuildSelector extends BuildSelector {
      */
     @DataBoundConstructor
     public DownstreamBuildSelector(String upstreamProjectName, String upstreamBuildNumber) {
-        this.upstreamProjectName = upstreamProjectName;
-        this.upstreamBuildNumber = upstreamBuildNumber;
+        this.upstreamProjectName = StringUtils.trim(upstreamProjectName);
+        this.upstreamBuildNumber = StringUtils.trim(upstreamBuildNumber);
     }
     
     /**
@@ -95,12 +98,12 @@ public class DownstreamBuildSelector extends BuildSelector {
                 run.getParent(),
                 AbstractProject.class
         );
-        if (upstreamProject == null) {
+        if (upstreamProject == null || !upstreamProject.hasPermission(Jenkins.READ)) {
             LOGGER.warning(String.format("Upstream project '%s' is not found.", upstreamProject));
             return false;
         }
         AbstractBuild<?,?> upstreamBuild = ((AbstractBuild<?,?>)run).getUpstreamRelationshipBuild(upstreamProject);
-        if (upstreamBuild == null) {
+        if (upstreamBuild == null || !upstreamBuild.hasPermission(Jenkins.READ)) {
             LOGGER.fine(String.format("No upstream build of project '%s' is found for build %s-%s.", upstreamProject, run.getParent().getFullName(), run.getDisplayName()));
             return false;
         }
@@ -115,8 +118,8 @@ public class DownstreamBuildSelector extends BuildSelector {
             // Ignore. Nothing to do.
         }
         
-        if (buildNumber.equals(upstreamBuild.getDisplayName())) {
-            // build name matches.
+        if (buildNumber.equals(upstreamBuild.getId()) || buildNumber.equals(upstreamBuild.getDisplayName())) {
+            // id or display name matches.
             return true;
         }
         
@@ -129,6 +132,111 @@ public class DownstreamBuildSelector extends BuildSelector {
         @Override
         public String getDisplayName() {
             return Messages.DownstreamBuildSelector_DisplayName();
+        }
+        
+        /**
+         * @param str
+         * @return whether a value contains variable expressions.
+         */
+        protected boolean containsVariable(String str) {
+            return !StringUtils.isBlank(str) && str.indexOf('$') >= 0;
+        }
+        
+        /**
+         * Validates a form input to "Upstream Project Name"
+         * 
+         * @return
+         */
+        public FormValidation doCheckUpstreamProjectName(
+                @AncestorInPath AbstractProject<?,?> project,
+                @QueryParameter String upstreamProjectName
+        ) {
+            upstreamProjectName = StringUtils.trim(upstreamProjectName);
+            if (StringUtils.isBlank(upstreamProjectName)) {
+                return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_Required());
+            }
+            
+            if (containsVariable(upstreamProjectName)) {
+                return FormValidation.ok();
+            }
+            
+            AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
+                    upstreamProjectName, project, AbstractProject.class
+            );
+            if (upstreamProject == null || upstreamProject.hasPermission(Jenkins.READ)) {
+                return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
+            }
+            return FormValidation.ok();
+        }
+        
+        /**
+         * Validates a form input to "Upstream Build Number"
+         * 
+         * @return
+         */
+        public FormValidation doCheckUpstreamBuildNumber(
+                @AncestorInPath AbstractProject<?,?> project,
+                @QueryParameter String upstreamProjectName,
+                @QueryParameter String upstreamBuildNumber
+        ) {
+            // This is useless in almost all cases as this is usually specified with variables.
+            
+            upstreamProjectName = StringUtils.trim(upstreamProjectName);
+            upstreamBuildNumber = StringUtils.trim(upstreamBuildNumber);
+            
+            if (StringUtils.isBlank(upstreamProjectName) || containsVariable(upstreamProjectName)) {
+                // skip validation
+                return FormValidation.ok();
+            }
+            
+            if (StringUtils.isBlank(upstreamBuildNumber)) {
+                return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamBuildNumber_Required());
+            }
+            
+            if (containsVariable(upstreamBuildNumber)) {
+                return FormValidation.ok();
+            }
+            
+            AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
+                    upstreamProjectName, project, AbstractProject.class
+            );
+            if (upstreamProject == null || upstreamProject.hasPermission(Jenkins.READ)) {
+                return FormValidation.ok();
+            }
+            
+            try {
+                int number = Integer.parseInt(upstreamBuildNumber);
+                AbstractBuild<?,?> upstreamBuild = upstreamProject.getBuildByNumber(number);
+                if (upstreamBuild != null && upstreamBuild.hasPermission(Jenkins.READ)) {
+                    // build number matches.
+                    return FormValidation.ok();
+                }
+            } catch (NumberFormatException e) {
+                // Ignore. Nothing to do.
+            }
+            
+            {
+                AbstractBuild<?,?> upstreamBuild = upstreamProject.getBuild(upstreamBuildNumber);
+                if (upstreamBuild != null && upstreamBuild.hasPermission(Jenkins.READ)) {
+                    // build id matches.
+                    return FormValidation.ok();
+                }
+            }
+            
+            {
+                for(
+                        AbstractBuild<?,?> upstreamBuild = upstreamProject.getLastCompletedBuild();
+                        upstreamBuild != null;
+                        upstreamBuild = upstreamBuild.getPreviousCompletedBuild()
+                ) {
+                    if (upstreamBuild.getDisplayName().equals(upstreamBuildNumber)) {
+                        // display name matches.
+                        return FormValidation.ok();
+                    }
+                }
+            }
+            
+            return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamBuildNumber_NotFound());
         }
     }
 }
