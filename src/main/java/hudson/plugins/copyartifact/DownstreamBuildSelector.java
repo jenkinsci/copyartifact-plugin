@@ -35,9 +35,11 @@ import org.kohsuke.stapler.QueryParameter;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
+import hudson.model.Job;
 import hudson.model.Run;
 import hudson.util.FormValidation;
 
@@ -46,6 +48,7 @@ import hudson.util.FormValidation;
  */
 public class DownstreamBuildSelector extends BuildSelector {
     private static final Logger LOGGER = Logger.getLogger(DownstreamBuildSelector.class.getName());
+    private static final String COPIER_PROJECT_KEY = "___COPIER_PROJECT_KEY___";
     private final String upstreamProjectName;
     private final String upstreamBuildNumber;
     
@@ -74,10 +77,24 @@ public class DownstreamBuildSelector extends BuildSelector {
     }
     
     @Override
+    public Run<?, ?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?, ?> parent) {
+        EnvVars extendedEnv = new EnvVars(env);
+        // Workaround to pass who is copier to isSelectable().
+        extendedEnv.put(COPIER_PROJECT_KEY, parent.getParent().getFullName());
+        return super.getBuild(job, extendedEnv, filter, parent);
+    }
+    
+    @Override
     protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
         if (!(run instanceof AbstractBuild<?,?>)) {
             LOGGER.warning(String.format("Only applicable to AbstractBuild: but is %s.", run.getClass().getName()));
             return false;
+        }
+        
+        // Workaround to retrieve who is copying.
+        Job<?,?> copier = Jenkins.getInstance().getItemByFullName(env.get(COPIER_PROJECT_KEY), Job.class);
+        if (copier != null && (copier instanceof AbstractProject<?,?>)) {
+            copier = ((AbstractProject<?,?>)copier).getRootProject();
         }
         
         String projectName = env.expand(getUpstreamProjectName());
@@ -95,16 +112,16 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
                 projectName,
-                run.getParent(),
+                copier,
                 AbstractProject.class
         );
-        if (upstreamProject == null || !upstreamProject.hasPermission(Jenkins.READ)) {
-            LOGGER.warning(String.format("Upstream project '%s' is not found.", upstreamProject));
+        if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
+            LOGGER.warning(String.format("Upstream project '%s' is not found.", projectName));
             return false;
         }
         AbstractBuild<?,?> upstreamBuild = ((AbstractBuild<?,?>)run).getUpstreamRelationshipBuild(upstreamProject);
-        if (upstreamBuild == null || !upstreamBuild.hasPermission(Jenkins.READ)) {
-            LOGGER.fine(String.format("No upstream build of project '%s' is found for build %s-%s.", upstreamProject, run.getParent().getFullName(), run.getDisplayName()));
+        if (upstreamBuild == null || !upstreamBuild.hasPermission(Item.READ)) {
+            LOGGER.fine(String.format("No upstream build of project '%s' is found for build %s-%s.", upstreamProject.getFullName(), run.getParent().getFullName(), run.getDisplayName()));
             return false;
         }
         
@@ -161,9 +178,9 @@ public class DownstreamBuildSelector extends BuildSelector {
             }
             
             AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
-                    upstreamProjectName, project, AbstractProject.class
+                    upstreamProjectName, project.getRootProject(), AbstractProject.class
             );
-            if (upstreamProject == null || upstreamProject.hasPermission(Jenkins.READ)) {
+            if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
             }
             return FormValidation.ok();
@@ -198,16 +215,16 @@ public class DownstreamBuildSelector extends BuildSelector {
             }
             
             AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
-                    upstreamProjectName, project, AbstractProject.class
+                    upstreamProjectName, project.getRootProject(), AbstractProject.class
             );
-            if (upstreamProject == null || upstreamProject.hasPermission(Jenkins.READ)) {
+            if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
             }
             
             try {
                 int number = Integer.parseInt(upstreamBuildNumber);
                 AbstractBuild<?,?> upstreamBuild = upstreamProject.getBuildByNumber(number);
-                if (upstreamBuild != null && upstreamBuild.hasPermission(Jenkins.READ)) {
+                if (upstreamBuild != null && upstreamBuild.hasPermission(Item.READ)) {
                     // build number matches.
                     return FormValidation.ok();
                 }
@@ -217,7 +234,7 @@ public class DownstreamBuildSelector extends BuildSelector {
             
             {
                 AbstractBuild<?,?> upstreamBuild = upstreamProject.getBuild(upstreamBuildNumber);
-                if (upstreamBuild != null && upstreamBuild.hasPermission(Jenkins.READ)) {
+                if (upstreamBuild != null && upstreamBuild.hasPermission(Item.READ)) {
                     // build id matches.
                     return FormValidation.ok();
                 }
