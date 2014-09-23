@@ -1425,12 +1425,12 @@ public class CopyArtifactTest extends HudsonTestCase {
         artifactDir.child("artifact.txt").write("some content", Charset.defaultCharset().name());
         artifactDir.child("artifact.txt").chmod(0644);
         artifactDir.child("artifactWithExecute.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("artifactWithExecute.txt").chmod(0644);
+        artifactDir.child("artifactWithExecute.txt").chmod(0755);
         artifactDir.child("subdir").mkdirs();
         artifactDir.child("subdir/artifactInSubdir.txt").write("some content", Charset.defaultCharset().name());
         artifactDir.child("subdir/artifactInSubdir.txt").chmod(0644);
-        artifactDir.child("subdir/artifactInSubdir.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("subdir/artifactInSubdir.txt").chmod(0644);
+        artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").write("some content", Charset.defaultCharset().name());
+        artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").chmod(0755);
         
         assertEquals(0644, artifactDir.child("artifact.txt").mode() & 0777);
         assertEquals(0755, artifactDir.child("artifactWithExecute.txt").mode() & 0777);
