@@ -1423,19 +1423,19 @@ public class CopyArtifactTest extends HudsonTestCase {
         // creates artifacts manually.
         FilePath artifactDir = new FilePath(copieeBuild.getArtifactsDir());
         artifactDir.child("artifact.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("artifact.txt").chmod(644);
+        artifactDir.child("artifact.txt").chmod(0644);
         artifactDir.child("artifactWithExecute.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("artifactWithExecute.txt").chmod(644);
+        artifactDir.child("artifactWithExecute.txt").chmod(0644);
         artifactDir.child("subdir").mkdirs();
         artifactDir.child("subdir/artifactInSubdir.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("subdir/artifactInSubdir.txt").chmod(644);
+        artifactDir.child("subdir/artifactInSubdir.txt").chmod(0644);
         artifactDir.child("subdir/artifactInSubdir.txt").write("some content", Charset.defaultCharset().name());
-        artifactDir.child("subdir/artifactInSubdir.txt").chmod(644);
+        artifactDir.child("subdir/artifactInSubdir.txt").chmod(0644);
         
-        assertEquals(0644, artifactDir.child("artifact.txt").mode());
-        assertEquals(0755, artifactDir.child("artifactWithExecute.txt").mode());
-        assertEquals(0644, artifactDir.child("subdir/artifactInSubdir.txt").mode());
-        assertEquals(0755, artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").mode());
+        assertEquals(0644, artifactDir.child("artifact.txt").mode() & 0777);
+        assertEquals(0755, artifactDir.child("artifactWithExecute.txt").mode() & 0777);
+        assertEquals(0644, artifactDir.child("subdir/artifactInSubdir.txt").mode() & 0777);
+        assertEquals(0755, artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         
         // on master, without flatten
         {
@@ -1458,10 +1458,10 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertEquals(jenkins, b.getBuiltOn());
             
             FilePath w = b.getWorkspace();
-            assertEquals(0644, w.child("artifact.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecute.txt").mode());
-            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode());
-            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode());
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
         
         // on master, with flatten
@@ -1485,10 +1485,10 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertEquals(jenkins, b.getBuiltOn());
             
             FilePath w = b.getWorkspace();
-            assertEquals(0644, w.child("artifact.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecute.txt").mode());
-            assertEquals(0644, w.child("artifactInSubdir.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode());
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
         
         DumbSlave node = createOnlineSlave();
@@ -1514,10 +1514,10 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertEquals(node, b.getBuiltOn());
             
             FilePath w = b.getWorkspace();
-            assertEquals(0644, w.child("artifact.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecute.txt").mode());
-            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode());
-            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode());
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
         
         // on slave, with flatten
@@ -1541,10 +1541,10 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertEquals(node, b.getBuiltOn());
             
             FilePath w = b.getWorkspace();
-            assertEquals(0644, w.child("artifact.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecute.txt").mode());
-            assertEquals(0644, w.child("artifactInSubdir.txt").mode());
-            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode());
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
     }
     
