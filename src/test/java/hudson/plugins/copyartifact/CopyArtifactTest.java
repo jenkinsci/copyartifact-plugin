@@ -33,8 +33,11 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.matrix.MatrixRun;
 import hudson.maven.MavenModuleSet;
+import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
+import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
+import hudson.plugins.copyartifact.testutils.WrapperBuilder;
 import hudson.security.ACL;
 import hudson.security.Permission;
 import hudson.security.AuthorizationMatrixProperty;
@@ -150,7 +153,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         return p;
     }
 
-    private static void assertFile(boolean exists, String path, Build<?,?> b)
+    private static void assertFile(boolean exists, String path, AbstractBuild<?,?> b)
             throws IOException, InterruptedException {
         if (b.getWorkspace().child(path).exists() != exists)
             assertEquals(path + ": " + getLog(b), exists, !exists);
@@ -898,6 +901,70 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
     }
 
+    @Bug(16028)
+    public void testEnvDataInMavenProject() throws Exception {
+        FreeStyleProject upstream = createFreeStyleProject("upstream");
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        upstream.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        FreeStyleBuild upstreamBuild = upstream.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(upstreamBuild);
+        
+        MavenModuleSet downstream = setupMavenJob();
+        downstream.getPrebuilders().add(new CopyArtifact(
+                "upstream",
+                "",
+                new SpecificBuildSelector(Integer.toString(upstreamBuild.getNumber())),
+                "**/*",
+                "",
+                "",
+                false,
+                false,
+                false
+        ));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        downstream.getPrebuilders().add(envStep);
+        
+        MavenModuleSetBuild downstreamBuild = downstream.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(downstreamBuild);
+        assertFile(true, "artifact.txt", downstreamBuild);
+        assertEquals(
+                Integer.toString(upstreamBuild.getNumber()),
+                envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_UPSTREAM")
+        );
+    }
+    
+    @Bug(18762)
+    public void testEnvDataWrapped() throws Exception {
+        FreeStyleProject upstream = createFreeStyleProject("upstream");
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        upstream.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        FreeStyleBuild upstreamBuild = upstream.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(upstreamBuild);
+        
+        FreeStyleProject downstream = createFreeStyleProject();
+        downstream.getBuildersList().add(new WrapperBuilder(new CopyArtifact(
+                "upstream",
+                "",
+                new SpecificBuildSelector(Integer.toString(upstreamBuild.getNumber())),
+                "**/*",
+                "",
+                "",
+                false,
+                false,
+                false
+        )));
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        downstream.getBuildersList().add(envStep);
+        
+        FreeStyleBuild downstreamBuild = downstream.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(downstreamBuild);
+        assertFile(true, "artifact.txt", downstreamBuild);
+        assertEquals(
+                Integer.toString(upstreamBuild.getNumber()),
+                envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_UPSTREAM")
+        );
+    }
+    
     /**
      * Test filtering on parameters, ie. last stable build with parameter FOO=bar.
      */
