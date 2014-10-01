@@ -289,9 +289,11 @@ public class CopyArtifact extends Builder {
             }
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
-            if (envData != null) {
-                envData.add(getItemGroup(build), expandedProject, src.getNumber());
+            if (envData == null) {
+                envData = new EnvAction();
+                build.addAction(envData);
             }
+            envData.add(getItemGroup(build), expandedProject, src.getNumber());
             if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
             expandedFilter = env.expand(filter);
             if (expandedFilter.trim().length() == 0) expandedFilter = "**";
@@ -497,20 +499,6 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    // Listen for new builds and add EnvAction in any that use CopyArtifact build step
-    @Extension
-    public static final class CopyArtifactRunListener extends RunListener<Build> {
-        public CopyArtifactRunListener() {
-            super(Build.class);
-        }
-
-        @Override
-        public void onStarted(Build r, TaskListener listener) {
-            if (((Build<?,?>)r).getProject().getBuildersList().get(CopyArtifact.class) != null)
-                r.addAction(new EnvAction());
-        }
-    }
-    
     private static class EnvAction implements EnvironmentContributingAction {
         // Decided not to record this data in build.xml, so marked transient:
         private transient Map<String,String> data = new HashMap<String,String>();
