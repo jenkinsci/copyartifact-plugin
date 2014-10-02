@@ -25,7 +25,11 @@
 package hudson.plugins.copyartifact;
 
 import static org.junit.Assert.*;
+
+import java.util.Arrays;
+
 import hudson.Util;
+import hudson.maven.MavenModuleSet;
 import hudson.model.Cause;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
@@ -38,6 +42,8 @@ import hudson.tasks.BuildTrigger;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 
@@ -610,5 +616,47 @@ public class TriggeredBuildSelectorTest {
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
         assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest).isUseNewest());
+    }
+    
+    @Bug(14653)
+    @Test
+    public void testMavenModule() throws Exception {
+        j.configureDefaultMaven();
+        MavenModuleSet upstream = j.createMavenProject();
+        FreeStyleProject downstream = j.createFreeStyleProject();
+        
+        upstream.setGoals("clean package");
+        upstream.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
+        
+        downstream.getBuildersList().add(new CopyArtifact(
+                String.format("%s/org.jvnet.hudson.main.test.multimod$moduleB", upstream.getName()),
+                "",
+                new TriggeredBuildSelector(false, null),
+                "**/*",
+                "",
+                "",
+                false,
+                false,
+                false
+        ));
+        
+        upstream.save();
+        downstream.save();
+        j.jenkins.rebuildDependencyGraph();
+        
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0));
+        j.waitUntilNoActivity();
+        
+        FreeStyleBuild b = downstream.getLastBuild();
+        j.assertBuildStatusSuccess(b);
+        
+        assertTrue(
+                String.format(
+                        "File not found: files are: %s",
+                        Arrays.asList(b.getWorkspace().list("**/*"))
+                ),
+                b.getWorkspace().child("org.jvnet.hudson.main.test.multimod/moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar").exists()
+        );
     }
 }
