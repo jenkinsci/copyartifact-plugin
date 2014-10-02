@@ -23,12 +23,14 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
-import hudson.matrix.MatrixConfiguration;
-import hudson.matrix.MatrixRun;
 import hudson.model.Result;
+import hudson.model.AbstractProject;
 import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
@@ -136,17 +138,18 @@ public class TriggeredBuildSelector extends BuildSelector {
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         Run<?,?> result = null;
-        // Upstream job for matrix will be parent project, not individual configuration:
-        String jobName = job instanceof MatrixConfiguration
-            ? job.getParent().getFullName() : job.getFullName();
-        // Matrix run is triggered by its parent project, so check causes of parent build:
-        for (Cause cause : parent instanceof MatrixRun
-                ? ((MatrixRun)parent).getParentBuild().getCauses() : parent.getCauses()) {
+        // Upstream job for matrix will be parent project, not only individual configuration:
+        List<String> jobNames = new ArrayList<String>();
+        jobNames.add(job.getFullName());
+        if ((job instanceof AbstractProject<?,?>) && ((AbstractProject<?,?>)job).getRootProject() != job) {
+            jobNames.add(((AbstractProject<?,?>)job).getRootProject().getFullName());
+        }
+        for (Cause cause: parent.getCauses()) {
             if (cause instanceof UpstreamCause) {
                 UpstreamCause upstream = (UpstreamCause) cause;
                 String upstreamProject = upstream.getUpstreamProject();
                 int upstreamBuild = upstream.getUpstreamBuild();
-                if (jobName.equals(upstreamProject)) {
+                if (jobNames.contains(upstreamProject)) {
                     Run<?,?> run = job.getBuildByNumber(upstreamBuild);
                     if (run != null && filter.isSelectable(run, env)){
                         if (
