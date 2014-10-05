@@ -1,4 +1,5 @@
 <div>
+<p>
   Jobs may be filtered to select only builds matching particular parameters or
   other build variables. Use <tt>PARAM=VALUE,...</tt>
   to list the parameter filter; this is the same syntax as described for
@@ -7,4 +8,10 @@
   For example, <tt>FOO=bar,BAZ=true</tt> examines only builds
   that ran with parameter <tt>FOO</tt> set to <tt>bar</tt>
   and the checkbox for <tt>BAZ</tt> was checked.
+</p>
+<p>
+  You shoudn't use "Build selector for Copy Artifact" parameters here,
+  as it doesn't preserve compatibility when you upgrade plugins,
+  and doesn't work for builds built before upgrading.
+</p>
 </div>
