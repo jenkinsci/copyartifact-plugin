@@ -50,6 +50,7 @@ import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +58,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
@@ -1397,6 +1399,152 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertTrue(ca.isFlatten());
             assertFalse(ca.isOptional());
             assertFalse(ca.isFingerprintArtifacts());
+        }
+    }
+    
+    private boolean isFilePermissionSupported() throws Exception {
+        return jenkins.getRootPath().mode() != -1;
+    }
+    
+    public void testFilePermission() throws Exception {
+        if (!isFilePermissionSupported()) {
+            Logger.getLogger(CopyArtifactTest.class.getName()).warning(String.format(
+                    "Skipped %s as file permission is not supported on this platform",
+                    getName()
+            ));
+            return;
+        }
+        
+        FreeStyleProject copiee = createFreeStyleProject();
+        FreeStyleBuild copieeBuild = copiee.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(copieeBuild);
+        
+        // As I cannot trust ArtifactArchiver (JENKINS-14269),
+        // creates artifacts manually.
+        FilePath artifactDir = new FilePath(copieeBuild.getArtifactsDir());
+        artifactDir.child("artifact.txt").write("some content", Charset.defaultCharset().name());
+        artifactDir.child("artifact.txt").chmod(0644);
+        artifactDir.child("artifactWithExecute.txt").write("some content", Charset.defaultCharset().name());
+        artifactDir.child("artifactWithExecute.txt").chmod(0755);
+        artifactDir.child("subdir").mkdirs();
+        artifactDir.child("subdir/artifactInSubdir.txt").write("some content", Charset.defaultCharset().name());
+        artifactDir.child("subdir/artifactInSubdir.txt").chmod(0644);
+        artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").write("some content", Charset.defaultCharset().name());
+        artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").chmod(0755);
+        
+        assertEquals(0644, artifactDir.child("artifact.txt").mode() & 0777);
+        assertEquals(0755, artifactDir.child("artifactWithExecute.txt").mode() & 0777);
+        assertEquals(0644, artifactDir.child("subdir/artifactInSubdir.txt").mode() & 0777);
+        assertEquals(0755, artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
+        
+        // on master, without flatten
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.setAssignedNode(jenkins);
+            p.getBuildersList().add(new CopyArtifact(
+                    copiee.getFullName(),
+                    "",
+                    new SpecificBuildSelector(Integer.toString(copieeBuild.getNumber())),
+                    "",
+                    "",
+                    "",
+                    false,
+                    false,
+                    false
+            ));
+            FreeStyleBuild b = p.scheduleBuild2(0).get();
+            assertBuildStatusSuccess(b);
+            
+            assertEquals(jenkins, b.getBuiltOn());
+            
+            FilePath w = b.getWorkspace();
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
+        }
+        
+        // on master, with flatten
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.setAssignedNode(jenkins);
+            p.getBuildersList().add(new CopyArtifact(
+                    copiee.getFullName(),
+                    "",
+                    new SpecificBuildSelector(Integer.toString(copieeBuild.getNumber())),
+                    "",
+                    "",
+                    "",
+                    true,   // flatten
+                    false,
+                    false
+            ));
+            FreeStyleBuild b = p.scheduleBuild2(0).get();
+            assertBuildStatusSuccess(b);
+            
+            assertEquals(jenkins, b.getBuiltOn());
+            
+            FilePath w = b.getWorkspace();
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode() & 0777);
+        }
+        
+        DumbSlave node = createOnlineSlave();
+        
+        // on slave, without flatten
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.setAssignedNode(node);
+            p.getBuildersList().add(new CopyArtifact(
+                    copiee.getFullName(),
+                    "",
+                    new SpecificBuildSelector(Integer.toString(copieeBuild.getNumber())),
+                    "",
+                    "",
+                    "",
+                    false,
+                    false,
+                    false
+            ));
+            FreeStyleBuild b = p.scheduleBuild2(0).get();
+            assertBuildStatusSuccess(b);
+            
+            assertEquals(node, b.getBuiltOn());
+            
+            FilePath w = b.getWorkspace();
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("subdir/artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
+        }
+        
+        // on slave, with flatten
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.setAssignedNode(node);
+            p.getBuildersList().add(new CopyArtifact(
+                    copiee.getFullName(),
+                    "",
+                    new SpecificBuildSelector(Integer.toString(copieeBuild.getNumber())),
+                    "",
+                    "",
+                    "",
+                    true,   // flatten
+                    false,
+                    false
+            ));
+            FreeStyleBuild b = p.scheduleBuild2(0).get();
+            assertBuildStatusSuccess(b);
+            
+            assertEquals(node, b.getBuiltOn());
+            
+            FilePath w = b.getWorkspace();
+            assertEquals(0644, w.child("artifact.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecute.txt").mode() & 0777);
+            assertEquals(0644, w.child("artifactInSubdir.txt").mode() & 0777);
+            assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
     }
     
