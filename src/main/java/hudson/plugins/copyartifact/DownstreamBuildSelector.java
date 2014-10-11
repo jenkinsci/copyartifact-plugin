@@ -35,6 +35,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.AutoCompletionCandidates;
 import hudson.model.Item;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -254,6 +255,21 @@ public class DownstreamBuildSelector extends BuildSelector {
             }
             
             return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamBuildNumber_NotFound());
+        }
+        
+        /**
+         * Fill the project name automatically.
+         * 
+         * @param value
+         * @param project
+         * @return
+         */
+        public AutoCompletionCandidates doAutoCompleteUpstreamProjectName(
+                @QueryParameter String value,
+                @AncestorInPath AbstractProject<?,?> project
+        ) {
+            // Specified Item to allow to autocomplete folders (maybe confusing...).
+            return AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
         }
     }
 }
