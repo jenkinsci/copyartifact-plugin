@@ -23,6 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -44,6 +47,7 @@ import org.kohsuke.stapler.StaplerRequest;
  * @author Alan Harder
  */
 public class TriggeredBuildSelector extends BuildSelector {
+    private static final Logger LOGGER = Logger.getLogger(TriggeredBuildSelector.class.getName());
     /**
      * Which build should be used if triggered by multiple upstream builds.
      * 
@@ -160,6 +164,14 @@ public class TriggeredBuildSelector extends BuildSelector {
                 } else {
                     // Figure out the parent job and do a recursive call to getBuild
                     Job<?,?> parentJob = Jenkins.getInstance().getItemByFullName(upstreamProject, Job.class);
+                    if (parentJob == null) {
+                        LOGGER.log(Level.WARNING, "Upstream project doesn't exist (may be removed): {0}", upstreamProject);
+                        continue;
+                    }
+                    if (parentJob.getBuildByNumber(upstreamBuild) == null) {
+                        LOGGER.log(Level.WARNING, "Upstream build doesn't exist (may be removed): {0} #{1}", new Object[]{upstreamProject, upstreamBuild});
+                        continue;
+                    }
                     Run<?,?> run = getBuild(
                         job,
                         env,

@@ -33,11 +33,13 @@ import hudson.model.StringParameterValue;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
+import hudson.plugins.copyartifact.testutils.RemoveUpstreamBuilder;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildTrigger;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 
@@ -610,5 +612,152 @@ public class TriggeredBuildSelectorTest {
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
         assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest).isUseNewest());
+    }
+    
+    @Bug(18804)
+    @Test
+    public void testUpstreamWasRemoved() throws Exception {
+        // upstream -> downstream
+        // Remove the build of upstream.
+        {
+            FreeStyleProject upstream = j.createFreeStyleProject();
+            FreeStyleProject downstream = j.createFreeStyleProject();
+            
+            upstream.getBuildersList().add(new FileWriteBuilder(
+                    "artifact.txt",
+                    "foobar"
+            ));
+            upstream.getPublishersList().add(new ArtifactArchiver(
+                    "**/*",
+                    "",
+                    false,
+                    false
+            ));
+            upstream.getPublishersList().add(new BuildTrigger(
+                    downstream.getFullName(),
+                    false
+            ));
+            
+            downstream.getBuildersList().add(new RemoveUpstreamBuilder());
+            downstream.getBuildersList().add(new CopyArtifact(
+                    upstream.getFullName(),
+                    "",
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    "**/*",
+                    "",
+                    "",
+                    false,
+                    true, // This results build succeed even if the upstream build has been removed.
+                    false
+            ));
+            
+            j.jenkins.rebuildDependencyGraph();
+            
+            upstream.scheduleBuild2(0);
+            j.waitUntilNoActivity();
+            
+            assertNull(upstream.getLastBuild());
+            j.assertBuildStatusSuccess(downstream.getLastBuild());
+        }
+        
+        // upstream -> intermediate -> downstream
+        // Remove the build of upstream.
+        {
+            FreeStyleProject upstream = j.createFreeStyleProject();
+            FreeStyleProject intermediate = j.createFreeStyleProject();
+            FreeStyleProject downstream = j.createFreeStyleProject();
+            
+            upstream.getBuildersList().add(new FileWriteBuilder(
+                    "artifact.txt",
+                    "foobar"
+            ));
+            upstream.getPublishersList().add(new ArtifactArchiver(
+                    "**/*",
+                    "",
+                    false,
+                    false
+            ));
+            upstream.getPublishersList().add(new BuildTrigger(
+                    intermediate.getFullName(),
+                    false
+            ));
+            
+            intermediate.getBuildersList().add(new RemoveUpstreamBuilder());
+            intermediate.getPublishersList().add(new BuildTrigger(
+                    downstream.getFullName(),
+                    false
+            ));
+            
+            downstream.getBuildersList().add(new CopyArtifact(
+                    upstream.getFullName(),
+                    "",
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    "**/*",
+                    "",
+                    "",
+                    false,
+                    true, // This results build succeed even if the upstream build has been removed.
+                    false
+            ));
+            
+            j.jenkins.rebuildDependencyGraph();
+            
+            upstream.scheduleBuild2(0);
+            j.waitUntilNoActivity();
+            
+            assertNull(upstream.getLastBuild());
+            j.assertBuildStatusSuccess(intermediate.getLastBuild());
+            j.assertBuildStatusSuccess(downstream.getLastBuild());
+        }
+        
+        // upstream -> intermediate -> downstream
+        // Remove the build of intermediate.
+        {
+            FreeStyleProject upstream = j.createFreeStyleProject();
+            FreeStyleProject intermediate = j.createFreeStyleProject();
+            FreeStyleProject downstream = j.createFreeStyleProject();
+            
+            upstream.getBuildersList().add(new FileWriteBuilder(
+                    "artifact.txt",
+                    "foobar"
+            ));
+            upstream.getPublishersList().add(new ArtifactArchiver(
+                    "**/*",
+                    "",
+                    false,
+                    false
+            ));
+            upstream.getPublishersList().add(new BuildTrigger(
+                    intermediate.getFullName(),
+                    false
+            ));
+            
+            intermediate.getPublishersList().add(new BuildTrigger(
+                    downstream.getFullName(),
+                    false
+            ));
+            
+            downstream.getBuildersList().add(new RemoveUpstreamBuilder());
+            downstream.getBuildersList().add(new CopyArtifact(
+                    upstream.getFullName(),
+                    "",
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    "**/*",
+                    "",
+                    "",
+                    false,
+                    true, // This results build succeed even if the upstream build has been removed.
+                    false
+            ));
+            
+            j.jenkins.rebuildDependencyGraph();
+            
+            upstream.scheduleBuild2(0);
+            j.waitUntilNoActivity();
+            
+            j.assertBuildStatusSuccess(upstream.getLastBuild());
+            assertNull(intermediate.getLastBuild());
+            j.assertBuildStatusSuccess(downstream.getLastBuild());
+        }
     }
 }
