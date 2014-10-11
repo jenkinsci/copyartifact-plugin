@@ -1227,7 +1227,12 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertTrue(configXml, configXml.contains("<projectName>plain</projectName>"));
         
         // upgraded when a build is triggered.
-        assertBuildStatusSuccess(copier.scheduleBuild2(0));
+        FreeStyleBuild b = copier.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(b);
+        FilePath fileToTest = b.getWorkspace().child("from-plain/tag.txt");
+        assertTrue(fileToTest.exists());
+        assertEquals("jenkins-plain-2\n", fileToTest.readToString());
+        
         configXml = copier.getConfigFile().asString();
         assertFalse(configXml, configXml.contains("<projectName>"));
         assertTrue(configXml, configXml.contains("<project>plain</project>"));

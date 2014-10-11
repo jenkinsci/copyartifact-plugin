@@ -12,9 +12,11 @@
   <triggers class="vector"/>
   <concurrentBuild>false</concurrentBuild>
   <builders>
-    <hudson.tasks.Shell>
-      <command>echo $BUILD_TAG &gt; stuff</command>
-    </hudson.tasks.Shell>
+    <hudson.plugins.copyartifact.testutils.FileWriteBuilder>
+      <filename>stuff</filename>
+      <content>$BUILD_TAG&#xA;</content>
+      <encoding>UTF-8</encoding>
+    </hudson.plugins.copyartifact.testutils.FileWriteBuilder>
   </builders>
   <publishers>
     <hudson.tasks.ArtifactArchiver>
