@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.plugins.copyartifact.CopyArtifact>
+      <projectName>plain</projectName>
+      <filter>tag.txt</filter>
+      <target>from-plain</target>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact>
+      <projectName>parameterized/good=true</projectName>
+      <filter>tag.txt</filter>
+      <target>from-parameterized</target>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.plugins.copyartifact.CopyArtifact>
+      <projectName>matrix/which=two</projectName>
+      <filter>tag.txt</filter>
+      <target>from-matrix</target>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.tasks.Shell>
+      <command>set +x
+result=`cat from-plain/tag.txt`:`cat from-parameterized/tag.txt`:`cat from-matrix/tag.txt`
+if [ &quot;$result&quot; = &quot;jenkins-plain-2:jenkins-parameterized-2 true:jenkins-matrix-which=two-1 two&quot; ]
+then
+    echo OK
+else
+    echo wrong: &quot;$result&quot;
+    exit 1
+fi</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>

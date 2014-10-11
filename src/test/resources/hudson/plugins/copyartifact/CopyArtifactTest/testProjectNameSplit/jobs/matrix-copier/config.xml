@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<matrix-project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <axes>
+    <hudson.matrix.TextAxis>
+      <name>which</name>
+      <values>
+        <string>one</string>
+        <string>two</string>
+      </values>
+    </hudson.matrix.TextAxis>
+  </axes>
+  <builders>
+    <hudson.plugins.copyartifact.CopyArtifact>
+      <projectName>matrix/which=${which}</projectName>
+      <filter>tag.txt</filter>
+      <target>from-matrix</target>
+      <selector class="hudson.plugins.copyartifact.StatusBuildSelector"/>
+    </hudson.plugins.copyartifact.CopyArtifact>
+    <hudson.tasks.Shell>
+      <command>set +x
+result=`cat from-matrix/tag.txt`
+if [ &quot;$result&quot; = &quot;jenkins-matrix-which=${which}-1 ${which}&quot; ]
+then
+    echo OK
+else
+    echo wrong: &quot;$result&quot;
+    exit 1
+fi</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+  <runSequentially>false</runSequentially>
+</matrix-project>
