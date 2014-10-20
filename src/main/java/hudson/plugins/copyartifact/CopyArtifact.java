@@ -373,11 +373,7 @@ public class CopyArtifact extends Builder {
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
     private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
-        ItemGroup group = build.getProject().getParent();
-        if (group instanceof Job) {
-            // MatrixProject, MavenModuleSet, IvyModuleSet or comparable
-            return ((Job) group).getParent();
-        }
+        ItemGroup group = build.getProject().getRootProject().getParent();
         return group;
 
     }
@@ -509,6 +505,19 @@ public class CopyArtifact extends Builder {
             // Use full name if configured with absolute path
             // and relative otherwise
             projectName = projectName.startsWith("/") ? item.getFullName() : item.getRelativeNameFrom(ctx);
+            if (projectName == null) {
+                // this is a case when the copying project doesn't belong to Jenkins item tree.
+                // (e.g. promotion for Promoted Builds plugin)
+                LOGGER.log(
+                        Level.WARNING,
+                        "Failed to calculate a relative path of {0} from {2}",
+                        new Object[] {
+                                item.getFullName(),
+                                ctx.getFullName(),
+                        }
+                );
+                return;
+            }
             data.put("COPYARTIFACT_BUILD_NUMBER_"
                        + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
                      Integer.toString(buildNumber));
