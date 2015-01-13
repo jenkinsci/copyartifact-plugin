@@ -43,9 +43,9 @@ public class FingerprintingCopyMethod extends Copier {
     private final Map<String,String> fingerprints = new HashMap<String, String>();
 
     @Override
-    public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+    public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         this.src = src instanceof AbstractBuild ? (AbstractBuild)src : null;
-        this.dst = dst;
+        this.dst = dst instanceof AbstractBuild ? (AbstractBuild)dst : null; // TODO: hmmm ?
         fingerprints.clear();
     }
 
@@ -100,7 +100,9 @@ public class FingerprintingCopyMethod extends Copier {
                 if (src!=null) {
                     f.add((AbstractBuild)src);
                 }
-                f.add(dst);
+                if (dst != null) {
+                    f.add(dst);
+                }
                 fingerprints.put(s.getName(), digest);
             }
         } catch (IOException e) {

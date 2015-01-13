@@ -35,7 +35,7 @@ public abstract class Copier implements ExtensionPoint {
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
      */
-    public abstract void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
+    public abstract void init(Run src, Run<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
 
     /**
      * @deprecated 

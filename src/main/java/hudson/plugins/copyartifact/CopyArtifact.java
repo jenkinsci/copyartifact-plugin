@@ -42,7 +42,6 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
-import hudson.model.listeners.RunListener;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -63,6 +62,7 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
+import jenkins.tasks.SimpleBuildStep;
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -73,11 +73,13 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
+
 /**
  * Build step to copy artifacts from another project.
  * @author Alan Harder
  */
-public class CopyArtifact extends Builder {
+public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
@@ -124,7 +126,14 @@ public class CopyArtifact extends Builder {
 
         this.project = projectName;
         this.parameters = Util.fixEmptyAndTrim(parameters);
-        this.selector = selector;
+
+        if (selector == null) {
+            // TODO: specify the BuildSelector instance in the workflow script via CoreStep?
+            this.selector = new StatusBuildSelector(true);
+        } else {
+            this.selector = selector;
+        }
+
         this.filter = Util.fixNull(filter).trim();
         this.excludes = Util.fixNull(excludes).trim();
         this.target = Util.fixNull(target).trim();
@@ -260,14 +269,25 @@ public class CopyArtifact extends Builder {
     public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException, IOException {
         upgradeIfNecessary(build.getProject());
+        EnvVars env = build.getEnvironment(listener);
+        env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
+        return _perform(build, build.getWorkspace(), env, launcher, listener);
+    }
+
+    @Override
+    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        EnvVars env = build.getEnvironment(listener);
+        // TODO: what about "matrix axes" variables? Available from AbstractBuild. See prev perform()
+        _perform(build, workspace, env, launcher, listener);
+    }
+
+    private boolean _perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull EnvVars env, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         String expandedExcludes = getExcludes();
         try {
-            EnvVars env = build.getEnvironment(listener);
-            env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
             expandedProject = env.expand(project);
-            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getRootProject().getParent(), Job.class);
+            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, getItemGroup(build), Job.class);
             if (job != null && !expandedProject.equals(project)
                 // If projectName is parameterized, need to do permission check on source project.
                 && !canReadFrom(job, build)) {
@@ -282,10 +302,15 @@ public class CopyArtifact extends Builder {
                 console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
                 return isOptional();  // Fail build unless copy is optional
             }
-            FilePath targetDir = build.getWorkspace(), baseTargetDir = targetDir;
+            FilePath targetDir = workspace, baseTargetDir = targetDir;
             if (targetDir == null || !targetDir.exists()) {
-                console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
-                return isOptional();  // Fail build unless copy is optional
+                if (targetDir != null) {
+                    // TODO: What do we do if the workspace dir does not exist, as in the case of workflow (it seems)? Forcing create for now.
+                    targetDir.mkdirs();
+                } else {
+                    console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
+                    return isOptional();  // Fail build unless copy is optional
+                }
             }
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
@@ -337,9 +362,9 @@ public class CopyArtifact extends Builder {
         }
     }
 
-    private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
-        if ((job instanceof AbstractProject) && CopyArtifactPermissionProperty.canCopyArtifact(
-                build.getProject().getRootProject(),
+    private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
+        if ((job instanceof AbstractProject) && (build instanceof AbstractBuild) && CopyArtifactPermissionProperty.canCopyArtifact(
+                ((AbstractBuild)build).getProject().getRootProject(),
                 ((AbstractProject<?,?>)job).getRootProject()
         )) {
             return true;
@@ -372,14 +397,17 @@ public class CopyArtifact extends Builder {
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
-    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
-        ItemGroup group = build.getProject().getRootProject().getParent();
-        return group;
-
+    private ItemGroup getItemGroup(Run<?, ?> build) {
+        if (build instanceof AbstractBuild) {
+            return ((AbstractBuild) build).getProject().getRootProject().getParent();
+        } else {
+            // TODO: hmmm ???
+            return build.getParent().getParent();
+        }
     }
 
 
-    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
+    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
             FilePath baseTargetDir, Copier copier, PrintStream console)
             throws IOException, InterruptedException {
         FilePath srcDir = selector.getSourceDirectory(src, console);

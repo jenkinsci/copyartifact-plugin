@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import hudson.model.Job;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
@@ -94,7 +95,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
      * @param copier a project who wants to copy artifacts of this project.
      * @return whether copier is allowed to copy artifacts of this project.
      */
-    public boolean canCopiedBy(AbstractProject<?,?> copier) {
+    public boolean canCopiedBy(Job<?,?> copier) {
         String copierName = copier.getRelativeNameFrom(owner.getParent());
         String absoluteName = String.format("/%s", copier.getFullName()); 
             // Note: getFullName() returns not an absolute path, but a relative path from root...
@@ -132,13 +133,13 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
     }
     
     /**
-     * Convenient wrapper for {@link CopyArtifactPermissionProperty#canCopiedBy(AbstractProject)}
+     * Convenient wrapper for {@link CopyArtifactPermissionProperty#canCopiedBy(Job)}
      * 
      * @param copier a project that wants to copy artifacts of copiee.
      * @param copiee a owner of artifacts.
      * @return whether copier can copy artifacts of copiee.
      */
-    public static boolean canCopyArtifact(AbstractProject<?,?> copier, AbstractProject<?,?> copiee) {
+    public static boolean canCopyArtifact(Job<?,?> copier, Job<?,?> copiee) {
         CopyArtifactPermissionProperty prop = copiee.getProperty(CopyArtifactPermissionProperty.class);
         if (prop == null) {
             return false;
