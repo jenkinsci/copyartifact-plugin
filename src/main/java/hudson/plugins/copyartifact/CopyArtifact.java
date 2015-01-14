@@ -69,6 +69,7 @@ import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
@@ -84,16 +85,17 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
     private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
+    private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
 
     @Deprecated private String projectName;
     private String project;
     private String parameters;
-    private final String filter, target;
-    private final String excludes;
+    private String filter, target;
+    private String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
-    private final Boolean flatten, optional;
-    private final boolean doNotFingerprintArtifacts;
+    private Boolean flatten, optional;
+    private boolean doNotFingerprintArtifacts;
 
     @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -107,9 +109,22 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this(projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts);
     }
 
-    @DataBoundConstructor
+    @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
+        this(projectName);
+        setParameters(parameters);
+        setFilter(filter);
+        setTarget(target);
+        setExcludes(excludes);
+        setSelector(selector);
+        setFlatten(flatten);
+        setOptional(optional);
+        setFingerprintArtifacts(fingerprintArtifacts);
+    }
+
+    @DataBoundConstructor
+    public CopyArtifact(String projectName) {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
@@ -125,20 +140,55 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
 
         this.project = projectName;
+
+        // Apply defaults to all other properties.
+        setParameters(null);
+        setFilter(null);
+        setTarget(null);
+        setExcludes(null);
+        setSelector(null);
+        setFlatten(false);
+        setOptional(false);
+        setFingerprintArtifacts(false);
+    }
+
+    @DataBoundSetter
+    public void setParameters(String parameters) {
         this.parameters = Util.fixEmptyAndTrim(parameters);
+    }
 
-        if (selector == null) {
-            // TODO: specify the BuildSelector instance in the workflow script via CoreStep?
-            this.selector = new StatusBuildSelector(true);
-        } else {
-            this.selector = selector;
-        }
-
+    @DataBoundSetter
+    public void setFilter(String filter) {
         this.filter = Util.fixNull(filter).trim();
-        this.excludes = Util.fixNull(excludes).trim();
+    }
+
+    @DataBoundSetter
+    public void setTarget(String target) {
         this.target = Util.fixNull(target).trim();
+    }
+
+    @DataBoundSetter
+    public void setExcludes(String excludes) {
+        this.excludes = Util.fixNull(excludes).trim();
+    }
+
+    @DataBoundSetter
+    public void setSelector(BuildSelector selector) {
+        this.selector = (selector != null ? selector : DEFAULT_BUILD_SELECTOR);
+    }
+
+    @DataBoundSetter
+    public void setFlatten(boolean flatten) {
         this.flatten = flatten ? Boolean.TRUE : null;
+    }
+
+    @DataBoundSetter
+    public void setOptional(boolean optional) {
         this.optional = optional ? Boolean.TRUE : null;
+    }
+
+    @DataBoundSetter
+    public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         this.doNotFingerprintArtifacts = !fingerprintArtifacts;
     }
 
