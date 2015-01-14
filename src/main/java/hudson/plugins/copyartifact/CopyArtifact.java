@@ -316,22 +316,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
-            throws InterruptedException, IOException {
-        upgradeIfNecessary(build.getProject());
-        EnvVars env = build.getEnvironment(listener);
-        env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
-        return _perform(build, build.getWorkspace(), env, launcher, listener);
-    }
-
-    @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        EnvVars env = build.getEnvironment(listener);
-        // TODO: what about "matrix axes" variables? Available from AbstractBuild. See prev perform()
-        _perform(build, workspace, env, launcher, listener);
-    }
+        if (build instanceof AbstractBuild) {
+            upgradeIfNecessary(((AbstractBuild)build).getProject());
+        }
 
-    private boolean _perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull EnvVars env, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        EnvVars env = build.getEnvironment(listener);
+        if (build instanceof AbstractBuild) {
+            env.overrideAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+        }
+
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         String expandedExcludes = getExcludes();
@@ -344,24 +338,24 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 job = null; // Disallow access
             }
             if (job == null) {
-                console.println(Messages.CopyArtifact_MissingProject(expandedProject));
-                return false;
+                String message = Messages.CopyArtifact_MissingProject(expandedProject);
+                console.println(message);
+                throw new CopyArtifactException(message);
             }
             Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
             if (src == null) {
-                console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
-                return isOptional();  // Fail build unless copy is optional
-            }
-            FilePath targetDir = workspace, baseTargetDir = targetDir;
-            if (targetDir == null || !targetDir.exists()) {
-                if (targetDir != null) {
-                    // TODO: What do we do if the workspace dir does not exist, as in the case of workflow (it seems)? Forcing create for now.
-                    targetDir.mkdirs();
+                String message = Messages.CopyArtifact_MissingBuild(expandedProject);
+                console.println(message);
+                if (isOptional()) {
+                    // just return without an error
+                    return;
                 } else {
-                    console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
-                    return isOptional();  // Fail build unless copy is optional
+                    // Fail build if copy is not optional
+                    throw new CopyArtifactException(message);
                 }
             }
+            FilePath targetDir = workspace, baseTargetDir = targetDir;
+            targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
             // Add info about the selected build into the environment
             EnvAction envData = build.getAction(EnvAction.class);
             if (envData == null) {
@@ -390,7 +384,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                     Run<?,?> r = it.next();
                     ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
                 }
-                return ok;
+                if (!ok) {
+                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+                }
             } else if (src instanceof MatrixBuild) {
                 boolean ok = false;
                 // Copy artifacts from all configurations of this matrix build
@@ -399,16 +395,24 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                     // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                     ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
                                   baseTargetDir, copier, console);
-                return ok;
+
+                if (!ok) {
+                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+                }
             } else {
-                return perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+                if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
+                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+                }
             }
+        }
+        catch (CopyArtifactException cae) {
+            throw cae;
         }
         catch (IOException ex) {
             Util.displayIOException(ex, listener);
-            ex.printStackTrace(listener.error(
-                    Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
-            return false;
+            String message = Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter);
+            ex.printStackTrace(listener.error(message));
+            throw new CopyArtifactException(message);
         }
     }
 
@@ -451,7 +455,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (build instanceof AbstractBuild) {
             return ((AbstractBuild) build).getProject().getRootProject().getParent();
         } else {
-            // TODO: hmmm ???
             return build.getParent().getParent();
         }
     }
