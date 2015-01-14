@@ -417,10 +417,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
-        if ((job instanceof AbstractProject) && (build instanceof AbstractBuild) && CopyArtifactPermissionProperty.canCopyArtifact(
-                ((AbstractBuild)build).getProject().getRootProject(),
-                ((AbstractProject<?,?>)job).getRootProject()
-        )) {
+        Job<?, ?> fromJob = job;
+        Job<?, ?> toJob = build.getParent();
+
+        if ((job instanceof AbstractProject) && (build instanceof AbstractBuild) &&
+                CopyArtifactPermissionProperty.canCopyArtifact(getRootJob(toJob), getRootJob(fromJob))) {
             return true;
         }
 
@@ -448,6 +449,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (!b)
             LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because 'authenticated' lacks Item.READ access",job,build));
         return b;
+    }
+
+    private Job<?, ?> getRootJob(Job<?, ?> job) {
+        if (job instanceof AbstractProject) {
+            return ((AbstractProject<?,?>)job).getRootProject();
+        } else {
+            return job;
+        }
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
