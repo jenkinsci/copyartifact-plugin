@@ -3,7 +3,6 @@ package hudson.plugins.copyartifact;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
-import hudson.model.AbstractBuild;
 import hudson.model.Fingerprint;
 import hudson.model.FingerprintMap;
 import hudson.model.Run;
@@ -33,19 +32,15 @@ import java.util.logging.Logger;
 public class FingerprintingCopyMethod extends Copier {
 
     private static final Logger LOGGER = Logger.getLogger(FingerprintingCopyMethod.class.getName());
-    /**
-     * Null if the source of the copy operation isn't {@link AbstractBuild} but some other Run type.
-     */
-    private AbstractBuild<?,?> src;
-    
-    private AbstractBuild<?,?> dst;
+    private Run<?,?> src;
+    private Run<?,?> dst;
     private final MessageDigest md5 = newMD5();
     private final Map<String,String> fingerprints = new HashMap<String, String>();
 
     @Override
     public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
-        this.src = src instanceof AbstractBuild ? (AbstractBuild)src : null;
-        this.dst = dst instanceof AbstractBuild ? (AbstractBuild)dst : null; // TODO: hmmm ?
+        this.src = src;
+        this.dst = dst;
         fingerprints.clear();
     }
 
@@ -98,10 +93,10 @@ public class FingerprintingCopyMethod extends Copier {
 
                 Fingerprint f = map.getOrCreate(src, s.getName(), digest);
                 if (src!=null) {
-                    f.add((AbstractBuild)src);
+                    f.addFor(src);
                 }
                 if (dst != null) {
-                    f.add(dst);
+                    f.addFor(dst);
                 }
                 fingerprints.put(s.getName(), digest);
             }
@@ -113,7 +108,7 @@ public class FingerprintingCopyMethod extends Copier {
     @Override
     public void end() {
         // add action
-        for (AbstractBuild r : new AbstractBuild[]{src,dst}) {
+        for (Run r : new Run[]{src,dst}) {
             if (r == null)
                 continue;
 
