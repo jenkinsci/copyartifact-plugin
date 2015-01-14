@@ -2,8 +2,13 @@ package hudson.plugins.copyartifact;
 
 import hudson.ExtensionPoint;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
 import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.scm.ChangeLogSet;
+import hudson.scm.SCM;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -34,8 +39,24 @@ public abstract class Copier implements ExtensionPoint {
      * @param srcDir Source for upcoming file copy
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
+     *
+     * @since TODO ?
      */
-    public abstract void init(Run src, Run<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
+    public void init(Run src, Run<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        if (dst instanceof AbstractBuild && Util.isOverridden(Copier.class, getClass(), "init", Run.class, AbstractBuild.class, FilePath.class, FilePath.class)) {
+            init(src, (AbstractBuild) dst, srcDir, baseTargetDir);
+        }
+    }
+
+    /**
+     * @deprecated Please use {@link #init(hudson.model.Run, hudson.model.Run, hudson.FilePath, hudson.FilePath)}
+     */
+    @Deprecated
+    public void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        if (Util.isOverridden(Copier.class, getClass(), "init", Run.class, Run.class, FilePath.class, FilePath.class)) {
+            init(src, (Run) dst, srcDir, baseTargetDir);
+        }
+    }
 
     /**
      * @deprecated 
