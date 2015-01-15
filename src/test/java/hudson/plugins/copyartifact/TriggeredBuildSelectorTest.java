@@ -36,6 +36,7 @@ import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
+import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.RemoveUpstreamBuilder;
 import hudson.tasks.ArtifactArchiver;
@@ -65,7 +66,7 @@ public class TriggeredBuildSelectorTest {
         WebClient wc = j.createWebClient();
         {
             FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
                     new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
@@ -96,7 +97,7 @@ public class TriggeredBuildSelectorTest {
         
         {
             FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
                     new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
@@ -127,7 +128,7 @@ public class TriggeredBuildSelectorTest {
         
         {
             FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
                     new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -182,7 +183,7 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
@@ -231,7 +232,7 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -278,7 +279,7 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
@@ -327,7 +328,7 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -384,7 +385,7 @@ public class TriggeredBuildSelectorTest {
         
         intermediate1.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
@@ -471,7 +472,7 @@ public class TriggeredBuildSelectorTest {
         
         intermediate1.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
@@ -551,7 +552,7 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
                 new TriggeredBuildSelector(false, null),
@@ -644,7 +645,7 @@ public class TriggeredBuildSelectorTest {
             ));
             
             downstream.getBuildersList().add(new RemoveUpstreamBuilder());
-            downstream.getBuildersList().add(new CopyArtifact(
+            downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
                     new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -693,7 +694,7 @@ public class TriggeredBuildSelectorTest {
                     false
             ));
             
-            downstream.getBuildersList().add(new CopyArtifact(
+            downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
                     new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -743,7 +744,7 @@ public class TriggeredBuildSelectorTest {
             ));
             
             downstream.getBuildersList().add(new RemoveUpstreamBuilder());
-            downstream.getBuildersList().add(new CopyArtifact(
+            downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
                     new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
@@ -777,7 +778,7 @@ public class TriggeredBuildSelectorTest {
         upstream.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 String.format("%s/org.jvnet.hudson.main.test.multimod$moduleB", upstream.getName()),
                 "",
                 new TriggeredBuildSelector(false, null),
