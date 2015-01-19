@@ -43,10 +43,13 @@ public class CopierTest {
         AbstractBuild abDst = Mockito.mock(AbstractBuild.class);
 
         // make sure legacy parameter types (AbstractBuild) work on all impl variants
-        for (C c : new C[] {new C1(), new C2(), new C3(), new C4()}) {
+        for (C c : new C[] {new C1(), new C2(), new C3()}) {
             c.init(runSrc, abDst, null, null);
             Assert.assertEquals(1, c.callCnt);
         }
+        C4 c4 = new C4();
+        c4.init(runSrc, abDst, null, null);
+        Assert.assertEquals(2, c4.callCnt);
 
         // test with new param types (Run dst type)
 
@@ -54,12 +57,18 @@ public class CopierTest {
         testRunDst(new C1(), 1); // should work
         testRunDst(new C2(), 1); // should work
 
-        // C3 and C4 only implement the legacy AbstractBuild init method (and not the Run
-        // version). Copier.init(Run, Run) will get called in both cases, but should
-        // not forward the call to C3/C4.init(Run, AbstractBuild) because the supplied runDst
-        // is not an AbstractBuild instance.
-        testRunDst(new C3(), 0);
-        testRunDst(new C4(), 0);
+        testRunDst(new C4(), 1); // should work since it extends C2, which was updated with the new init method
+
+        // C3 only implements the legacy AbstractBuild init method (and not the Run
+        // version). Copier.init(Run, Run) will get called, but should throw an AbstractMethodError
+        try {
+            testRunDst(new C3(), 0);
+            Assert.fail("expected AbstractMethodError");
+        } catch (AbstractMethodError e) {
+            Assert.assertEquals("Invalid call to Copier.init(Run src, Run dst, FilePath, FilePath), passing an AbstractBuild " +
+                    "instance for the 'dst' arg when hudson.plugins.copyartifact.CopierTest$C3 does not implement the deprecated " +
+                    "version of 'init' that takes an AbstractBuild. Please supply a Run instance for the 'dst' arg.", e.getMessage());
+        }
     }
 
     public void testRunDst(C c, int expectedCnt) throws IOException, InterruptedException {
@@ -70,7 +79,7 @@ public class CopierTest {
     }
 
     private class C extends Copier {
-        int callCnt;
+        protected int callCnt;
         @Override
         public void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts) throws IOException, InterruptedException {
         }
@@ -109,7 +118,10 @@ public class CopierTest {
         }
     }
 
-    private class C4 extends C {
+    // C4 extends C2, which is a Copier impl that's been updated to use the newer version of the init method.
+    // C4 was overriding C2.init() but because of the C2 update, it is now overriding the Copier.init().
+    // Call to super should be fine so long as dst is left as an AbstractBuild.
+    private class C4 extends C2 {
         // Override init that uses the deprecated AbstractBuild dst + call super
         @Override
         public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {

@@ -45,6 +45,10 @@ public abstract class Copier implements ExtensionPoint {
     public void init(Run src, Run<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         if (dst instanceof AbstractBuild && Util.isOverridden(Copier.class, getClass(), "init", Run.class, AbstractBuild.class, FilePath.class, FilePath.class)) {
             init(src, (AbstractBuild) dst, srcDir, baseTargetDir);
+        } else {
+            throw new AbstractMethodError(String.format("Invalid call to Copier.init(Run src, Run dst, FilePath, FilePath), passing an AbstractBuild " +
+                    "instance for the 'dst' arg when %s does not implement the deprecated version of 'init' that takes an AbstractBuild. Please supply a " +
+                    "Run instance for the 'dst' arg.", getClass().getName()));
         }
     }
 
@@ -55,6 +59,12 @@ public abstract class Copier implements ExtensionPoint {
     public void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         if (Util.isOverridden(Copier.class, getClass(), "init", Run.class, Run.class, FilePath.class, FilePath.class)) {
             init(src, (Run) dst, srcDir, baseTargetDir);
+        } else {
+            // Is near impossible for this to happen. Copier impl would need to not implement the newer version of the init method, while at
+            // the same time be changed to call super with a Run instance for dst, which would be bizarre because that could only have been done
+            // after the init method was changed to not be abstract.
+            throw new AbstractMethodError(String.format("Invalid call to Copier.init(Run src, AbstractBuild dst, FilePath, FilePath). " +
+                    "%s implements the newer version of 'init' that takes a Run instance for the 'dst' arg. Please call that implementation.", getClass().getName()));
         }
     }
 
