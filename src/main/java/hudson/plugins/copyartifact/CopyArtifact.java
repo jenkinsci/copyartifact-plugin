@@ -25,6 +25,7 @@ package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 
+import hudson.AbortException;
 import hudson.DescriptorExtensionList;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -332,90 +333,78 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         String expandedExcludes = getExcludes();
-        try {
-            expandedProject = env.expand(project);
-            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, getItemGroup(build), Job.class);
-            if (job != null && !expandedProject.equals(project)
-                // If projectName is parameterized, need to do permission check on source project.
-                && !canReadFrom(job, build)) {
-                job = null; // Disallow access
-            }
-            if (job == null) {
-                String message = Messages.CopyArtifact_MissingProject(expandedProject);
+
+        expandedProject = env.expand(project);
+        Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, getItemGroup(build), Job.class);
+        if (job != null && !expandedProject.equals(project)
+            // If projectName is parameterized, need to do permission check on source project.
+            && !canReadFrom(job, build)) {
+            job = null; // Disallow access
+        }
+        if (job == null) {
+            throw new AbortException(Messages.CopyArtifact_MissingProject(expandedProject));
+        }
+        Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
+        if (src == null) {
+            String message = Messages.CopyArtifact_MissingBuild(expandedProject);
+            if (isOptional()) {
+                // just return without an error
                 console.println(message);
-                throw new CopyArtifactException(message);
-            }
-            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
-            if (src == null) {
-                String message = Messages.CopyArtifact_MissingBuild(expandedProject);
-                console.println(message);
-                if (isOptional()) {
-                    // just return without an error
-                    return;
-                } else {
-                    // Fail build if copy is not optional
-                    throw new CopyArtifactException(message);
-                }
-            }
-            FilePath targetDir = workspace, baseTargetDir = targetDir;
-            targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
-            // Add info about the selected build into the environment
-            EnvAction envData = build.getAction(EnvAction.class);
-            if (envData == null) {
-                envData = new EnvAction();
-                build.addAction(envData);
-            }
-            envData.add(getItemGroup(build), expandedProject, src.getNumber());
-            if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
-            expandedFilter = env.expand(filter);
-            if (expandedFilter.trim().length() == 0) expandedFilter = "**";
-            expandedExcludes = env.expand(expandedExcludes);
-            if (StringUtils.isBlank(expandedExcludes)) {
-                expandedExcludes = null;
-            }
-
-            Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
-
-            if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) { 
-            // use classes in the "maven-plugin" plugin as might not be installed
-                // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                // Copy artifacts from all modules of this Maven build (automatic archiving)
-                for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
-                    // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
-                    // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
-                    Run<?,?> r = it.next();
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                }
-                if (!ok) {
-                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-                }
-            } else if (src instanceof MatrixBuild) {
-                boolean ok = false;
-                // Copy artifacts from all configurations of this matrix build
-                // Use MatrixBuild.getExactRuns if available
-                for (Run r : ((MatrixBuild) src).getExactRuns())
-                    // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
-                                  baseTargetDir, copier, console);
-
-                if (!ok) {
-                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-                }
+                return;
             } else {
-                if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
-                    throw new CopyArtifactException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-                }
+                // Fail build if copy is not optional
+                throw new AbortException(message);
             }
         }
-        catch (CopyArtifactException cae) {
-            throw cae;
+        FilePath targetDir = workspace, baseTargetDir = targetDir;
+        targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
+        // Add info about the selected build into the environment
+        EnvAction envData = build.getAction(EnvAction.class);
+        if (envData == null) {
+            envData = new EnvAction();
+            build.addAction(envData);
         }
-        catch (IOException ex) {
-            Util.displayIOException(ex, listener);
-            String message = Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter);
-            ex.printStackTrace(listener.error(message));
-            throw new CopyArtifactException(message);
+        envData.add(getItemGroup(build), expandedProject, src.getNumber());
+        if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
+        expandedFilter = env.expand(filter);
+        if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+        expandedExcludes = env.expand(expandedExcludes);
+        if (StringUtils.isBlank(expandedExcludes)) {
+            expandedExcludes = null;
+        }
+
+        Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
+
+        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
+        // use classes in the "maven-plugin" plugin as might not be installed
+            // Copy artifacts from the build (ArchiveArtifacts build step)
+            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+            // Copy artifacts from all modules of this Maven build (automatic archiving)
+            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
+                // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
+                // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
+                Run<?,?> r = it.next();
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+            }
+            if (!ok) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
+        } else if (src instanceof MatrixBuild) {
+            boolean ok = false;
+            // Copy artifacts from all configurations of this matrix build
+            // Use MatrixBuild.getExactRuns if available
+            for (Run r : ((MatrixBuild) src).getExactRuns())
+                // Use subdir of targetDir with configuration name (like "jdk=java6u20")
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
+                              baseTargetDir, copier, console);
+
+            if (!ok) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
+        } else {
+            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
         }
     }
 
@@ -424,7 +413,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         Job<?, ?> toJob = build.getParent();
 
         if ((job instanceof AbstractProject) && (build instanceof AbstractBuild) &&
-                CopyArtifactPermissionProperty.canCopyArtifact(getRootJob(toJob), getRootJob(fromJob))) {
+                CopyArtifactPermissionProperty.canCopyArtifact(getRootProject(toJob), getRootProject(fromJob))) {
             return true;
         }
 
@@ -454,7 +443,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return b;
     }
 
-    private Job<?, ?> getRootJob(Job<?, ?> job) {
+    private Job<?, ?> getRootProject(Job<?, ?> job) {
         if (job instanceof AbstractProject) {
             return ((AbstractProject<?,?>)job).getRootProject();
         } else {
@@ -464,11 +453,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
     private ItemGroup getItemGroup(Run<?, ?> build) {
-        if (build instanceof AbstractBuild) {
-            return ((AbstractBuild) build).getProject().getRootProject().getParent();
-        } else {
-            return build.getParent().getParent();
-        }
+        return getRootProject(build.getParent()).getParent();
     }
 
 
