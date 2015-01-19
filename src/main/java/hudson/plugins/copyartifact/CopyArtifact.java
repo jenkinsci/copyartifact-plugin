@@ -321,9 +321,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             upgradeIfNecessary(((AbstractBuild)build).getProject());
         }
 
-        EnvVars env = build.getEnvironment(listener);
+        EnvVars env;
         if (build instanceof AbstractBuild) {
+            env = build.getEnvironment(listener);
             env.overrideAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+        } else {
+            env = new EnvVars();
         }
 
         PrintStream console = listener.getLogger();
