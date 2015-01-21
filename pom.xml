@@ -26,25 +26,18 @@
     </properties>
 
     <dependencies>
-      <!--
-        TODO: ??
-        After updating parent pom version dep to 1.580.1, we needed to explicitly include
-        the remoting jar before maven-plugin. If not, we get a 'java.lang.SecurityException: class
-        "org.jenkinsci.remoting.CallableDecorator"'s signer information does not match signer
-        information of other classes in the same package' exception. Looks to be related to the
-        addition of org.jenkins-ci:SECURITY-144-compat:jar:1.0, which the maven plugin depends on
-        and has classes in the org.jenkinsci.remoting package.
-      -->
-      <dependency>
-        <groupId>org.jenkins-ci.main</groupId>
-        <artifactId>remoting</artifactId>
-        <version>2.47</version>
-      </dependency>
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
         <version>2.7.1</version>
         <optional>true</optional>
+        <exclusions>
+          <!-- See https://issues.jenkins-ci.org/browse/JENKINS-25625 -->
+          <exclusion>
+            <groupId>org.jenkins-ci</groupId>
+            <artifactId>SECURITY-144-compat</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <!-- Used for UI test -->
       <dependency>
