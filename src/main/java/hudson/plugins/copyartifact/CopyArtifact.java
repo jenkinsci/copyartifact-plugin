@@ -415,8 +415,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         Job<?, ?> fromJob = job;
         Job<?, ?> toJob = build.getParent();
 
-        if ((job instanceof AbstractProject) && (build instanceof AbstractBuild) &&
-                CopyArtifactPermissionProperty.canCopyArtifact(getRootProject(toJob), getRootProject(fromJob))) {
+        if (CopyArtifactPermissionProperty.canCopyArtifact(getRootProject(toJob), getRootProject(fromJob))) {
             return true;
         }
 
