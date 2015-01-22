@@ -89,7 +89,7 @@ public class CopyArtifactWorkflowTest {
         // Create "project_2", which triggers build of "project_1"
         // I'm sure there's a sweeter way of passing in the build number via a parameter
         WorkflowJob project_2 = createWorkflow("project_2",
-                "step ([$class: 'CopyArtifact', projectName: 'project_1', filter: 'hello.txt', selector: [$class: 'SpecificBuildSelector', buildNumber: '#1']]); " +
+                "step ([$class: 'CopyArtifact', projectName: 'project_1', filter: 'hello.txt', selector: [$class: 'SpecificBuildSelector', buildNumber: '1']]); " +
                 "step ([$class: 'ArtifactArchiver', artifacts: 'hello.txt', fingerprint: true]); ");
 
         // run project_1 and check that project_2 was triggered and copied hello.txt
