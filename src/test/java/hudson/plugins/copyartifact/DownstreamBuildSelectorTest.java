@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import jenkins.model.Jenkins;
 import hudson.FilePath;
 import hudson.model.Cause;
@@ -76,7 +77,7 @@ public class DownstreamBuildSelectorTest {
         FreeStyleProject p = j.createFreeStyleProject();
         
         p.getBuildersList().add(
-                new CopyArtifact(
+                CopyArtifactUtil.createCopyArtifact(
                         "${PROJECT}",
                         "",
                         new DownstreamBuildSelector(
@@ -127,7 +128,7 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(downstream.getFullName(), Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getFullName(),
                 "",
                 new TriggeredBuildSelector(
@@ -186,7 +187,7 @@ public class DownstreamBuildSelectorTest {
         // not use variables.
         {
             FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -218,7 +219,7 @@ public class DownstreamBuildSelectorTest {
                     new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                     new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
             ));
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -253,7 +254,7 @@ public class DownstreamBuildSelectorTest {
                     new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                     new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
             ));
-            p.getBuildersList().add(new CopyArtifact(
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -296,7 +297,7 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(downstream.getFullName(), Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getFullName(),
                 "",
                 new TriggeredBuildSelector(
@@ -348,7 +349,7 @@ public class DownstreamBuildSelectorTest {
                 new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                 new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
         ));
-        p.getBuildersList().add(new CopyArtifact(
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 downstream.getFullName(),
                 "",
                 new DownstreamBuildSelector(
@@ -442,7 +443,7 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger("../folder2/downstream", Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(new CopyArtifact(
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 "../folder1/upstream",
                 "",
                 new TriggeredBuildSelector(
@@ -475,7 +476,7 @@ public class DownstreamBuildSelectorTest {
         j.assertBuildStatusSuccess(upstreamBuild);
         j.assertBuildStatusSuccess(downstreamBuild);
         
-        copier.getBuildersList().add(new CopyArtifact(
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 "../../folder2/downstream",
                 "",
                 new DownstreamBuildSelector(

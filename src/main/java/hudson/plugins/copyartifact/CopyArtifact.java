@@ -25,6 +25,7 @@ package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 
+import hudson.AbortException;
 import hudson.DescriptorExtensionList;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -42,7 +43,6 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
-import hudson.model.listeners.RunListener;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -63,35 +63,40 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 
+import jenkins.tasks.SimpleBuildStep;
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
+
+import javax.annotation.Nonnull;
 
 /**
  * Build step to copy artifacts from another project.
  * @author Alan Harder
  */
-public class CopyArtifact extends Builder {
+public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
     private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
+    private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
 
     @Deprecated private String projectName;
     private String project;
     private String parameters;
-    private final String filter, target;
-    private final String excludes;
+    private String filter, target;
+    private String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
-    private final Boolean flatten, optional;
-    private final boolean doNotFingerprintArtifacts;
+    private Boolean flatten, optional;
+    private boolean doNotFingerprintArtifacts;
 
     @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -105,9 +110,25 @@ public class CopyArtifact extends Builder {
         this(projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts);
     }
 
-    @DataBoundConstructor
+    @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
+        this(projectName);
+        setParameters(parameters);
+        setFilter(filter);
+        setTarget(target);
+        setExcludes(excludes);
+        if (selector == null) {
+            selector = DEFAULT_BUILD_SELECTOR;
+        }
+        setSelector(selector);
+        setFlatten(flatten);
+        setOptional(optional);
+        setFingerprintArtifacts(fingerprintArtifacts);
+    }
+
+    @DataBoundConstructor
+    public CopyArtifact(String projectName) {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
@@ -123,13 +144,55 @@ public class CopyArtifact extends Builder {
         }
 
         this.project = projectName;
+
+        // Apply defaults to all other properties.
+        setParameters(null);
+        setFilter(null);
+        setTarget(null);
+        setExcludes(null);
+        setSelector(DEFAULT_BUILD_SELECTOR);
+        setFlatten(false);
+        setOptional(false);
+        setFingerprintArtifacts(false);
+    }
+
+    @DataBoundSetter
+    public void setParameters(String parameters) {
         this.parameters = Util.fixEmptyAndTrim(parameters);
-        this.selector = selector;
+    }
+
+    @DataBoundSetter
+    public void setFilter(String filter) {
         this.filter = Util.fixNull(filter).trim();
-        this.excludes = Util.fixNull(excludes).trim();
+    }
+
+    @DataBoundSetter
+    public void setTarget(String target) {
         this.target = Util.fixNull(target).trim();
+    }
+
+    @DataBoundSetter
+    public void setExcludes(String excludes) {
+        this.excludes = Util.fixNull(excludes).trim();
+    }
+
+    @DataBoundSetter
+    public void setSelector(@Nonnull BuildSelector selector) {
+        this.selector = selector;
+    }
+
+    @DataBoundSetter
+    public void setFlatten(boolean flatten) {
         this.flatten = flatten ? Boolean.TRUE : null;
+    }
+
+    @DataBoundSetter
+    public void setOptional(boolean optional) {
         this.optional = optional ? Boolean.TRUE : null;
+    }
+
+    @DataBoundSetter
+    public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         this.doNotFingerprintArtifacts = !fingerprintArtifacts;
     }
 
@@ -257,91 +320,102 @@ public class CopyArtifact extends Builder {
     }
 
     @Override
-    public boolean perform(AbstractBuild<?,?> build, Launcher launcher, BuildListener listener)
-            throws InterruptedException, IOException {
-        upgradeIfNecessary(build.getProject());
+    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        if (build instanceof AbstractBuild) {
+            upgradeIfNecessary(((AbstractBuild)build).getProject());
+        }
+
+        EnvVars env;
+        if (build instanceof AbstractBuild) {
+            env = build.getEnvironment(listener);
+            env.overrideAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+        } else {
+            env = new EnvVars();
+        }
+
         PrintStream console = listener.getLogger();
         String expandedProject = project, expandedFilter = filter;
         String expandedExcludes = getExcludes();
-        try {
-            EnvVars env = build.getEnvironment(listener);
-            env.overrideAll(build.getBuildVariables()); // Add in matrix axes..
-            expandedProject = env.expand(project);
-            Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, build.getProject().getRootProject().getParent(), Job.class);
-            if (job != null && !expandedProject.equals(project)
-                // If projectName is parameterized, need to do permission check on source project.
-                && !canReadFrom(job, build)) {
-                job = null; // Disallow access
-            }
-            if (job == null) {
-                console.println(Messages.CopyArtifact_MissingProject(expandedProject));
-                return false;
-            }
-            Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
-            if (src == null) {
-                console.println(Messages.CopyArtifact_MissingBuild(expandedProject));
-                return isOptional();  // Fail build unless copy is optional
-            }
-            FilePath targetDir = build.getWorkspace(), baseTargetDir = targetDir;
-            if (targetDir == null || !targetDir.exists()) {
-                console.println(Messages.CopyArtifact_MissingWorkspace()); // (see JENKINS-3330)
-                return isOptional();  // Fail build unless copy is optional
-            }
-            // Add info about the selected build into the environment
-            EnvAction envData = build.getAction(EnvAction.class);
-            if (envData == null) {
-                envData = new EnvAction();
-                build.addAction(envData);
-            }
-            envData.add(getItemGroup(build), expandedProject, src.getNumber());
-            if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
-            expandedFilter = env.expand(filter);
-            if (expandedFilter.trim().length() == 0) expandedFilter = "**";
-            expandedExcludes = env.expand(expandedExcludes);
-            if (StringUtils.isBlank(expandedExcludes)) {
-                expandedExcludes = null;
-            }
 
-            Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
-
-            if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) { 
-            // use classes in the "maven-plugin" plugin as might not be installed
-                // Copy artifacts from the build (ArchiveArtifacts build step)
-                boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                // Copy artifacts from all modules of this Maven build (automatic archiving)
-                for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
-                    // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
-                    // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
-                    Run<?,?> r = it.next();
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-                }
-                return ok;
-            } else if (src instanceof MatrixBuild) {
-                boolean ok = false;
-                // Copy artifacts from all configurations of this matrix build
-                // Use MatrixBuild.getExactRuns if available
-                for (Run r : ((MatrixBuild) src).getExactRuns())
-                    // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                    ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
-                                  baseTargetDir, copier, console);
-                return ok;
+        expandedProject = env.expand(project);
+        Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, getItemGroup(build), Job.class);
+        if (job != null && !expandedProject.equals(project)
+            // If projectName is parameterized, need to do permission check on source project.
+            && !canReadFrom(job, build)) {
+            job = null; // Disallow access
+        }
+        if (job == null) {
+            throw new AbortException(Messages.CopyArtifact_MissingProject(expandedProject));
+        }
+        Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
+        if (src == null) {
+            String message = Messages.CopyArtifact_MissingBuild(expandedProject);
+            if (isOptional()) {
+                // just return without an error
+                console.println(message);
+                return;
             } else {
-                return perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+                // Fail build if copy is not optional
+                throw new AbortException(message);
             }
         }
-        catch (IOException ex) {
-            Util.displayIOException(ex, listener);
-            ex.printStackTrace(listener.error(
-                    Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter)));
-            return false;
+        FilePath targetDir = workspace, baseTargetDir = targetDir;
+        targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
+        // Add info about the selected build into the environment
+        EnvAction envData = build.getAction(EnvAction.class);
+        if (envData == null) {
+            envData = new EnvAction();
+            build.addAction(envData);
+        }
+        envData.add(getItemGroup(build), expandedProject, src.getNumber());
+        if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
+        expandedFilter = env.expand(filter);
+        if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+        expandedExcludes = env.expand(expandedExcludes);
+        if (StringUtils.isBlank(expandedExcludes)) {
+            expandedExcludes = null;
+        }
+
+        Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
+
+        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
+        // use classes in the "maven-plugin" plugin as might not be installed
+            // Copy artifacts from the build (ArchiveArtifacts build step)
+            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+            // Copy artifacts from all modules of this Maven build (automatic archiving)
+            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
+                // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
+                // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
+                Run<?,?> r = it.next();
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+            }
+            if (!ok) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
+        } else if (src instanceof MatrixBuild) {
+            boolean ok = false;
+            // Copy artifacts from all configurations of this matrix build
+            // Use MatrixBuild.getExactRuns if available
+            for (Run r : ((MatrixBuild) src).getExactRuns())
+                // Use subdir of targetDir with configuration name (like "jdk=java6u20")
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
+                              baseTargetDir, copier, console);
+
+            if (!ok) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
+        } else {
+            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
+            }
         }
     }
 
-    private boolean canReadFrom(Job<?, ?> job, AbstractBuild<?, ?> build) {
-        if ((job instanceof AbstractProject) && CopyArtifactPermissionProperty.canCopyArtifact(
-                build.getProject().getRootProject(),
-                ((AbstractProject<?,?>)job).getRootProject()
-        )) {
+    private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
+        Job<?, ?> fromJob = job;
+        Job<?, ?> toJob = build.getParent();
+
+        if (CopyArtifactPermissionProperty.canCopyArtifact(getRootProject(toJob), getRootProject(fromJob))) {
             return true;
         }
 
@@ -371,15 +445,21 @@ public class CopyArtifact extends Builder {
         return b;
     }
 
-    // retrieve the "folder" (jenkins root if no folder used) for this build
-    private ItemGroup getItemGroup(AbstractBuild<?, ?> build) {
-        ItemGroup group = build.getProject().getRootProject().getParent();
-        return group;
+    private Job<?, ?> getRootProject(Job<?, ?> job) {
+        if (job instanceof AbstractProject) {
+            return ((AbstractProject<?,?>)job).getRootProject();
+        } else {
+            return job;
+        }
+    }
 
+    // retrieve the "folder" (jenkins root if no folder used) for this build
+    private ItemGroup getItemGroup(Run<?, ?> build) {
+        return getRootProject(build.getParent()).getParent();
     }
 
 
-    private boolean perform(Run src, AbstractBuild<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
+    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
             FilePath baseTargetDir, Copier copier, PrintStream console)
             throws IOException, InterruptedException {
         FilePath srcDir = selector.getSourceDirectory(src, console);
@@ -387,7 +467,7 @@ public class CopyArtifact extends Builder {
             return isOptional();  // Fail build unless copy is optional
         }
 
-        copier.init(src,dst,srcDir,baseTargetDir);
+        copier.initialize(src, dst, srcDir, baseTargetDir);
         try {
             int cnt;
             if (!isFlatten())

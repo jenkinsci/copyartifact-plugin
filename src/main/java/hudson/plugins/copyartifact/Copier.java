@@ -2,6 +2,7 @@ package hudson.plugins.copyartifact;
 
 import hudson.ExtensionPoint;
 import hudson.FilePath;
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.Run;
 
@@ -27,6 +28,7 @@ public abstract class Copier implements ExtensionPoint {
 
     /**
      * Called before copy-artifact operation.
+     *
      * @param src
      *      The build record from which we are copying artifacts.
      * @param dst
@@ -34,8 +36,34 @@ public abstract class Copier implements ExtensionPoint {
      * @param srcDir Source for upcoming file copy
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
+     *
+     * @since TODO ?
      */
-    public abstract void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException;
+    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        if (dst instanceof AbstractBuild && Util.isOverridden(Copier.class, getClass(), "init", Run.class, AbstractBuild.class, FilePath.class, FilePath.class)) {
+            init(src, (AbstractBuild<?,?>) dst, srcDir, baseTargetDir);
+        } else {
+            throw new AbstractMethodError(String.format("Invalid call to Copier.initialize(Run src, Run dst, FilePath, FilePath), passing an AbstractBuild " +
+                    "instance for the 'dst' arg when %s does not implement the deprecated version of 'init' that takes an AbstractBuild. Please supply a " +
+                    "Run instance for the 'dst' arg.", getClass().getName()));
+        }
+    }
+
+    /**
+     * @deprecated Please use {@link #initialize(hudson.model.Run, hudson.model.Run, hudson.FilePath, hudson.FilePath)}
+     */
+    @Deprecated
+    public void init(Run src, AbstractBuild<?,?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        if (Util.isOverridden(Copier.class, getClass(), "initialize", Run.class, Run.class, FilePath.class, FilePath.class)) {
+            initialize((Run<?, ?>)src, dst, srcDir, baseTargetDir);
+        } else {
+            // Is near impossible for this to happen. Copier impl would need to not implement the newer version of the initialize method, while at
+            // the same time be changed to call super with a Run instance for dst, which would be bizarre because that could only have been done
+            // after the initialize method was changed to not be abstract.
+            throw new AbstractMethodError(String.format("Invalid call to Copier.init(Run src, AbstractBuild dst, FilePath, FilePath). " +
+                    "%s implements the newer version of 'initialize' that takes a Run instance for the 'dst' arg. Please call that implementation.", getClass().getName()));
+        }
+    }
 
     /**
      * @deprecated 
@@ -110,7 +138,7 @@ public abstract class Copier implements ExtensionPoint {
      * Creates a clone.
      * 
      * This method is only called before the {@link #init(Run, AbstractBuild, FilePath, FilePath)} method
-     * to allow each init-end session to run against different objects, so you need not copy any state
+     * to allow each initialize-end session to run against different objects, so you need not copy any state
      * that your {@link Copier} might maintain.
      * 
      * This is a cheap hack to implement a factory withot breaking backward compatibility.
