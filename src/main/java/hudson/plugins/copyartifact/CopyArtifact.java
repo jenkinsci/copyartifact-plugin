@@ -118,6 +118,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         setFilter(filter);
         setTarget(target);
         setExcludes(excludes);
+        if (selector == null) {
+            selector = DEFAULT_BUILD_SELECTOR;
+        }
         setSelector(selector);
         setFlatten(flatten);
         setOptional(optional);
@@ -147,7 +150,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         setFilter(null);
         setTarget(null);
         setExcludes(null);
-        setSelector(null);
+        setSelector(DEFAULT_BUILD_SELECTOR);
         setFlatten(false);
         setOptional(false);
         setFingerprintArtifacts(false);
@@ -174,8 +177,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @DataBoundSetter
-    public void setSelector(BuildSelector selector) {
-        this.selector = (selector != null ? selector : DEFAULT_BUILD_SELECTOR);
+    public void setSelector(@Nonnull BuildSelector selector) {
+        this.selector = selector;
     }
 
     @DataBoundSetter
