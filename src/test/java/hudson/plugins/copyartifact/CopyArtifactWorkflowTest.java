@@ -60,47 +60,6 @@ public class CopyArtifactWorkflowTest {
         assertArtifactInArchive(b);
     }
 
-    @Test
-    public void test_upstreamCopyFromDownstream() throws Exception {
-        // create "project_1" with an archived artifact...
-        createWorkflow("project_1",
-                "sh 'echo hello > hello.txt'; " +
-                "step([$class: 'ArtifactArchiver', artifacts: 'hello.txt'])");
-
-        // Create "project_2", which triggers build of "project_1"
-        WorkflowJob project_2 = createWorkflow("project_2",
-                "build ('project_1'); " +
-                "step ([$class: 'CopyArtifact', projectName: 'project_1', filter: 'hello.txt']); " +
-                "step ([$class: 'ArtifactArchiver', artifacts: 'hello.txt', fingerprint: true]);");
-
-        // run project_2 and check that was able to copy from project_1
-        WorkflowRun b = jenkinsRule.assertBuildStatusSuccess(project_2.scheduleBuild2(0));
-        assertArtifactInArchive(b);
-    }
-
-    @Test
-    public void test_downstreamCopyFromUpstream() throws Exception {
-        // create "project_1" with an archived artifact...
-        WorkflowJob project_1 = createWorkflow("project_1",
-                "sh 'echo hello > hello.txt'; " +
-                "step([$class: 'ArtifactArchiver', artifacts: 'hello.txt']); " +
-                "build ('project_2'); ");
-
-        // Create "project_2", which triggers build of "project_1"
-        // I'm sure there's a sweeter way of passing in the build number via a parameter
-        WorkflowJob project_2 = createWorkflow("project_2",
-                "step ([$class: 'CopyArtifact', projectName: 'project_1', filter: 'hello.txt', selector: [$class: 'SpecificBuildSelector', buildNumber: '1']]); " +
-                "step ([$class: 'ArtifactArchiver', artifacts: 'hello.txt', fingerprint: true]); ");
-
-        // run project_1 and check that project_2 was triggered and copied hello.txt
-        WorkflowRun b = jenkinsRule.assertBuildStatusSuccess(project_1.scheduleBuild2(0));
-        assertArtifactInArchive(b);
-
-        assertArtifactInArchive(project_2.getLastBuild());
-    }
-
-
-
     private void assertArtifactInArchive(Run b) {
         List<WorkflowRun.Artifact> artifacts = b.getArtifacts();
         Assert.assertEquals(1, artifacts.size());
