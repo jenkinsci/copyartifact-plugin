@@ -38,7 +38,7 @@ public class FingerprintingCopyMethod extends Copier {
     private final Map<String,String> fingerprints = new HashMap<String, String>();
 
     @Override
-    public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         this.src = src;
         this.dst = dst;
         fingerprints.clear();

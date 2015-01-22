@@ -467,7 +467,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return isOptional();  // Fail build unless copy is optional
         }
 
-        copier.init(src,dst,srcDir,baseTargetDir);
+        copier.initialize(src, dst, srcDir, baseTargetDir);
         try {
             int cnt;
             if (!isFlatten())

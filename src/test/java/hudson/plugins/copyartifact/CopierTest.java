@@ -53,19 +53,19 @@ public class CopierTest {
 
         // test with new param types (Run dst type)
 
-        // C1 and C2 both impl the non-legacy init methods, so should work fine.
+        // C1 and C2 both impl the non-legacy initialize methods, so should work fine.
         testRunDst(new C1(), 1); // should work
         testRunDst(new C2(), 1); // should work
 
-        testRunDst(new C4(), 1); // should work since it extends C2, which was updated with the new init method
+        testRunDst(new C4(), 1); // should work since it extends C2, which was updated with the new initialize method
 
-        // C3 only implements the legacy AbstractBuild init method (and not the Run
-        // version). Copier.init(Run, Run) will get called, but should throw an AbstractMethodError
+        // C3 only implements the legacy AbstractBuild initialize method (and not the Run
+        // version). Copier.initialize(Run, Run) will get called, but should throw an AbstractMethodError
         try {
             testRunDst(new C3(), 0);
             Assert.fail("expected AbstractMethodError");
         } catch (AbstractMethodError e) {
-            Assert.assertEquals("Invalid call to Copier.init(Run src, Run dst, FilePath, FilePath), passing an AbstractBuild " +
+            Assert.assertEquals("Invalid call to Copier.initialize(Run src, Run dst, FilePath, FilePath), passing an AbstractBuild " +
                     "instance for the 'dst' arg when hudson.plugins.copyartifact.CopierTest$C3 does not implement the deprecated " +
                     "version of 'init' that takes an AbstractBuild. Please supply a Run instance for the 'dst' arg.", e.getMessage());
         }
@@ -74,7 +74,7 @@ public class CopierTest {
     public void testRunDst(C c, int expectedCnt) throws IOException, InterruptedException {
         Run runSrc = Mockito.mock(Run.class);
         Run runDst = Mockito.mock(Run.class);
-        c.init(runSrc, runDst, null, null);
+        c.initialize(runSrc, runDst, null, null);
         Assert.assertEquals(expectedCnt, c.callCnt);
     }
 
@@ -90,9 +90,9 @@ public class CopierTest {
     }
 
     private class C1 extends C {
-        // Overrides both init methods (for whatever reason :) )
+        // Overrides both initialize methods (for whatever reason :) )
         @Override
-        public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
             callCnt++;
         }
 
@@ -103,26 +103,26 @@ public class CopierTest {
     }
 
     private class C2 extends C {
-        // Override init that uses the Run dst
+        // Override initialize that uses the Run dst
         @Override
-        public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
+        public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
             callCnt++;
         }
     }
 
     private class C3 extends C {
-        // Override init that uses the deprecated AbstractBuild dst
+        // Override initialize that uses the deprecated AbstractBuild dst
         @Override
         public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
             callCnt++;
         }
     }
 
-    // C4 extends C2, which is a Copier impl that's been updated to use the newer version of the init method.
-    // C4 was overriding C2.init() but because of the C2 update, it is now overriding the Copier.init().
+    // C4 extends C2, which is a Copier impl that's been updated to use the newer version of the initialize method.
+    // C4 was overriding C2.initialize() but because of the C2 update, it is now overriding the Copier.initialize().
     // Call to super should be fine so long as dst is left as an AbstractBuild.
     private class C4 extends C2 {
-        // Override init that uses the deprecated AbstractBuild dst + call super
+        // Override initialize that uses the deprecated AbstractBuild dst + call super
         @Override
         public void init(Run src, AbstractBuild<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
             callCnt++;

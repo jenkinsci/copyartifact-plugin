@@ -56,6 +56,6 @@ public class FilePathCopyMethod extends Copier {
         return this;
     }
 
-    @Override public void init(Run src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
+    @Override public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
 
 }
