@@ -47,7 +47,7 @@ public class CopyArtifactWorkflowTest {
     public void test_simpleUntriggeredCopy() throws Exception {
         // create "project_1" with an archived artifact...
         WorkflowJob project_1 = createWorkflow("project_1",
-                "sh 'echo hello > hello.txt'; " +
+                "writeFile text: 'hello', file: 'hello.txt'; " +
                 "step([$class: 'ArtifactArchiver', artifacts: 'hello.txt', fingerprint: true])");
         WorkflowRun b = jenkinsRule.assertBuildStatusSuccess(project_1.scheduleBuild2(0));
         assertArtifactInArchive(b);
