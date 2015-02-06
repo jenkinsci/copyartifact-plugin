@@ -6,6 +6,7 @@ import hudson.Util;
 import hudson.model.Fingerprint;
 import hudson.model.FingerprintMap;
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.os.PosixException;
 import hudson.tasks.Fingerprinter.FingerprintAction;
 import hudson.util.IOException2;
@@ -67,6 +68,11 @@ public class FingerprintingCopyMethod extends Copier {
 
     @Override
     public void copyOne(FilePath s, FilePath d, boolean fingerprintArtifacts) throws IOException, InterruptedException {
+        String link = s.readLink();
+        if (link != null) {
+            d.symlinkTo(link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */TaskListener.NULL);
+            return;
+        }
         try {
             md5.reset();
             DigestOutputStream out =new DigestOutputStream(d.write(),md5);
