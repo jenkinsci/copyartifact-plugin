@@ -67,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
+import jenkins.security.QueueItemAuthenticatorConfiguration;
 
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
@@ -86,16 +87,6 @@ import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
 
 import org.jvnet.hudson.test.TestBuilder;
-
-/*
-// classes used only in testQueueItemAuthenticator
-import hudson.security.Permission;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import jenkins.security.QueueItemAuthenticatorConfiguration;
-import com.google.common.collect.Sets;
-*/
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -1685,11 +1676,6 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertEquals("nonexistent", ws.child("link2").readLink());
     }
     
-    /* This test is available only for Jenkins >= 1.521.
-     * As I do not upgrade target Jenkins version to preserve compatibility
-     * (the feature supporting QueueItemAuthenticator itself does not need to upgrade target version),
-     * I comment out this test for now.
-     * 
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
         private final org.acegisecurity.Authentication auth;
         
@@ -1807,5 +1793,4 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         }
     }
-    */
 }
