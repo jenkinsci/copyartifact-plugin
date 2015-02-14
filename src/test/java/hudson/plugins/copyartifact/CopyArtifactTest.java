@@ -85,7 +85,7 @@ import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
 
-import static org.junit.Assert.assertTrue;
+import org.jvnet.hudson.test.TestBuilder;
 
 /*
 // classes used only in testQueueItemAuthenticator
@@ -1661,6 +1661,28 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertEquals(0644, w.child("artifactInSubdir.txt").mode() & 0777);
             assertEquals(0755, w.child("artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
+    }
+
+    @Bug(20546)
+    public void testSymlinks() throws Exception {
+        FreeStyleProject p1 = createFreeStyleProject("p1");
+        p1.getBuildersList().add(new TestBuilder() {
+            @Override public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                build.getWorkspace().child("plain").write("text", null);
+                build.getWorkspace().child("link1").symlinkTo("plain", listener);
+                build.getWorkspace().child("link2").symlinkTo("nonexistent", listener);
+                return true;
+            }
+        });
+        p1.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
+        buildAndAssertSuccess(p1);
+        FreeStyleProject p2 = createFreeStyleProject("p2");
+        p2.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("p1", null, new StatusBuildSelector(true), null, "", false, false, true));
+        FreeStyleBuild b = buildAndAssertSuccess(p2);
+        FilePath ws = b.getWorkspace();
+        assertEquals("text", ws.child("plain").readToString());
+        assertEquals("plain", ws.child("link1").readLink());
+        assertEquals("nonexistent", ws.child("link2").readLink());
     }
     
     /* This test is available only for Jenkins >= 1.521.
