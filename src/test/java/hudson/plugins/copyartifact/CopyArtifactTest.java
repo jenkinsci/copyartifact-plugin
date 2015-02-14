@@ -71,6 +71,8 @@ import jenkins.model.Jenkins;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
@@ -1130,6 +1132,54 @@ public class CopyArtifactTest extends HudsonTestCase {
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatus(Result.FAILURE, b);
         assertFile(false, "foo.txt", b);
+    }
+
+    /**
+     * Test filtering on parameters works to copy from workflow jobs.
+     */
+    @Bug(26694)
+    public void testFilterByParametersForWorkflow() throws Exception {
+        WorkflowJob copiee = jenkins.createProject(WorkflowJob.class, createUniqueProjectName());
+        copiee.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("PARAM", "")
+        ));
+        copiee.setDefinition(new CpsFlowDefinition(
+                "node {"
+                        + "writeFile text: \"${PARAM}\", file:'artifact.txt';"
+                        + "archive includes:'artifact.txt';"
+                + "}",
+                true
+        ));
+        
+        FreeStyleProject copier = createFreeStyleProject();
+        copier.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("PARAM_TO_COPY", "")
+        ));
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                "PARAM=${PARAM_TO_COPY}",
+                new LastCompletedBuildSelector(),
+                "artifact.txt",
+                "",
+                false,
+                false
+        ));
+        
+        // #1: PARAM=foo
+        assertBuildStatusSuccess(copiee.scheduleBuild2(0, new ParametersAction(
+                new StringParameterValue("PARAM", "foo")
+        )));
+        // #2: PARAM=bar
+        assertBuildStatusSuccess(copiee.scheduleBuild2(0, new ParametersAction(
+                new StringParameterValue("PARAM", "bar")
+        )));
+        
+        FreeStyleBuild build = copier.scheduleBuild2(0, new UserCause(), new ParametersAction(
+                new StringParameterValue("PARAM_TO_COPY", "foo")
+        )).get();
+        assertBuildStatusSuccess(build);
+        
+        assertEquals("foo", build.getWorkspace().child("artifact.txt").readToString());
     }
 
     // Verify BuildSelector defaults to false
