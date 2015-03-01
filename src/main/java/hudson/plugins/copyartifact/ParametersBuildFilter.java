@@ -24,8 +24,11 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
+import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
 import hudson.model.Job;
+import hudson.model.ParametersAction;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
 import java.util.ArrayList;
@@ -78,6 +81,22 @@ public class ParametersBuildFilter extends BuildFilter {
             otherEnv = run.getEnvironment(TaskListener.NULL);
         } catch (Exception ex) {
             return false;
+        }
+        if(!(run instanceof AbstractBuild)) {
+            // Abstract#getEnvironment(TaskListener) put build parameters to
+            // environments, but Run#getEnvironment(TaskListener) doesn't.
+            // That means we can't retrieve build parameters from WorkflowRun
+            // as it is a subclass of Run, not of AbstractBuild.
+            // We need expand build parameters manually.
+            // See JENKINS-26694 for details.
+            for(ParametersAction pa: run.getActions(ParametersAction.class)) {
+                // We have to extract parameters manally as ParametersAction#buildEnvVars
+                // (overrides EnvironmentContributingAction#buildEnvVars)
+                // is applicable only for AbstractBuild.
+                for(ParameterValue pv: pa.getParameters()) {
+                    pv.buildEnvironment(run, otherEnv);
+                }
+            }
         }
         for (StringParameterValue spv : filters) {
             if (!spv.value.equals(otherEnv.get(spv.getName()))) {
