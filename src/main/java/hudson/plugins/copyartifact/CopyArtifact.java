@@ -268,6 +268,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return parameters;
     }
 
+    public BuildSelector getSelector() {
+        return selector;
+    }
+
+    @Deprecated
     public BuildSelector getBuildSelector() {
         return selector;
     }
