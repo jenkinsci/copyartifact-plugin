@@ -493,11 +493,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AbstractProject anc, @QueryParameter String value) {
-            // Require CONFIGURE permission on this project
-            if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
+                @AncestorInPath ItemGroup parent, @QueryParameter String value) {
             FormValidation result;
-            Item item = Jenkins.getInstance().getItem(value, anc.getParent());
+            Item item = Jenkins.getInstance().getItem(value, parent);
             if (item != null)
                 if (Hudson.getInstance().getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
                     result = FormValidation.warning(Messages.CopyArtifact_MavenProject());

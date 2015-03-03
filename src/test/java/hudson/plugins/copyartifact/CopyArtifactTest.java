@@ -1148,15 +1148,15 @@ public class CopyArtifactTest extends HudsonTestCase {
         CopyArtifact.DescriptorImpl descriptor = hudson.getDescriptorByType(CopyArtifact.DescriptorImpl.class);
         assertNotNull(descriptor);
         // Valid value
-        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, p.getFullName()).kind);
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(jenkins, p.getFullName()).kind);
         // Empty value
-        assertSame(FormValidation.Kind.ERROR, descriptor.doCheckProjectName(p, "").kind);
+        assertSame(FormValidation.Kind.ERROR, descriptor.doCheckProjectName(jenkins, "").kind);
         // Parameterized value
-        assertSame(FormValidation.Kind.WARNING, descriptor.doCheckProjectName(p, "$FOO").kind);
+        assertSame(FormValidation.Kind.WARNING, descriptor.doCheckProjectName(jenkins, "$FOO").kind);
         // Just returns OK if no permission
         hudson.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
         SecurityContextHolder.clearContext();
-        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, "").kind);
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(jenkins, "").kind);
         // Other descriptor methods
         assertTrue(descriptor.isApplicable(null));
         assertTrue(descriptor.getDisplayName().length() > 0);
