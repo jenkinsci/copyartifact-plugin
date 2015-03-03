@@ -506,10 +506,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             else if (value.indexOf('$') >= 0)
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
-            else
+            else {
+                AbstractProject nearest = AbstractProject.findNearest(value);
+                String alternative = nearest != null ? nearest.getRelativeNameFrom(parent) : "?";
                 result = FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
-                        value, AbstractProject.findNearest(value).getName()));
+                            value, alternative));
+
+            }
             return result;
         }
 
