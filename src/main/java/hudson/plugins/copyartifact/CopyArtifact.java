@@ -132,7 +132,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
-            AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
+            Job p = req.findAncestorObject(Job.class);
             if (p != null) {
                 ItemGroup<?> context = p.getParent();
 
