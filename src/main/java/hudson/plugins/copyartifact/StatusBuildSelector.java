@@ -38,8 +38,8 @@ public class StatusBuildSelector extends BuildSelector {
     private Boolean stable;
 
     @DataBoundConstructor
-    public StatusBuildSelector(boolean stableOnly) {
-        this.stable = stableOnly ? Boolean.TRUE : null;
+    public StatusBuildSelector(boolean stable) {
+        this.stable = stable ? Boolean.TRUE : null;
     }
 
     public boolean isStable() {

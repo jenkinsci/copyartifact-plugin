@@ -132,7 +132,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         // check the permissions only if we can
         StaplerRequest req = Stapler.getCurrentRequest();
         if (req!=null) {
-            AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
+            Job p = req.findAncestorObject(Job.class);
             if (p != null) {
                 ItemGroup<?> context = p.getParent();
 
@@ -268,6 +268,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return parameters;
     }
 
+    public BuildSelector getSelector() {
+        return selector;
+    }
+
+    @Deprecated
     public BuildSelector getBuildSelector() {
         return selector;
     }
@@ -493,11 +498,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AbstractProject anc, @QueryParameter String value) {
-            // Require CONFIGURE permission on this project
-            if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
+                @AncestorInPath Job job, @QueryParameter String value) {
+            if (!job.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
-            Item item = Jenkins.getInstance().getItem(value, anc.getParent());
+            ItemGroup parent = job.getParent();
+            Item item = Jenkins.getInstance().getItem(value, parent);
             if (item != null)
                 if (Hudson.getInstance().getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
                     result = FormValidation.warning(Messages.CopyArtifact_MavenProject());
@@ -508,10 +513,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             else if (value.indexOf('$') >= 0)
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
-            else
+            else {
+                Job nearest = Items.findNearest(Job.class, value, parent);
+                String alternative = nearest != null ? nearest.getRelativeNameFrom(parent) : "?";
                 result = FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
-                        value, AbstractProject.findNearest(value).getName()));
+                            value, alternative));
+
+            }
             return result;
         }
 

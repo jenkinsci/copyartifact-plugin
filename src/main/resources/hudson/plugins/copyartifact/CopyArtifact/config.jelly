@@ -26,7 +26,7 @@ THE SOFTWARE.
   <f:entry title="${%Project name}" field="projectName">
     <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
   </f:entry>
-  <ca:selectorList currentSelector="${instance.buildSelector}"
+  <ca:selectorList currentSelector="${instance.selector}"
       name="selector" title="${%Which build}"/>
   <f:entry title="${%Artifacts to copy}" field="filter">
     <f:textbox/>
