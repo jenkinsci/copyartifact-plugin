@@ -498,8 +498,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath ItemGroup parent, @QueryParameter String value) {
+                @AncestorInPath Job job, @QueryParameter String value) {
+            if (!job.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
+            ItemGroup parent = job.getParent();
             Item item = Jenkins.getInstance().getItem(value, parent);
             if (item != null)
                 if (Hudson.getInstance().getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
