@@ -95,8 +95,8 @@ public class TriggeredBuildSelector extends BuildSelector {
     private final UpstreamFilterStrategy upstreamFilterStrategy;
 
     @DataBoundConstructor
-    public TriggeredBuildSelector(boolean fallback, UpstreamFilterStrategy upstreamFilterStrategy) {
-        this.fallbackToLastSuccessful = fallback ? Boolean.TRUE : null;
+    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
+        this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
         this.upstreamFilterStrategy = upstreamFilterStrategy;
     }
 

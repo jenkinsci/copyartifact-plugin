@@ -23,8 +23,7 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry title="${%Parameter Name}" help="/plugin/copyartifact/help-parameterName.html">
-    <f:textbox clazz="required" name="parameterName" value="${selector.parameterName}"
-               default="BUILD_SELECTOR"/>
+  <f:entry field="parameterName" title="${%Parameter Name}">
+    <f:textbox clazz="required" default="BUILD_SELECTOR"/>
   </f:entry>
 </j:jelly>
