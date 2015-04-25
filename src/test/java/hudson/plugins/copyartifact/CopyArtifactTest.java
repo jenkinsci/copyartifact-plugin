@@ -1160,7 +1160,6 @@ public class CopyArtifactTest extends HudsonTestCase {
         // Other descriptor methods
         assertTrue(descriptor.isApplicable(null));
         assertTrue(descriptor.getDisplayName().length() > 0);
-        assertTrue(descriptor.getBuildSelectors().size() > 0);
     }
 
     @LocalData

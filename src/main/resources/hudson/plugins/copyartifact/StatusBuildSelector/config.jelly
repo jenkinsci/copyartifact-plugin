@@ -23,8 +23,7 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry title="">
-    <f:checkbox name="stableOnly" checked="${selector.isStable()}"/>
-    <label class="attach-previous">${%Stable build only}</label>
+  <f:entry field="stable">
+    <f:checkbox title="${%Stable build only}"/>
   </f:entry>
 </j:jelly>

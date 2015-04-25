@@ -59,7 +59,7 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         wc.setPrintContentOnFailingStatusCode(false);
         HtmlForm form = wc.getPage(job, "build").getFormByName("parameters");
         form.getSelectByName("").getOptionByText("Specific build").setSelected(true);
-        form.getInputByName("buildNumber").setValueAttribute("6");
+        form.getInputByName("_.buildNumber").setValueAttribute("6");
         submit(form);
         Queue.Item q = hudson.getQueue().getItem(job);
         if (q != null) q.getFuture().get();

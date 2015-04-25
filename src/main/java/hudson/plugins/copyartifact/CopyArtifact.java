@@ -26,7 +26,6 @@ package hudson.plugins.copyartifact;
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 
 import hudson.AbortException;
-import hudson.DescriptorExtensionList;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -268,7 +267,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return parameters;
     }
 
+    @Deprecated
     public BuildSelector getBuildSelector() {
+        return selector;
+    }
+
+    public BuildSelector getSelector() {
         return selector;
     }
 
@@ -523,9 +527,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return Messages.CopyArtifact_DisplayName();
         }
 
-        public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
-        }
     }
 
     // Listen for project renames and update property here if needed.
