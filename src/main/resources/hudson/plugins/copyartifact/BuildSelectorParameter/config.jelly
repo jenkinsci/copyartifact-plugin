@@ -22,12 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form" xmlns:ca="/hudson/plugins/copyartifact">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
   <f:entry title="${%Name}" field="name" help="/help/parameter/name.html">
     <f:textbox/>
   </f:entry>
-  <ca:selectorList currentSelector="${instance.defaultSelector}"
-      name="defaultSelector" title="${%Default Selector}" omit="ParameterizedBuildSelector"/>
+  <f:dropdownDescriptorSelector field="defaultSelector"  help="/plugin/copyartifact/help-buildSelector.html"
+      title="${%Default Selector}" descriptors="${descriptor.availableBuildSelectorList}" />
   <f:entry title="${%Description}" field="description" help="/help/parameter/description.html">
     <f:textarea/>
   </f:entry>
