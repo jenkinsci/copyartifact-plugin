@@ -111,6 +111,21 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                     }
             ));
         }
+        
+        @Override
+        public String getHelpFile(String fieldName) {
+            if ("defaultSelector".equals(fieldName) || "parameter".equals(fieldName)) {
+                // Display the help file of `Copyartifact#getSelector` ("which build" field)
+                // for `defaultSelector` ("Default Selector" field) in project configuration pages
+                // and the value of build parameter ("Build selector for Copy Artifact" field)
+                // in "This build requires parameters" pages.
+                Descriptor<?> d = Jenkins.getInstance().getDescriptor(CopyArtifact.class);
+                if (d != null) {
+                    return d.getHelpFile("selector");
+                }
+            }
+            return super.getHelpFile(fieldName);
+        }
     }
 
     private static final XStream2 XSTREAM = new XStream2();

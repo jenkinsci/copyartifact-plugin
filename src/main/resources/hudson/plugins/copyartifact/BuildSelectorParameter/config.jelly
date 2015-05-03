@@ -26,7 +26,7 @@ THE SOFTWARE.
   <f:entry title="${%Name}" field="name" help="/help/parameter/name.html">
     <f:textbox/>
   </f:entry>
-  <f:dropdownDescriptorSelector field="defaultSelector"  help="/plugin/copyartifact/help-buildSelector.html"
+  <f:dropdownDescriptorSelector field="defaultSelector"
       title="${%Default Selector}" descriptors="${descriptor.availableBuildSelectorList}" />
   <f:entry title="${%Description}" field="description" help="/help/parameter/description.html">
     <f:textarea/>

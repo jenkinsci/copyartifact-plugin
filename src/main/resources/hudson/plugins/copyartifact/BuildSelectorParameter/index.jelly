@@ -23,7 +23,9 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:dropdownDescriptorSelector field="parameter" help="/plugin/copyartifact/help-buildSelector.html"
+  <j:scope>
+  <j:set var="descriptor" value="${it.descriptor}" /> <!-- this enables displaying the help file. -->
+  <f:dropdownDescriptorSelector field="parameter"
       title="${it.name}" description="${it.description}"
       default="${it.defaultSelector}"
       descriptors="${it.descriptor.availableBuildSelectorList}">
@@ -31,4 +33,5 @@ THE SOFTWARE.
       <tr><td><input type="hidden" name="name" value="${it.name}"/></td></tr>
     </j:if>
   </f:dropdownDescriptorSelector>
+  </j:scope>
 </j:jelly>
