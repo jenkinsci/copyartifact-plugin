@@ -541,6 +541,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 try {
                 for (CopyArtifact ca : getCopiers(project)) {
                     String projectName = ca.getProjectName();
+                    if (projectName == null) {
+                        // JENKINS-27475 (not sure why this happens).
+                        continue;
+                    }
 
                     String suffix = "";
                     // Support rename for "MatrixJobName/AxisName=value" type of name
