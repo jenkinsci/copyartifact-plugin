@@ -91,4 +91,15 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
+    
+    public void testConfiguration() throws Exception {
+        BuildSelectorParameter expected = new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(true), "foo");
+        FreeStyleProject job = createFreeStyleProject();
+        job.addProperty(new ParametersDefinitionProperty(expected));
+        job.save();
+        
+        job = configRoundtrip(job);
+        BuildSelectorParameter actual = (BuildSelectorParameter)job.getProperty(ParametersDefinitionProperty.class).getParameterDefinition("SELECTOR");
+        assertEqualDataBoundBeans(expected, actual);
+    }
 }

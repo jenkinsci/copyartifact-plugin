@@ -23,6 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.List;
+
+import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.model.Descriptor;
@@ -34,6 +37,10 @@ import hudson.util.XStream2;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
+
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 
 /**
  * @author Alan Harder
@@ -89,6 +96,35 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
             return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
+        }
+
+        /**
+         * @return {@link BuildSelector}s available for BuildSelectorParameter.
+         */
+        public List<Descriptor<BuildSelector>> getAvailableBuildSelectorList() {
+            return Lists.newArrayList(Collections2.filter(
+                    Jenkins.getInstance().getDescriptorList(BuildSelector.class),
+                    new Predicate<Descriptor<BuildSelector>>() {
+                        public boolean apply(Descriptor<BuildSelector> input) {
+                            return !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName());
+                        };
+                    }
+            ));
+        }
+        
+        @Override
+        public String getHelpFile(String fieldName) {
+            if ("defaultSelector".equals(fieldName) || "parameter".equals(fieldName)) {
+                // Display the help file of `Copyartifact#getSelector` ("which build" field)
+                // for `defaultSelector` ("Default Selector" field) in project configuration pages
+                // and the value of build parameter ("Build selector for Copy Artifact" field)
+                // in "This build requires parameters" pages.
+                Descriptor<?> d = Jenkins.getInstance().getDescriptor(CopyArtifact.class);
+                if (d != null) {
+                    return d.getHelpFile("selector");
+                }
+            }
+            return super.getHelpFile(fieldName);
         }
     }
 

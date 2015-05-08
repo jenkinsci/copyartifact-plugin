@@ -497,7 +497,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(
-                @AncestorInPath AbstractProject anc, @QueryParameter String value) {
+                @AncestorInPath Job<?,?> anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             FormValidation result;
@@ -515,7 +515,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             else
                 result = FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
-                        value, AbstractProject.findNearest(value).getName()));
+                        value, Items.findNearest(Job.class, value, anc.getParent()).getName()));
             return result;
         }
 
