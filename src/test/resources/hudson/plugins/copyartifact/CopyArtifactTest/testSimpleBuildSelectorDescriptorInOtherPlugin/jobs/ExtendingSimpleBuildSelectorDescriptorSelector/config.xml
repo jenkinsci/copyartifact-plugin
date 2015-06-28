@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers/>
+  <concurrentBuild>false</concurrentBuild>
+  <builders>
+    <hudson.plugins.copyartifact.CopyArtifact plugin="copyartifact@1.35">
+      <project>ExtendingSimpleBuildSelectorDescriptorSelector</project>
+      <filter>**/*</filter>
+      <target></target>
+      <excludes></excludes>
+      <selector class="org.jenkinsci.plugins.copyartifactextensiontest.ExtendingSimpleBuildSelectorDescriptorSelector" plugin="copyartifact-extension-test@1.0-SNAPSHOT">
+        <field>test</field>
+      </selector>
+      <doNotFingerprintArtifacts>false</doNotFingerprintArtifacts>
+    </hudson.plugins.copyartifact.CopyArtifact>
+  </builders>
+  <publishers/>
+  <buildWrappers/>
+</project>
