@@ -24,6 +24,7 @@
 package hudson.plugins.copyartifact;
 
 import hudson.model.Descriptor;
+
 import org.jvnet.localizer.Localizable;
 
 /**
@@ -44,5 +45,23 @@ public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
     @Override
     public String getDisplayName() {
         return displayName.toString();
+    }
+    
+    @Override
+    public String getConfigPage() {
+        if (!getClass().equals(SimpleBuildSelectorDescriptor.class)) {
+            return super.getConfigPage();
+        }
+        // Workaround for JENKINS-28972, JENKINS-29048
+        // Jenkins tries to load view file
+        // not from the plugin the BuildSelector is located,
+        // but from the plugin the Descriptor is located (JENKINS-29048).
+        // This cause failures for BuildSelectors
+        // using SimpleBuildSelectorDescriptor (JENKINS-28972).
+        return getViewPage(SimpleBuildSelectorDescriptor.class, "config.jelly");
+    }
+    
+    public String getBuildSelectorConfigPage() {
+        return super.getConfigPage();
     }
 }
