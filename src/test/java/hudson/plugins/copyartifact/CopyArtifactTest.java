@@ -76,11 +76,13 @@ import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
+import org.jvnet.hudson.test.recipes.WithPlugin;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
@@ -1790,6 +1792,35 @@ public class CopyArtifactTest extends HudsonTestCase {
                     new TestQueueItemAuthenticator(Jenkins.ANONYMOUS)
             );
             assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
+        }
+    }
+    
+    @Issue("JENKINS-28972")
+    @LocalData
+    @WithPlugin("copyartifact-extension-test.hpi")  // JENKINS-28792 reproduces only when classes are located in different class loaders.
+    public void testSimpleBuildSelectorDescriptorInOtherPlugin() throws Exception {
+        WebClient wc = createWebClient();
+        
+        // An extension using SimpleBuildSelectorDescriptorSelector
+        {
+            FreeStyleProject p = jenkins.getItemByFullName("UsingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            assertNotNull(p);
+            wc.getPage(p, "configure");
+        }
+        
+        // An extension using SimpleBuildSelectorDescriptorSelector without configuration pages.
+        {
+            FreeStyleProject p = jenkins.getItemByFullName("NoConfigPageSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            assertNotNull(p);
+            wc.getPage(p, "configure");
+        }
+        
+        // An extension extending SimpleBuildSelectorDescriptorSelector.
+        // (Even though generally it is useless)
+        {
+            FreeStyleProject p = jenkins.getItemByFullName("ExtendingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            assertNotNull(p);
+            wc.getPage(p, "configure");
         }
     }
 }
