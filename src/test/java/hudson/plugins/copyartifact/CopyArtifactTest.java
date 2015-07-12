@@ -927,7 +927,7 @@ public class CopyArtifactTest extends HudsonTestCase {
      */
     public void testEnvData() throws Exception {
         // Also test conversion of job name to env var name, only keeping letters:
-        FreeStyleProject other = createArtifactProject("My (Test) Job"),
+        FreeStyleProject other = createArtifactProject("My (Test) Job x86"),
                  p = createProject(other.getName(), null, "", "", false, false, false, true);
         CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
         p.getBuildersList().add(envStep);
@@ -936,7 +936,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         assertBuildStatusSuccess(b);
-        assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
+        assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB_X86"));
     }
 
     @Bug(16028)
@@ -970,7 +970,7 @@ public class CopyArtifactTest extends HudsonTestCase {
                 envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_UPSTREAM")
         );
     }
-    
+
     @Bug(18762)
     public void testEnvDataWrapped() throws Exception {
         FreeStyleProject upstream = createFreeStyleProject("upstream");

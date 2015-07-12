@@ -604,7 +604,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 return;
             }
             data.put("COPYARTIFACT_BUILD_NUMBER_"
-                       + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
+                       + projectName.toUpperCase().replaceAll("[^A-Z0-9]+", "_"), // Only use alphanumeric and _
                      Integer.toString(buildNumber));
         }
 
