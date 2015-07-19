@@ -66,8 +66,9 @@ public class PermalinkBuildSelector extends BuildSelector {
 
         public ComboBoxModel doFillIdItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             Job j = null;
-            if (projectName != null) {
-                j = Jenkins.getInstance().getItem(projectName, copyingJob, Job.class);
+            Jenkins jenkins = Jenkins.getInstance();
+            if (projectName != null && jenkins != null) {
+                j = jenkins.getItem(projectName, copyingJob, Job.class);
             }
             ComboBoxModel r = new ComboBoxModel();
             for (Permalink p : j != null ? j.getPermalinks() : Permalink.BUILTIN) {

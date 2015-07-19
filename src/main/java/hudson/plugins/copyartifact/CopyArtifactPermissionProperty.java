@@ -126,7 +126,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
         List<String> literals = Arrays.asList(pattern.split("\\*", -1));
         String regex = StringUtils.join(Lists.transform(literals, new Function<String, String>() {
             public String apply(String input) {
-                return Pattern.quote(input);
+                return (input != null)?Pattern.quote(input):"";
             }
         }), ".*");
         return name.matches(regex);
@@ -210,7 +210,8 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
                     // no check for pattern
                     continue;
                 }
-                AbstractProject<?,?> proj = Jenkins.getInstance().getItem(projectName, context, AbstractProject.class);
+                Jenkins jenkins = Jenkins.getInstance();
+                AbstractProject<?,?> proj = (jenkins == null)?null:jenkins.getItem(projectName, context, AbstractProject.class);
                 if (proj == null || proj.getRootProject() != proj || !proj.hasPermission(Item.READ)) {
                     // permission check is done only for root project.
                     notFound.add(projectName);
@@ -243,7 +244,11 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
                 return candidates;
             }
             value = StringUtils.trim(value);
-            for (AbstractProject<?,?> project: Jenkins.getInstance().getAllItems(AbstractProject.class)) {
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                return candidates;
+            }
+            for (AbstractProject<?,?> project: jenkins.getAllItems(AbstractProject.class)) {
                 if (project.getRootProject() != project) {
                     // permission check is done only for root project.
                     continue;

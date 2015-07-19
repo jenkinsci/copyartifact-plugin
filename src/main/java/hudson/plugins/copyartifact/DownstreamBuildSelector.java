@@ -24,6 +24,7 @@
 
 package hudson.plugins.copyartifact;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
@@ -91,9 +92,19 @@ public class DownstreamBuildSelector extends BuildSelector {
             LOGGER.warning(String.format("Only applicable to AbstractBuild: but is %s.", run.getClass().getName()));
             return false;
         }
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            // to suppress findbugs warnings.
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Jenkins instance isn't available and cannot perform copyartifact from",
+                    run.getDisplayName()
+            );
+            return false;
+        }
         
         // Workaround to retrieve who is copying.
-        Job<?,?> copier = Jenkins.getInstance().getItemByFullName(env.get(COPIER_PROJECT_KEY), Job.class);
+        Job<?,?> copier = jenkins.getItemByFullName(env.get(COPIER_PROJECT_KEY), Job.class);
         if (copier != null && (copier instanceof AbstractProject<?,?>)) {
             copier = ((AbstractProject<?,?>)copier).getRootProject();
         }
@@ -111,7 +122,7 @@ public class DownstreamBuildSelector extends BuildSelector {
             return false;
         }
         
-        AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
+        AbstractProject<?,?> upstreamProject = jenkins.getItem(
                 projectName,
                 copier,
                 AbstractProject.class
@@ -178,7 +189,13 @@ public class DownstreamBuildSelector extends BuildSelector {
                 return FormValidation.ok();
             }
             
-            AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                // Jenkins is unavailable and validation is useless.
+                return FormValidation.ok();
+            }
+            
+            AbstractProject<?,?> upstreamProject = jenkins.getItem(
                     upstreamProjectName, project.getRootProject(), AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
@@ -215,7 +232,13 @@ public class DownstreamBuildSelector extends BuildSelector {
                 return FormValidation.ok();
             }
             
-            AbstractProject<?,?> upstreamProject = Jenkins.getInstance().getItem(
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                // Jenkins is unavailable and validation is useless.
+                return FormValidation.ok();
+            }
+            
+            AbstractProject<?,?> upstreamProject = jenkins.getItem(
                     upstreamProjectName, project.getRootProject(), AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {

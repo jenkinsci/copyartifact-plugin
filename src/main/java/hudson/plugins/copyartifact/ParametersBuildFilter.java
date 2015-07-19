@@ -31,6 +31,8 @@ import hudson.model.Job;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
+
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -66,7 +68,8 @@ public class ParametersBuildFilter extends BuildFilter {
                 }
             }
             return true;
-        } catch (Exception ignore) {
+        } catch (InterruptedException ignore) {
+        } catch (IOException ignore) {
         }
         return false;
     }

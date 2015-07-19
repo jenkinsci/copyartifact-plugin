@@ -87,6 +87,12 @@
             </exclusion>
         </exclusions>
       </dependency>
+      <!-- to suppress known (and harmless) findbugs issues -->
+      <dependency>
+          <groupId>com.google.code.findbugs</groupId>
+          <artifactId>annotations</artifactId>
+          <version>3.0.0</version>
+      </dependency>
     </dependencies>
     <build>
         <plugins>
