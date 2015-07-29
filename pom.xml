@@ -107,7 +107,6 @@
                 <version>3.0.1</version>
                 <configuration>
                     <xmlOutput>true</xmlOutput>
-                    <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
                     <failOnError>false</failOnError>
                 </configuration>
             </plugin>
