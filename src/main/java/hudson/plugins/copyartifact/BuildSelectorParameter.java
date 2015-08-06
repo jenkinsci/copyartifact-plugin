@@ -23,7 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
@@ -47,6 +49,7 @@ import com.google.common.collect.Lists;
  */
 public class BuildSelectorParameter extends SimpleParameterDefinition {
     private BuildSelector defaultSelector;
+    private static final Logger LOGGER = Logger.getLogger(BuildSelectorParameter.class.getName());
 
     @DataBoundConstructor
     public BuildSelectorParameter(String name, BuildSelector defaultSelector, String description) {
@@ -95,15 +98,23 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         }
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            return Hudson.getInstance().<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                return DescriptorExtensionList.createDescriptorList(jenkins, BuildSelector.class);
+            }
+            return jenkins.<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
         }
 
         /**
          * @return {@link BuildSelector}s available for BuildSelectorParameter.
          */
         public List<Descriptor<BuildSelector>> getAvailableBuildSelectorList() {
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                return Collections.emptyList();
+            }
             return Lists.newArrayList(Collections2.filter(
-                    Jenkins.getInstance().getDescriptorList(BuildSelector.class),
+                    jenkins.getDescriptorList(BuildSelector.class),
                     new Predicate<Descriptor<BuildSelector>>() {
                         public boolean apply(Descriptor<BuildSelector> input) {
                             return !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName());
@@ -119,7 +130,8 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                 // for `defaultSelector` ("Default Selector" field) in project configuration pages
                 // and the value of build parameter ("Build selector for Copy Artifact" field)
                 // in "This build requires parameters" pages.
-                Descriptor<?> d = Jenkins.getInstance().getDescriptor(CopyArtifact.class);
+                Jenkins jenkins = Jenkins.getInstance();
+                Descriptor<?> d = (jenkins == null)?null:jenkins.getDescriptor(CopyArtifact.class);
                 if (d != null) {
                     return d.getHelpFile("selector");
                 }
@@ -131,8 +143,12 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
     private static final XStream2 XSTREAM = new XStream2();
 
     static void initAliases() {
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
+        }
         // Alias all BuildSelectors to their simple names
-        for (Descriptor<BuildSelector> d : Hudson.getInstance().getDescriptorByType(DescriptorImpl.class).getBuildSelectors())
+        for (Descriptor<BuildSelector> d : jenkins.getDescriptorByType(DescriptorImpl.class).getBuildSelectors())
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
     }
 }

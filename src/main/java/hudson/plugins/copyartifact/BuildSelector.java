@@ -28,6 +28,7 @@ import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
+import hudson.model.Result;
 import hudson.model.Job;
 import hudson.model.Run;
 import java.io.IOException;
@@ -82,6 +83,28 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      */
     protected boolean isSelectable(Run<?,?> run, EnvVars env) {
         return false;
+    }
+
+    /**
+     * Wrapper for {@link Result#isBetterOrEqualTo(Result)} with null checks.
+     * 
+     * Returns <code>false</code> if <code>run</code> is <code>null</code>
+     * or <code>run</code> is still running.
+     * 
+     * @param run
+     * @param resultToTest
+     * @return
+     * @see Result#isBetterOrEqualTo(Result)
+     */
+    protected static boolean isBuildResultBetterOrEqualTo(Run<?,?> run, Result resultToTest) {
+        if (run == null) {
+            return false;
+        }
+        Result buildResult = run.getResult();
+        if (buildResult == null) {
+            return false;
+        }
+        return buildResult.isBetterOrEqualTo(resultToTest);
     }
 
     protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {

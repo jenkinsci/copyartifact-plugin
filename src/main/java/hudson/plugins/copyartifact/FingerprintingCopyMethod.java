@@ -1,5 +1,6 @@
 package hudson.plugins.copyartifact;
 
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
@@ -20,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Performs fingerprinting during the copy.
@@ -95,7 +98,11 @@ public class FingerprintingCopyMethod extends Copier {
             String digest = Util.toHexString(md5.digest());
 
             if (fingerprintArtifacts) {
-                FingerprintMap map = Jenkins.getInstance().getFingerprintMap();
+                Jenkins jenkins = Jenkins.getInstance();
+                if (jenkins == null) {
+                    throw new AbortException("Jenkins instance no longer exists.");
+                }
+                FingerprintMap map = jenkins.getFingerprintMap();
 
                 Fingerprint f = map.getOrCreate(src, s.getName(), digest);
                 if (src!=null) {
@@ -126,6 +133,10 @@ public class FingerprintingCopyMethod extends Copier {
         }
     }
 
+    @SuppressFBWarnings(
+            value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
+            justification = "This is a method not of Cloneable but of Copier."
+    )
     @Override
     public Copier clone() {
         return new FingerprintingCopyMethod();

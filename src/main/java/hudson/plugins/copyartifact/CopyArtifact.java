@@ -137,7 +137,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
                 // Prevents both invalid values and access to artifacts of projects which this user cannot see.
                 // If value is parameterized, it will be checked when build runs.
-                if (projectName.indexOf('$') < 0 && Jenkins.getInstance().getItem(projectName, context, Job.class) == null)
+                Jenkins jenkins = Jenkins.getInstance();
+                if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
                     projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
             }
         }
@@ -234,10 +235,15 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (!upgradeNeeded) {
             return;
         }
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            LOGGER.log(Level.SEVERE, "Called for initializing, but Jenkins instance is unavailable.");
+            return;
+        }
         upgradeNeeded = false;
         
         boolean isUpgraded = false;
-        for (AbstractProject<?,?> project: Jenkins.getInstance().getAllItems(AbstractProject.class)) {
+        for (AbstractProject<?,?> project: jenkins.getAllItems(AbstractProject.class)) {
             try {
                 for (CopyArtifact target: getCopyArtifactsInProject(project)) {
                     try {
@@ -298,8 +304,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                LOGGER.log(Level.SEVERE, "upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
+                return false;
+            }
             int i = projectName.lastIndexOf('/');
-            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */Jenkins.getInstance().getItem(projectName, job.getParent(), Job.class) == null) {
+            if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */jenkins.getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
                 parameters = projectName.substring(i + 1);
             } else {
@@ -325,6 +336,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            throw new AbortException("Jenkins instance is unavailable.");
+        }
         if (build instanceof AbstractBuild) {
             upgradeIfNecessary(((AbstractBuild)build).getProject());
         }
@@ -342,7 +357,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         String expandedExcludes = getExcludes();
 
         expandedProject = env.expand(project);
-        Job<?, ?> job = Jenkins.getInstance().getItem(expandedProject, getItemGroup(build), Job.class);
+        Job<?, ?> job = jenkins.getItem(expandedProject, getItemGroup(build), Job.class);
         if (job != null && !expandedProject.equals(project)
             // If projectName is parameterized, need to do permission check on source project.
             && !canReadFrom(job, build)) {
@@ -380,9 +395,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             expandedExcludes = null;
         }
 
-        Copier copier = Jenkins.getInstance().getExtensionList(Copier.class).get(0).clone();
+        Copier copier = jenkins.getExtensionList(Copier.class).get(0).clone();
 
-        if (Hudson.getInstance().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
+        if (jenkins.getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
         // use classes in the "maven-plugin" plugin as might not be installed
             // Copy artifacts from the build (ArchiveArtifacts build step)
             boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
@@ -500,10 +515,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 @AncestorInPath Job<?,?> anc, @QueryParameter String value) {
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
+            
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                // validation is useless if Jenkins is no longer available.
+                return FormValidation.ok();
+            }
             FormValidation result;
-            Item item = Jenkins.getInstance().getItem(value, anc.getParent());
+            Item item = jenkins.getItem(value, anc.getParent());
             if (item != null)
-                if (Hudson.getInstance().getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
+                if (jenkins.getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
                     result = FormValidation.warning(Messages.CopyArtifact_MavenProject());
                 } else {
                     result = (item instanceof MatrixProject)
@@ -512,10 +533,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             else if (value.indexOf('$') >= 0)
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
-            else
+            else {
+                Job<?,?> nearest = Items.findNearest(Job.class, value, anc.getParent());
+                if (nearest != null) {
                 result = FormValidation.error(
                     hudson.tasks.Messages.BuildTrigger_NoSuchProject(
-                        value, Items.findNearest(Job.class, value, anc.getParent()).getName()));
+                        value, nearest.getName()));
+                } else {
+                    result = FormValidation.error(hudson.tasks.Messages.BuildTrigger_NoProjectSpecified());
+                }
+            }
             return result;
         }
 
@@ -536,8 +563,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public void onRenamed(Item item, String oldName, String newName) {
             String oldFullName = Items.getCanonicalName(item.getParent(), oldName);
             String newFullName = Items.getCanonicalName(item.getParent(), newName);
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                LOGGER.log(Level.SEVERE, "Jenkins instance is no longer available.");
+                return;
+            }
             for (AbstractProject<?,?> project
-                    : Hudson.getInstance().getAllItems(AbstractProject.class)) {
+                    : jenkins.getAllItems(AbstractProject.class)) {
                 try {
                 for (CopyArtifact ca : getCopiers(project)) {
                     String projectName = ca.getProjectName();
@@ -615,7 +647,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
          */
         private Job getProject(ItemGroup ctx, String projectPath) {
             String[] parts = projectPath.split("/");
-            if (projectPath.startsWith("/")) ctx = Jenkins.getInstance();
+            if (projectPath.startsWith("/") || ctx == null) ctx = Jenkins.getInstance();
+            if (ctx == null) {
+                LOGGER.log(Level.SEVERE, "Jenkins instance is no longer available.");
+                return null;
+            }
             for (int i =0; i<parts.length; i++) {
                 String part = parts[i];
                 if (part.length() == 0) continue;
@@ -626,7 +662,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 Item item = ctx.getItem(part);
                 if (item == null && i == 0) {
                     // not a relative job name, fall back to "classic" interpretation to consider absolute
-                    item = Jenkins.getInstance().getItem(part);
+                    Jenkins jenkins = Jenkins.getInstance();
+                    if (jenkins != null) {
+                        item = jenkins.getItem(part);
+                    }
                 }
                 if (item instanceof Job) return (Job) item;
                 ctx = (ItemGroup) item;

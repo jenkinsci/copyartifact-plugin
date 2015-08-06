@@ -165,7 +165,20 @@ public class TriggeredBuildSelector extends BuildSelector {
                     }
                 } else {
                     // Figure out the parent job and do a recursive call to getBuild
-                    Job<?,?> parentJob = Jenkins.getInstance().getItemByFullName(upstreamProject, Job.class);
+                    Jenkins jenkins = Jenkins.getInstance();
+                    if (jenkins == null) {
+                        // to suppress findbugs warnings.
+                        LOGGER.log(
+                                Level.SEVERE,
+                                "Jenkins instance is unavailable and cannot perform copyartifact from {0} for {1}",
+                                new Object[] {
+                                        job.getFullName(),
+                                        parent.getDisplayName(),
+                                }
+                        );
+                        return null;
+                    }
+                    Job<?,?> parentJob = jenkins.getItemByFullName(upstreamProject, Job.class);
                     if (parentJob == null) {
                         LOGGER.log(Level.WARNING, "Upstream project doesn't exist (may be removed): {0}", upstreamProject);
                         continue;
@@ -201,7 +214,7 @@ public class TriggeredBuildSelector extends BuildSelector {
     
     @Override
     protected boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return isFallbackToLastSuccessful() && run.getResult().isBetterOrEqualTo(Result.SUCCESS);
+        return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
     }
 
     @Extension(ordinal=25)
