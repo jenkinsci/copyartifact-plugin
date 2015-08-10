@@ -48,6 +48,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
+import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 
 import java.io.IOException;
@@ -528,6 +529,38 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
+    /**
+     * Tests whether specified variable name is valid.
+     * Package scope for testing purpose.
+     * 
+     * @param variableName
+     * @return
+     */
+    static boolean isValidVariableName(final String variableName) {
+        if(StringUtils.isBlank(variableName)) {
+            return false;
+        }
+        
+        // The pattern for variables are defined in hudson.Util.VARIABLE.
+        // It's not exposed unfortunately and tests the variable
+        // by actually expanding that.
+        final String expected = "GOOD";
+        String expanded = Util.replaceMacro(
+            String.format("${%s}", variableName),
+            new VariableResolver<String>() {
+                @Override
+                public String resolve(String name) {
+                    if(variableName.equals(name)) {
+                        return expected;
+                    }
+                    return null;
+                }
+            }
+        );
+        
+        return expected.equals(expanded);
+    }
+    
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
@@ -564,6 +597,20 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             }
             return result;
+        }
+
+        public FormValidation doCheckResultVariableSuffix(@QueryParameter String value) {
+            value = Util.fixEmptyAndTrim(value);
+            if (value == null) {
+                // optional field.
+                return FormValidation.ok();
+            }
+            
+            if (!isValidVariableName(value)) {
+                return FormValidation.error(Messages.CopyArtifact_InvalidVariableName());
+            }
+            
+            return FormValidation.ok();
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> clazz) {
@@ -668,7 +715,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         ) {
             if (data==null) return;
             
-            if (StringUtils.isEmpty(resultVariableSuffix)) {
+            if (!isValidVariableName(resultVariableSuffix)) {
                 resultVariableSuffix = calculateDefaultSuffix(build, src, projectName);
                 if (resultVariableSuffix == null) {
                     return;
