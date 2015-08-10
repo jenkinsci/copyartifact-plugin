@@ -1461,7 +1461,8 @@ public class CopyArtifactTest extends HudsonTestCase {
                 "",
                 false,
                 true,
-                true
+                true,
+                ""
         ));
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream2.getName(),
@@ -1472,7 +1473,8 @@ public class CopyArtifactTest extends HudsonTestCase {
                 "targetdir",
                 true,
                 false,
-                false
+                false,
+                "SomeSuffix"
         ));
         p.save();
         
@@ -1494,6 +1496,7 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertFalse(ca.isFlatten());
             assertTrue(ca.isOptional());
             assertTrue(ca.isFingerprintArtifacts());
+            assertNull(ca.getResultVariableSuffix());
         }
         {
             CopyArtifact ca = caList.get(1);
@@ -1506,6 +1509,7 @@ public class CopyArtifactTest extends HudsonTestCase {
             assertTrue(ca.isFlatten());
             assertFalse(ca.isOptional());
             assertFalse(ca.isFingerprintArtifacts());
+            assertEquals("SomeSuffix", ca.getResultVariableSuffix());
         }
     }
     
@@ -1821,6 +1825,67 @@ public class CopyArtifactTest extends HudsonTestCase {
             FreeStyleProject p = jenkins.getItemByFullName("ExtendingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
             assertNotNull(p);
             wc.getPage(p, "configure");
+        }
+    }
+    
+    public void testResultVariableSuffix() throws Exception {
+        FreeStyleProject srcProject = createArtifactProject("SRC-PROJECT1");
+        FreeStyleBuild srcBuild = srcProject.scheduleBuild2(0).get();
+        assertBuildStatusSuccess(srcBuild);
+        
+        // if no result variable suffix is provided
+        // the default suffix (SRC_PROJECT) is used.
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                    srcProject.getFullName(),
+                    null,       // parameters
+                    new PermalinkBuildSelector("lastStableBuild"),
+                    "*.txt",    // filter
+                    "",         // excludes
+                    "",         // target
+                    false,      // flatten
+                    false,      // optional
+                    true,       // fingerprintArtifacts
+                    ""          // resultVariableSuffix
+            ));
+            CaptureEnvironmentBuilder ceb = new CaptureEnvironmentBuilder();
+            p.getBuildersList().add(ceb);
+            
+            assertBuildStatusSuccess(p.scheduleBuild2(0));
+            
+            assertEquals(
+                    Integer.toString(srcBuild.getNumber()),
+                    ceb.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SRC_PROJECT_")
+            );
+        }
+        
+        // if result variable suffix is provided
+        // it is used for the variable name to store.
+        {
+            FreeStyleProject p = createFreeStyleProject();
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                    srcProject.getFullName(),
+                    null,       // parameters
+                    new PermalinkBuildSelector("lastStableBuild"),
+                    "*.txt",    // filter
+                    "",         // excludes
+                    "",         // target
+                    false,      // flatten
+                    false,      // optional
+                    true,       // fingerprintArtifacts
+                    "DEST1"     // resultVariableSuffix
+            ));
+            CaptureEnvironmentBuilder ceb = new CaptureEnvironmentBuilder();
+            p.getBuildersList().add(ceb);
+            
+            assertBuildStatusSuccess(p.scheduleBuild2(0));
+            
+            assertEquals(
+                    Integer.toString(srcBuild.getNumber()),
+                    ceb.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_DEST1")
+            );
+            assertNull(ceb.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SRC_PROJECT_"));
         }
     }
 }

@@ -1,0 +1,25 @@
+<div>
+The build number of the selected build will be recorded
+into the variable named <tt>COPYARTIFACT_BUILD_NUMBER_(SUFFIX)</tt>
+for later build steps to reference.
+You can specify that suffix part for that variable here.
+<p>
+If not specified, the source project name will be used instead
+(in all uppercase, and sequences of characters other than A-Z
+replaced by a single underscore).
+<p><strong>Example</strong>:
+<table>
+  <tr>
+    <th>Source project name</th>
+    <th>Suffix to be used</th>
+  </tr>
+  <tr>
+    <td>Project-ABC</td>
+    <td>PROJECT_ABC</td>
+  </tr>
+  <tr>
+    <td>tool1-release1.2</td>
+    <td>TOOL_RELEASE_</td>
+  </tr>
+</table>
+</div>

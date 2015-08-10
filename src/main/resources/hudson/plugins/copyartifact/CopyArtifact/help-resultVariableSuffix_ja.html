@@ -1,0 +1,23 @@
+<div>
+コピー元のビルドのビルド番号を <tt>COPYARTIFACT_BUILD_NUMBER_(SUFFIX)</tt>
+という変数に保存し、以降のビルド処理で参照できるようにします。
+その際に使用する SUFFIX の部分をここで指定します。
+<p>
+指定しない場合、コピー元のプロジェクト名が使用されます。
+プロジェクト名はすべて大文字、A-Z 以外の文字がすべてアンダースコアに変換されます。
+<p><strong>例</strong>:
+<table>
+  <tr>
+    <th>Source project name</th>
+    <th>Suffix to be used</th>
+  </tr>
+  <tr>
+    <td>Project-ABC</td>
+    <td>PROJECT_ABC</td>
+  </tr>
+  <tr>
+    <td>tool1-release1.2</td>
+    <td>TOOL_RELEASE_</td>
+  </tr>
+</table>
+</div>

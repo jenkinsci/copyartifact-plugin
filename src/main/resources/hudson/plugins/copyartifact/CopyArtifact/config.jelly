@@ -49,4 +49,9 @@ THE SOFTWARE.
     <f:checkbox field="fingerprintArtifacts" default="true"/>
     <label class="attach-previous">${%Fingerprint Artifacts}</label>
   </f:entry>
+  <f:advanced>
+    <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
+      <f:textbox/>
+    </f:entry>
+  </f:advanced>
 </j:jelly>
