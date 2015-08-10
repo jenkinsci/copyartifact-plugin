@@ -46,7 +46,7 @@ public class CopyArtifactUtil {
 
     public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
-        return createCopyArtifact(projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts, null);
+        return createCopyArtifact(projectName, parameters, selector, filter, excludes, target, flatten, optional, fingerprintArtifacts, null);
     }
     
     public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
