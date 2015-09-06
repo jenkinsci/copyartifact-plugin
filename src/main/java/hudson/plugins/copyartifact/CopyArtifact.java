@@ -48,6 +48,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
+import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 
 import java.io.IOException;
@@ -75,6 +76,7 @@ import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Build step to copy artifacts from another project.
@@ -96,6 +98,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     @Deprecated private transient Boolean stable;
     private Boolean flatten, optional;
     private boolean doNotFingerprintArtifacts;
+    private String resultVariableSuffix;
 
     @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -154,6 +157,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         setFlatten(false);
         setOptional(false);
         setFingerprintArtifacts(false);
+        setResultVariableSuffix(null);
     }
 
     @DataBoundSetter
@@ -194,6 +198,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         this.doNotFingerprintArtifacts = !fingerprintArtifacts;
+    }
+
+    /**
+     * Set the suffix for variables to store copying results.
+     * 
+     * @param resultVariableSuffix
+     */
+    @DataBoundSetter
+    public void setResultVariableSuffix(String resultVariableSuffix) {
+        this.resultVariableSuffix = Util.fixEmptyAndTrim(resultVariableSuffix);
     }
 
     // Upgrade data from old format
@@ -302,6 +316,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return optional != null && optional;
     }
 
+    /**
+     * @return the suffix for variables to store copying results.
+     */
+    public String getResultVariableSuffix() {
+        return resultVariableSuffix;
+    }
+
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
             Jenkins jenkins = Jenkins.getInstance();
@@ -386,7 +407,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             envData = new EnvAction();
             build.addAction(envData);
         }
-        envData.add(getItemGroup(build), expandedProject, src.getNumber());
+        envData.add(build, src, expandedProject, getResultVariableSuffix());
         if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
         expandedFilter = env.expand(filter);
         if (expandedFilter.trim().length() == 0) expandedFilter = "**";
@@ -464,7 +485,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return b;
     }
 
-    private Job<?, ?> getRootProject(Job<?, ?> job) {
+    private static Job<?, ?> getRootProject(Job<?, ?> job) {
         if (job instanceof AbstractProject) {
             return ((AbstractProject<?,?>)job).getRootProject();
         } else {
@@ -473,7 +494,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
-    private ItemGroup getItemGroup(Run<?, ?> build) {
+    private static ItemGroup getItemGroup(Run<?, ?> build) {
         return getRootProject(build.getParent()).getParent();
     }
 
@@ -508,6 +529,38 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
+    /**
+     * Tests whether specified variable name is valid.
+     * Package scope for testing purpose.
+     * 
+     * @param variableName
+     * @return
+     */
+    static boolean isValidVariableName(final String variableName) {
+        if(StringUtils.isBlank(variableName)) {
+            return false;
+        }
+        
+        // The pattern for variables are defined in hudson.Util.VARIABLE.
+        // It's not exposed unfortunately and tests the variable
+        // by actually expanding that.
+        final String expected = "GOOD";
+        String expanded = Util.replaceMacro(
+            String.format("${%s}", variableName),
+            new VariableResolver<String>() {
+                @Override
+                public String resolve(String name) {
+                    if(variableName.equals(name)) {
+                        return expected;
+                    }
+                    return null;
+                }
+            }
+        );
+        
+        return expected.equals(expanded);
+    }
+    
     @Extension
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
@@ -544,6 +597,20 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             }
             return result;
+        }
+
+        public FormValidation doCheckResultVariableSuffix(@QueryParameter String value) {
+            value = Util.fixEmptyAndTrim(value);
+            if (value == null) {
+                // optional field.
+                return FormValidation.ok();
+            }
+            
+            if (!isValidVariableName(value)) {
+                return FormValidation.error(Messages.CopyArtifact_InvalidVariableName());
+            }
+            
+            return FormValidation.ok();
         }
 
         public boolean isApplicable(Class<? extends AbstractProject> clazz) {
@@ -616,9 +683,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         // Decided not to record this data in build.xml, so marked transient:
         private transient Map<String,String> data = new HashMap<String,String>();
 
-        private void add(ItemGroup ctx, String projectName, int buildNumber) {
-            if (data==null) return;
-            Item item = getProject(ctx, projectName);
+        @Nullable
+        private String calculateDefaultSuffix(@Nonnull Run<?,?> build, @Nonnull Run<?,?> src, @Nonnull String projectName) {
+            ItemGroup<?> ctx = getItemGroup(build);
+            Job<?,?> item = src.getParent();
             // Use full name if configured with absolute path
             // and relative otherwise
             projectName = projectName.startsWith("/") ? item.getFullName() : item.getRelativeNameFrom(ctx);
@@ -633,44 +701,30 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                                 ctx.getFullName(),
                         }
                 );
-                return;
-            }
-            data.put("COPYARTIFACT_BUILD_NUMBER_"
-                       + projectName.toUpperCase().replaceAll("[^A-Z]+", "_"), // Only use letters and _
-                     Integer.toString(buildNumber));
-        }
-
-        /**
-         * Retrieve root Job identified by this projectPath. For legacy reason, projectPath uses '/' as separator for
-         * job name and parameters or matrix axe, so can't just use {@link Jenkins#getItemByFullName(String)}.
-         * As a workaround, we split the path into parts and retrieve the item(group)s up to a Job.
-         */
-        private Job getProject(ItemGroup ctx, String projectPath) {
-            String[] parts = projectPath.split("/");
-            if (projectPath.startsWith("/") || ctx == null) ctx = Jenkins.getInstance();
-            if (ctx == null) {
-                LOGGER.log(Level.SEVERE, "Jenkins instance is no longer available.");
                 return null;
             }
-            for (int i =0; i<parts.length; i++) {
-                String part = parts[i];
-                if (part.length() == 0) continue;
-                if (part.equals("..")) {
-                    ctx = ((Item) ctx).getParent();
-                    continue;
+            
+            return  projectName.toUpperCase().replaceAll("[^A-Z]+", "_"); // Only use letters and _
+        }
+        
+        private void add(
+                @Nonnull Run<?,?> build,
+                @Nonnull Run<?,?> src,
+                @Nonnull String projectName,
+                @Nullable String resultVariableSuffix
+        ) {
+            if (data==null) return;
+            
+            if (!isValidVariableName(resultVariableSuffix)) {
+                resultVariableSuffix = calculateDefaultSuffix(build, src, projectName);
+                if (resultVariableSuffix == null) {
+                    return;
                 }
-                Item item = ctx.getItem(part);
-                if (item == null && i == 0) {
-                    // not a relative job name, fall back to "classic" interpretation to consider absolute
-                    Jenkins jenkins = Jenkins.getInstance();
-                    if (jenkins != null) {
-                        item = jenkins.getItem(part);
-                    }
-                }
-                if (item instanceof Job) return (Job) item;
-                ctx = (ItemGroup) item;
             }
-            return null;
+            data.put(
+                String.format("COPYARTIFACT_BUILD_NUMBER_%s", resultVariableSuffix),
+                Integer.toString(src.getNumber())
+            );
         }
 
         public void buildEnvVars(AbstractBuild<?,?> build, EnvVars env) {
