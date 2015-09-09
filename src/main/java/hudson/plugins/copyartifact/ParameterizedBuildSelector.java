@@ -25,9 +25,13 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.ParameterValue;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.ParametersAction;
 import hudson.model.Run;
+import hudson.model.RunParameterValue;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -49,8 +53,25 @@ public class ParameterizedBuildSelector extends BuildSelector {
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName))
-                                     .getBuild(job, env, filter, parent);
+    	Run<?,?> run = checkForRunParameter(parent);
+    	
+    	if (run == null) {
+    		run = BuildSelectorParameter.getSelectorFromXml(env.get(parameterName))
+                    .getBuild(job, env, filter, parent);
+    	}
+    	
+    	return run;
+    }
+    
+    public Run<?,?> checkForRunParameter(Run<?,?> parent) {
+    	ParametersAction parameters = parent.getAction(ParametersAction.class);
+    	ParameterValue parameterValue = parameters.getParameter(parameterName);
+    	
+    	if (parameterValue instanceof RunParameterValue) {
+    		return ((RunParameterValue) parameterValue).getRun();
+    	} else {
+    		return null;
+    	}
     }
 
     @Extension(ordinal=-20)
