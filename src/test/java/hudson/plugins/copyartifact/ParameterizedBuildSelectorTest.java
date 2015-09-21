@@ -117,4 +117,95 @@ public class ParameterizedBuildSelectorTest {
         VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
         assertEquals("foobar", IOUtils.toString(vf.open()));
     }
+    
+    /**
+     * Should not cause a fatal error even for a broken selector.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testBrokenParameter() throws Exception {
+        FreeStyleProject copiee = j.createFreeStyleProject();
+        FreeStyleProject copier = j.createFreeStyleProject();
+        
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("SELECTOR");
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                null,   // parameters
+                pbs,
+                "**/*", // filter
+                "",     // excludes
+                false,  // flatten
+                true,   // optional
+                false   // finterprintArtifacts
+        ));
+        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+                0,
+                new ParametersAction(
+                    new StringParameterValue("SELECTOR", "<SomeBrokenSelector")
+                )
+        ).get();
+        j.assertBuildStatusSuccess(b);
+    }
+    
+    /**
+     * Should not cause a fatal error even for an unavailable selector.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testUnavailableSelector() throws Exception {
+        FreeStyleProject copiee = j.createFreeStyleProject();
+        FreeStyleProject copier = j.createFreeStyleProject();
+        
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("SELECTOR");
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                null,   // parameters
+                pbs,
+                "**/*", // filter
+                "",     // excludes
+                false,  // flatten
+                true,   // optional
+                false   // finterprintArtifacts
+        ));
+        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+                0,
+                new ParametersAction(
+                    new StringParameterValue("SELECTOR", "<NoSuchSelector />")
+                )
+        ).get();
+        j.assertBuildStatusSuccess(b);
+    }
+    
+    
+    /**
+     * Should not cause a fatal error even for an empty selector.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testEmptySelector() throws Exception {
+        FreeStyleProject copiee = j.createFreeStyleProject();
+        FreeStyleProject copier = j.createFreeStyleProject();
+        
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("SELECTOR");
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                null,   // parameters
+                pbs,
+                "**/*", // filter
+                "",     // excludes
+                false,  // flatten
+                true,   // optional
+                false   // finterprintArtifacts
+        ));
+        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+                0,
+                new ParametersAction(
+                    new StringParameterValue("SELECTOR", "")
+                )
+        ).get();
+        j.assertBuildStatusSuccess(b);
+    }
 }

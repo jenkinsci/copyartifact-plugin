@@ -59,8 +59,14 @@ public class ParameterizedBuildSelector extends BuildSelector {
             LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
             return null;
         }
-        return BuildSelectorParameter.getSelectorFromXml(xml)
-                                     .getBuild(job, env, filter, parent);
+        BuildSelector selector = null;
+        try {
+            selector = BuildSelectorParameter.getSelectorFromXml(xml);
+        } catch (Exception e) {
+            LOG.log(Level.SEVERE, String.format("Failed to resolve selector: %s", xml), e);
+            return null;
+        }
+        return selector.getBuild(job, env, filter, parent);
     }
 
     @Extension(ordinal=-20)
