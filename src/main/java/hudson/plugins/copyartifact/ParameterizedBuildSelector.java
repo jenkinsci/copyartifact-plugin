@@ -32,6 +32,7 @@ import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
 
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -54,9 +55,8 @@ public class ParameterizedBuildSelector extends BuildSelector {
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        String xml = env.get(getParameterName());
+        String xml = resolveParameter(env);
         if (xml == null) {
-            LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
             return null;
         }
         BuildSelector selector = null;
@@ -67,6 +67,39 @@ public class ParameterizedBuildSelector extends BuildSelector {
             return null;
         }
         return selector.getBuild(job, env, filter, parent);
+    }
+
+    /**
+     * Expand the parameter and resolve it to a xstream expression.
+     * <ol>
+     *   <li>Considers an immediate value if contains '&lt;'.
+     *       This is expected to be used in especially in workflow jobs.</li>
+     *   <li>Otherwise, considers a variable expression if contains '$'.
+     *       This is to keep the compatibility of usage between workflow jobs and non-workflow jobs.</li>
+     *   <li>Otherwise, considers a variable name.</li>
+     * </ol>
+     * 
+     * @param env
+     * @return xstream expression.
+     */
+    private String resolveParameter(EnvVars env) {
+        if (StringUtils.isBlank(getParameterName())) {
+            LOG.log(Level.WARNING, "Parameter name is not specified");
+            return null;
+        }
+        if (getParameterName().contains("<")) {
+            LOG.log(Level.FINEST, "{0} is considered a xstream expression", getParameterName());
+            return getParameterName();
+        }
+        if (getParameterName().contains("$")) {
+            LOG.log(Level.FINEST, "{0} is considered a variable expression", getParameterName());
+            return env.expand(getParameterName());
+        }
+        String xml = env.get(getParameterName());
+        if (xml == null) {
+            LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
+        }
+        return xml;
     }
 
     @Extension(ordinal=-20)

@@ -208,4 +208,81 @@ public class ParameterizedBuildSelectorTest {
         ).get();
         j.assertBuildStatusSuccess(b);
     }
+    
+    /**
+     * Also accepts immediate value.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testImmediateValue() throws Exception {
+        // Prepare an artifact to be copied.
+        FreeStyleProject copiee = j.createFreeStyleProject("copiee");
+        copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+        
+        WorkflowJob copier = j.jenkins.createProject(WorkflowJob.class, "copier");
+        copier.setDefinition(new CpsFlowDefinition(
+                "node {"
+                    + "step([$class: 'CopyArtifact',"
+                        + "projectName: 'copiee',"
+                        + "filter: '**/*',"
+                        + "selector: [$class: 'ParameterizedBuildSelector', parameterName: '${SELECTOR}'],"
+                    + "]);"
+                    + "step([$class: 'ArtifactArchiver', artifacts: '**/*']);"
+                + "}",
+                true
+        ));
+        
+        WorkflowRun b = j.assertBuildStatusSuccess(copier.scheduleBuild2(
+                0,
+                null,
+                new ParametersAction(new StringParameterValue(
+                        "SELECTOR",
+                        "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>"
+                ))
+        ));
+        
+        VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
+        assertEquals("foobar", IOUtils.toString(vf.open()));
+    }
+    
+    
+    /**
+     * Also accepts variable expression.
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void testVariableExpression() throws Exception {
+        // Prepare an artifact to be copied.
+        FreeStyleProject copiee = j.createFreeStyleProject();
+        copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+        
+        FreeStyleProject copier = j.createFreeStyleProject();
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("${SELECTOR}");
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                null,   // parameters
+                pbs,
+                "**/*", // filter
+                "",     // excludes
+                false,  // flatten
+                false,  // optional
+                false   // finterprintArtifacts
+        ));
+        FreeStyleBuild b = j.assertBuildStatusSuccess((FreeStyleBuild)copier.scheduleBuild2(
+                0,
+                new ParametersAction(new StringParameterValue(
+                        "SELECTOR",
+                        "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>"
+                ))
+        ).get());
+        
+        assertEquals("foobar", b.getWorkspace().child("artifact.txt").readToString());
+    }
+    
 }
