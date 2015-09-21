@@ -23,11 +23,15 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -37,6 +41,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class ParameterizedBuildSelector extends BuildSelector {
     private String parameterName;
+    private static final Logger LOG = Logger.getLogger(ParameterizedBuildSelector.class.getName());
 
     @DataBoundConstructor
     public ParameterizedBuildSelector(String parameterName) {
@@ -49,7 +54,12 @@ public class ParameterizedBuildSelector extends BuildSelector {
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        return BuildSelectorParameter.getSelectorFromXml(env.get(parameterName))
+        String xml = env.get(getParameterName());
+        if (xml == null) {
+            LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
+            return null;
+        }
+        return BuildSelectorParameter.getSelectorFromXml(xml)
                                      .getBuild(job, env, filter, parent);
     }
 
