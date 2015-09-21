@@ -25,6 +25,9 @@
 package hudson.plugins.copyartifact;
 
 import static org.junit.Assert.*;
+
+import java.io.IOException;
+
 import jenkins.util.VirtualFile;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -51,6 +54,10 @@ import org.jvnet.hudson.test.JenkinsRule;
 public class ParameterizedBuildSelectorTest {
     @ClassRule
     public static JenkinsRule j = new JenkinsRule();
+    
+    private WorkflowJob createWorkflowJob() throws IOException {
+        return j.jenkins.createProject(WorkflowJob.class, "test"+j.jenkins.getItems().size());
+    }
     
     /**
      * Should not cause a fatal error even for an undefined variable.
@@ -87,22 +94,25 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testWorkflow() throws Exception {
         // Prepare an artifact to be copied.
-        FreeStyleProject copiee = j.createFreeStyleProject("copiee");
+        FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
-        WorkflowJob copier = j.jenkins.createProject(WorkflowJob.class, "copier");
+        WorkflowJob copier = createWorkflowJob();
         copier.setDefinition(new CpsFlowDefinition(
+            String.format(
                 "node {"
                     + "step([$class: 'CopyArtifact',"
-                        + "projectName: 'copiee',"
+                        + "projectName: '%1$s',"
                         + "filter: '**/*',"
                         + "selector: [$class: 'ParameterizedBuildSelector', parameterName: 'SELECTOR'],"
                     + "]);"
                     + "step([$class: 'ArtifactArchiver', artifacts: '**/*']);"
                 + "}",
-                true
+                copiee.getFullName()
+            ),
+            true
         ));
         
         WorkflowRun b = j.assertBuildStatusSuccess(copier.scheduleBuild2(
@@ -217,22 +227,25 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testImmediateValue() throws Exception {
         // Prepare an artifact to be copied.
-        FreeStyleProject copiee = j.createFreeStyleProject("copiee");
+        FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
-        WorkflowJob copier = j.jenkins.createProject(WorkflowJob.class, "copier");
+        WorkflowJob copier = createWorkflowJob();
         copier.setDefinition(new CpsFlowDefinition(
+            String.format(
                 "node {"
                     + "step([$class: 'CopyArtifact',"
-                        + "projectName: 'copiee',"
+                        + "projectName: '%1$s',"
                         + "filter: '**/*',"
                         + "selector: [$class: 'ParameterizedBuildSelector', parameterName: '${SELECTOR}'],"
                     + "]);"
                     + "step([$class: 'ArtifactArchiver', artifacts: '**/*']);"
                 + "}",
-                true
+                copiee.getFullName()
+            ),
+            true
         ));
         
         WorkflowRun b = j.assertBuildStatusSuccess(copier.scheduleBuild2(
