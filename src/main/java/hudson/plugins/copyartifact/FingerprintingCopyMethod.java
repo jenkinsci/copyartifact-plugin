@@ -1,17 +1,13 @@
 package hudson.plugins.copyartifact;
 
-import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.Fingerprint;
 import hudson.model.FingerprintMap;
 import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.os.PosixException;
 import hudson.tasks.Fingerprinter.FingerprintAction;
-import hudson.util.IOException2;
-import jenkins.model.Jenkins;
+import jenkins.util.VirtualFile;
 
 import java.io.IOException;
 import java.security.DigestOutputStream;
@@ -19,10 +15,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import javax.annotation.Nonnull;
+
+import org.apache.commons.io.IOUtils;
 
 /**
  * Performs fingerprinting during the copy.
@@ -34,112 +30,109 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @Extension(ordinal=-100)
 public class FingerprintingCopyMethod extends Copier {
-
-    private static final Logger LOGGER = Logger.getLogger(FingerprintingCopyMethod.class.getName());
-    private Run<?,?> src;
-    private Run<?,?> dst;
-    private final MessageDigest md5 = newMD5();
-    private final Map<String,String> fingerprints = new HashMap<String, String>();
-
-    @Override
-    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
-        this.src = src;
-        this.dst = dst;
-        fingerprints.clear();
-    }
-
-    private MessageDigest newMD5() {
-        try {
-            return MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            throw new AssertionError(e);    // impossible
-        }
-    }
-
-    @Override
-    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
-        targetDir.mkdirs();  // Create target if needed
-        FilePath[] list = srcDir.list(filter, excludes, false);
-        for (FilePath file : list) {
-            String tail = file.getRemote().substring(srcDir.getRemote().length());
-            if (tail.startsWith("\\") || tail.startsWith("/"))
-                tail = tail.substring(1);
-            copyOne(file, new FilePath(targetDir, tail), fingerprintArtifacts);
-        }
-        return list.length;
-    }
-
-    @Override
-    public void copyOne(FilePath s, FilePath d, boolean fingerprintArtifacts) throws IOException, InterruptedException {
-        String link = s.readLink();
-        if (link != null) {
-            d.getParent().mkdirs();
-            d.symlinkTo(link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */TaskListener.NULL);
-            return;
-        }
-        try {
-            md5.reset();
-            DigestOutputStream out =new DigestOutputStream(d.write(),md5);
+    private static class ContextExtension {
+        @Nonnull
+        private final Run<?,?> src;
+        
+        @Nonnull
+        private final Run<?,?> dst;
+        
+        @Nonnull
+        private final MessageDigest md5;
+        
+        @Nonnull
+        private final Map<String,String> fingerprints;
+        
+        private MessageDigest newMD5() {
             try {
-                s.copyTo(out);
+                return MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException e) {
+                throw new AssertionError(e);    // impossible
+            }
+        }
+        
+        private ContextExtension(@Nonnull Run<?,?> src, @Nonnull Run<?,?> dst) {
+            this.src = src;
+            this.dst = dst;
+            this.md5 = newMD5();
+            this.fingerprints = new HashMap<String, String>();
+        }
+    }
+
+    @Override
+    public void init(@Nonnull Run<?, ?> src, @Nonnull CopyArtifactCopyContext context) {
+        context.replaceExtension(new ContextExtension(src, context.getCopierBuild()));
+    }
+
+    @Override
+    public void copy(VirtualFile s, FilePath d, CopyArtifactCopyContext context) throws IOException, InterruptedException {
+        ContextExtension ext = context.getExtension(ContextExtension.class);
+        if (ext == null) {
+            throw new IllegalStateException("FingerprintingCopyMethod.ContextExtension is not available.");
+        }
+        
+        // Unfortunately, VirtualFile doesn't support symbolic links.
+        // String link = s.readLink();
+        // if (link != null) {
+        //     d.getParent().mkdirs();
+        //     d.symlinkTo(link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */TaskListener.NULL);
+        //     return;
+        // }
+        
+        try {
+            ext.md5.reset();
+            DigestOutputStream out =new DigestOutputStream(d.write(), ext.md5);
+            try {
+                IOUtils.copy(s.open(), out);
             } finally {
                 out.close();
             }
+            /*
+            // VirtualFile doesn't provide modes.
             try {
                 d.chmod(s.mode());
             } catch (PosixException x) {
                 LOGGER.log(Level.WARNING, "could not check mode of " + s, x);
             }
+            */
             // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
             try {
                 d.touch(s.lastModified());
             } catch (IOException x) {
-                LOGGER.warning(x.getMessage());
+                context.logException("Failed to set last modification time", x);
             }
-            String digest = Util.toHexString(md5.digest());
+            String digest = Util.toHexString(ext.md5.digest());
 
-            if (fingerprintArtifacts) {
-                Jenkins jenkins = Jenkins.getInstance();
-                if (jenkins == null) {
-                    throw new AbortException("Jenkins instance no longer exists.");
-                }
-                FingerprintMap map = jenkins.getFingerprintMap();
+            if (context.isFingerprintArtifacts()) {
+                FingerprintMap map = context.getJenkins().getFingerprintMap();
 
-                Fingerprint f = map.getOrCreate(src, s.getName(), digest);
-                if (src!=null) {
-                    f.addFor(src);
-                }
-                if (dst != null) {
-                    f.addFor(dst);
-                }
-                fingerprints.put(s.getName(), digest);
+                Fingerprint f = map.getOrCreate(ext.src, s.getName(), digest);
+                f.addFor(ext.src);
+                f.addFor(ext.dst);
+                ext.fingerprints.put(s.getName(), digest);
             }
         } catch (IOException e) {
-            throw new IOException2("Failed to copy "+s+" to "+d,e);
+            throw new IOException("Failed to copy "+s+" to "+d,e);
         }
     }
 
     @Override
-    public void end() {
+    public void end(CopyArtifactCopyContext context) {
+        ContextExtension ext = context.getExtension(ContextExtension.class);
+        if (ext == null) {
+            throw new IllegalStateException("FingerprintingCopyMethod.ContextExtension is not available.");
+        }
+        
         // add action
-        for (Run r : new Run[]{src,dst}) {
-            if (r == null)
-                continue;
-
-            if (fingerprints.size() > 0) {
+        for (Run<?,?> r : new Run[]{ext.src, ext.dst}) {
+            if (ext.fingerprints.size() > 0) {
                 FingerprintAction fa = r.getAction(FingerprintAction.class);
-                if (fa != null) fa.add(fingerprints);
-                else            r.getActions().add(new FingerprintAction(r, fingerprints));
+                if (fa != null) {
+                    fa.add(ext.fingerprints);
+                } else {
+                    r.addAction(new FingerprintAction(r, ext.fingerprints));
+                }
             }
         }
-    }
-
-    @SuppressFBWarnings(
-            value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
-            justification = "This is a method not of Cloneable but of Copier."
-    )
-    @Override
-    public Copier clone() {
-        return new FingerprintingCopyMethod();
     }
 }

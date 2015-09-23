@@ -61,6 +61,7 @@ public class CopyArtifactUtil {
         copyArtifact.setOptional(optional);
         copyArtifact.setFingerprintArtifacts(fingerprintArtifacts);
         copyArtifact.setResultVariableSuffix(resultVariableSuffix);
+        copyArtifact.setVerbose(true);
         return copyArtifact;
     }
 }

@@ -48,6 +48,8 @@ public class WorkspaceSelector extends BuildSelector {
         return true;
     }
 
+    /*
+    // TODO: No longer supports to copy from non-artifacts.
     @Override protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
         if (src instanceof AbstractBuild) {
             FilePath srcDir = ((AbstractBuild) src).getWorkspace();
@@ -61,6 +63,7 @@ public class WorkspaceSelector extends BuildSelector {
             return super.getSourceDirectory(src, console);
         }
     }
+    */
 
     @Extension(ordinal=-20)
     public static final Descriptor<BuildSelector> DESCRIPTOR =
