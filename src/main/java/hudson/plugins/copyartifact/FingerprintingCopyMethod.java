@@ -10,6 +10,7 @@ import hudson.tasks.Fingerprinter.FingerprintAction;
 import jenkins.util.VirtualFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -82,9 +83,11 @@ public class FingerprintingCopyMethod extends Copier {
         try {
             ext.md5.reset();
             DigestOutputStream out =new DigestOutputStream(d.write(), ext.md5);
+            InputStream in = s.open();
             try {
-                IOUtils.copy(s.open(), out);
+                IOUtils.copy(in, out);
             } finally {
+                in.close();
                 out.close();
             }
             /*
