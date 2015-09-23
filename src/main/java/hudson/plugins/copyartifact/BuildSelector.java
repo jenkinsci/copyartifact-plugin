@@ -51,7 +51,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * 
      * @since 2.0
      */
-    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?,?> job, @Nonnull CopyArtifactPickContext context) {
+    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?,?> job, @Nonnull final CopyArtifactPickContext context) {
         if (!Util.isOverridden(
                 BuildSelector.class,
                 getClass(),
@@ -64,7 +64,12 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             return getBuild(
                     job,
                     context.getEnvVars(),
-                    (context.getBuildFilter() != null)?context.getBuildFilter():new BuildFilter(),
+                    (context.getBuildFilter() != null)?new BuildFilter() {
+                        @Override
+                        public boolean isSelectable(Run<?, ?> run, EnvVars env) {
+                            return context.getBuildFilter().isSelectable(run, context);
+                        }
+                    }:new BuildFilter(),
                     context.getCopierBuild()
             );
         }

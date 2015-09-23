@@ -37,7 +37,8 @@ import hudson.FilePath;
  * @since 2.0
  */
 public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
-    private FilePath targetDir;
+    private FilePath targetBaseDir;
+    private String targetDirPath;
     private String includes;
     private String excludes;
     private Copier copier;
@@ -45,10 +46,39 @@ public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
     private boolean fingerprintArtifacts;
 
     /**
-     * @param targetDir
+     * @param targetBaseDir
      */
-    public void setTargetDir(@Nonnull FilePath targetDir) {
-        this.targetDir = targetDir;
+    public void setTargetBaseDir(@Nonnull FilePath targetBaseDir) {
+        this.targetBaseDir = targetBaseDir;
+    }
+
+    /**
+     * Returns the base directory to copy files to.
+     * Usually you want to use {@link #getTargetDir()}.
+     * 
+     * This is stored to allow insert intermediate directories
+     * for target directories (${targetBaseDir}/something/${targetDirName})
+     * 
+     * @return the bese directory of {@link FilePath} to copy files to.
+     */
+    @Nonnull
+    public FilePath getTargetBaseDir() {
+        return targetBaseDir;
+    }
+
+    /**
+     * @param targetDirPath
+     */
+    public void setTargetDirPath(@Nonnull String targetDirPath) {
+        this.targetDirPath = targetDirPath;
+    }
+
+    /**
+     * @return the path from {@link #getTargetBaseDir()} to copy files to.
+     */
+    @Nonnull
+    public String getTargetDirPath() {
+        return targetDirPath;
     }
 
     /**
@@ -56,7 +86,7 @@ public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
      */
     @Nonnull
     public FilePath getTargetDir() {
-        return targetDir;
+        return getTargetBaseDir().child(getTargetDirPath());
     }
 
     /**
@@ -145,7 +175,8 @@ public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
      */
     protected CopyArtifactCopyContext(@Nonnull CopyArtifactCopyContext src) {
         super(src);
-        this.targetDir = src.targetDir;
+        this.targetBaseDir = src.targetBaseDir;
+        this.targetDirPath = src.targetDirPath;
         this.includes = src.includes;
         this.excludes = src.excludes;
         this.copier = src.copier;

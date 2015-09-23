@@ -38,47 +38,43 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+
 /**
  * Filter to find builds matching particular parameters.
  * @author Alan Harder
  */
 public class ParametersBuildFilter extends BuildFilter {
-    private List<StringParameterValue> filters;
+    private final String paramsToMatch;
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
     public ParametersBuildFilter(String paramsToMatch) {
+        this.paramsToMatch = paramsToMatch;
+    }
+    
+    /**
+     * @return
+     * @since 2.0
+     */
+    public String getParamsToMatch() {
+        return paramsToMatch;
+    }
+
+    private List<StringParameterValue> getFilerParameters(@Nonnull CopyArtifactPickContext context) {
         // Initialize.. parse out the given parameters/values.
-        filters = new ArrayList<StringParameterValue>(5);
-        Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
+        List<StringParameterValue> filters = new ArrayList<StringParameterValue>(5);
+        Matcher m = PARAMVAL_PATTERN.matcher(context.getEnvVars().expand(getParamsToMatch()));
         while (m.find()) {
             filters.add(new StringParameterValue(m.group(1), m.group(2)));
         }
+        return filters;
     }
-
-    public boolean isValid(Job<?,?> job) {
-        if (filters.isEmpty()) return false;  // Unable to parse text after /
-        // Consider the filter valid for this job if any build for this job has all the filter params
-        outer:
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) try {
-            EnvVars env = run.getEnvironment(TaskListener.NULL);
-            for (StringParameterValue spv : filters) {
-                if (!env.containsKey(spv.getName())) {
-                    continue outer;
-                }
-            }
-            return true;
-        } catch (InterruptedException ignore) {
-        } catch (IOException ignore) {
-        }
-        return false;
-    }
-
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(@Nonnull Run<?,?> run, @Nonnull CopyArtifactPickContext context) {
         EnvVars otherEnv;
         try {
             otherEnv = run.getEnvironment(TaskListener.NULL);
@@ -101,6 +97,7 @@ public class ParametersBuildFilter extends BuildFilter {
                 }
             }
         }
+        List<StringParameterValue> filters = getFilerParameters(context);
         for (StringParameterValue spv : filters) {
             if (!spv.value.equals(otherEnv.get(spv.getName()))) {
                 return false;

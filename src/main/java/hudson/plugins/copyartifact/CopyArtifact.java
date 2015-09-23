@@ -562,9 +562,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         copyContext.setFlatten(isFlatten());
         copyContext.setFingerprintArtifacts(isFingerprintArtifacts());
 
-        FilePath targetDir = workspace;
+        FilePath targetBaseDir = workspace;
+        String targetDirPath = "";
         if (!StringUtils.isEmpty(getTarget())) {
-            targetDir = new FilePath(targetDir, env.expand(getTarget()));
+            targetDirPath = env.expand(getTarget());
         }
         String expandedFilter = env.expand(getFilter());
         if (StringUtils.isBlank(expandedFilter)) {
@@ -574,7 +575,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (StringUtils.isBlank(expandedExcludes)) {
             expandedExcludes = null;
         }
-        copyContext.setTargetDir(targetDir);
+        copyContext.setTargetBaseDir(targetBaseDir);
+        copyContext.setTargetDirPath(targetDirPath);
         copyContext.setIncludes(expandedFilter);
         copyContext.setExcludes(expandedExcludes);
         copyContext.setCopier(jenkins.getExtensionList(Copier.class).get(0));
@@ -679,7 +681,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public static CopyArtifactCopyResult copyArttifactsFrom(Run<?,?> src, CopyArtifactCopyContext context)
             throws IOException, InterruptedException
     {
-        context.getTargetDir().mkdirs();
         
         if (context.getJenkins().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
         // use classes in the "maven-plugin" plugin as might not be installed
@@ -700,8 +701,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             for (Run r : ((MatrixBuild) src).getExactRuns()) {
                 // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                 CopyArtifactCopyContext contextForChild = (CopyArtifactCopyContext) context.clone();
-                contextForChild.setTargetDir(context.getTargetDir().child(r.getParent().getName()));
-                copyResult = copyResult.merge(copyArtifactsFromDirect(r, context));
+                contextForChild.setTargetBaseDir(context.getTargetBaseDir().child(r.getParent().getName()));
+                copyResult = copyResult.merge(copyArtifactsFromDirect(r, contextForChild));
             }
             
             return copyResult;
@@ -713,6 +714,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private static CopyArtifactCopyResult copyArtifactsFromDirect(Run<?, ?> src, CopyArtifactCopyContext context)
             throws IOException, InterruptedException {
         context.logDebug("Copying artifacts from {0}", src.getFullDisplayName());
+        context.getTargetDir().mkdirs();
         
         ArtifactManager manager = src.getArtifactManager();
         VirtualFile srcDir = manager.root();

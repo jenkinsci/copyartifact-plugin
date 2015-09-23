@@ -523,30 +523,16 @@ public class CopyArtifactTest {
         assertFile(false, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
     }
 
-    /** Test copy from workspace instead of artifacts area */
-    @Test
-    public void testCopyFromWorkspace() throws Exception {
-        FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, new WorkspaceSelector(),
-                "**/*.txt", "", true, false, true));
-        // Run a build that places a file in the workspace, but does not archive anything
-        other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
-        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
-        rule.assertBuildStatusSuccess(b);
-        assertFile(true, "foo.txt", b);
-        assertFile(true, "subfoo.txt", b);
-        assertFile(false, "c.log", b);
-    }
-
     /** Test copy from workspace containing default ant excludes */
     @Test
-    public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
+    public void testDefaultExcludes() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new StatusBuildSelector(true),
                 "", "", false, false));
-        // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
+        ArtifactArchiver aa = new ArtifactArchiver("**/*");
+        aa.setDefaultExcludes(false);
+        other.getPublishersList().add(aa);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -1686,6 +1672,7 @@ public class CopyArtifactTest {
         return rule.jenkins.getRootPath().mode() != -1;
     }
     
+    @Ignore("VirtualFile (ArtifactArchiver) doesn't support file permissions.")
     @Test
     public void testFilePermission() throws Exception {
         if (!isFilePermissionSupported()) {
@@ -1829,6 +1816,7 @@ public class CopyArtifactTest {
         }
     }
 
+    @Ignore("VirtualFile (ArtifactArchiver) doesn't support symbolic links.")
     @Issue("JENKINS-20546")
     @Test
     public void testSymlinks() throws Exception {
