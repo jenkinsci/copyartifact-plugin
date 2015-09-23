@@ -1,5 +1,6 @@
 package hudson.plugins.copyartifact;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -56,6 +57,11 @@ public class VirtualFileScanner {
         if (StringUtils.isBlank(pattern)) {
             return;
         }
+        
+        // Make work both on Windows or Linux.
+        pattern = pattern
+                .replace('/', File.separatorChar)
+                .replace('\\', File.separatorChar);
         
         StringTokenizer tokens = new StringTokenizer(pattern,",");
         while(tokens.hasMoreTokens()) {
