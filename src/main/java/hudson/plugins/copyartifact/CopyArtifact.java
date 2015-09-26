@@ -248,6 +248,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public void setParameters(String parameters) {
         parameters = Util.fixEmptyAndTrim(parameters);
         setBuildFilter((parameters != null)?new ParametersBuildFilter(parameters):null);
+        this.parameters = null;
     }
 
     @DataBoundSetter
@@ -324,6 +325,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (obj.parameters != null) {
                 obj.setParameters(obj.parameters);
                 obj.parameters = null;
+            }
+            if (obj.buildFilter == null) {
+                obj.setBuildFilter(null);
             }
             if (obj.isUpgradeNeeded()) {
                 // A Copy Artifact to be upgraded.
@@ -462,10 +466,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             int i = projectName.lastIndexOf('/');
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */jenkins.getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
-                parameters = projectName.substring(i + 1);
+                setParameters(projectName.substring(i + 1));
             } else {
                 project = projectName;
-                parameters = null;
+                setParameters(null);
             }
             LOGGER.log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
