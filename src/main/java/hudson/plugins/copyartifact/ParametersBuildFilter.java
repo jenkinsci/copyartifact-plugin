@@ -24,6 +24,7 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
+import hudson.Extension;
 import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
@@ -40,6 +41,8 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 
+import org.kohsuke.stapler.DataBoundConstructor;
+
 /**
  * Filter to find builds matching particular parameters.
  * @author Alan Harder
@@ -49,6 +52,7 @@ public class ParametersBuildFilter extends BuildFilter {
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
+    @DataBoundConstructor
     public ParametersBuildFilter(String paramsToMatch) {
         this.paramsToMatch = paramsToMatch;
     }
@@ -104,5 +108,13 @@ public class ParametersBuildFilter extends BuildFilter {
             }
         }
         return true;
+    }
+    
+    @Extension
+    public static class DescriptorImpl extends BuildFilterDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.ParameterizedBuildSelector_DisplayName();
+        }
     }
 }

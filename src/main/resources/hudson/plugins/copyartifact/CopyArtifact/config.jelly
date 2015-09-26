@@ -36,9 +36,7 @@ THE SOFTWARE.
   <f:entry title="${%Target directory}" field="target">
     <f:textbox/>
   </f:entry>
-  <f:entry title="${%Parameter filters}" field="parameters">
-    <f:textbox/>
-  </f:entry>
+  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filters}" descriptors="${descriptor.buildFilterDescriptorList}" />
   <f:entry help="/plugin/copyartifact/help-flatten-optional.html">
     <f:checkbox field="flatten"/>
     <label class="attach-previous">${%Flatten directories}</label>

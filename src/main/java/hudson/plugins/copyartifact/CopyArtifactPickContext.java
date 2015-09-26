@@ -63,14 +63,14 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     /**
      * @param buildFilter
      */
-    public void setBuildFilter(BuildFilter buildFilter) {
+    public void setBuildFilter(@Nonnull BuildFilter buildFilter) {
         this.buildFilter = buildFilter;
     }
 
     /**
      * @return a filter to builds
      */
-    @CheckForNull
+    @Nonnull
     public BuildFilter getBuildFilter() {
         return buildFilter;
     }

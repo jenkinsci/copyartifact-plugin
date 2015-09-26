@@ -42,6 +42,7 @@ import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
 import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
+import hudson.plugins.copyartifact.filter.NoBuildFilter;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -183,7 +184,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     @Deprecated private String projectName;
     private String project;
-    @Deprecated private String parameters;
+    @Deprecated transient private String parameters;
     private String filter, target;
     private String excludes;
     private /*almost final*/ BuildSelector selector;
@@ -246,7 +247,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     @Deprecated
     public void setParameters(String parameters) {
         parameters = Util.fixEmptyAndTrim(parameters);
-        buildFilter = (parameters != null)?new ParametersBuildFilter(parameters):null;
+        setBuildFilter((parameters != null)?new ParametersBuildFilter(parameters):null);
     }
 
     @DataBoundSetter
@@ -309,7 +310,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      */
     @DataBoundSetter
     public void setBuildFilter(@CheckForNull BuildFilter buildFilter) {
-        this.buildFilter = buildFilter;
+        this.buildFilter = (buildFilter != null)?buildFilter:new NoBuildFilter();
     }
 
     // Upgrade data from old format
@@ -319,6 +320,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (obj.selector == null) {
                 obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
+            }
+            if (obj.parameters != null) {
+                obj.setParameters(obj.parameters);
+                obj.parameters = null;
             }
             if (obj.isUpgradeNeeded()) {
                 // A Copy Artifact to be upgraded.
@@ -442,7 +447,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * @return the filter for builds.
      * @since 2.0
      */
-    @CheckForNull
+    @Nonnull
     public BuildFilter getBuildFilter() {
         return buildFilter;
     }
@@ -863,6 +868,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return Messages.CopyArtifact_DisplayName();
         }
 
+        public List<BuildFilterDescriptor> getBuildFilterDescriptorList() {
+            return BuildFilter.allWithNoBuildFilter();
+        }
     }
 
     // Listen for project renames and update property here if needed.

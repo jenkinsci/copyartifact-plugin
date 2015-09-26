@@ -64,12 +64,12 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             return getBuild(
                     job,
                     context.getEnvVars(),
-                    (context.getBuildFilter() != null)?new BuildFilter() {
+                    new BuildFilter() {
                         @Override
                         public boolean isSelectable(Run<?, ?> run, EnvVars env) {
                             return context.getBuildFilter().isSelectable(run, context);
                         }
-                    }:new BuildFilter(),
+                    },
                     context.getCopierBuild()
             );
         }

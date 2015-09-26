@@ -23,16 +23,29 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import javax.annotation.Nonnull;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
+
+import jenkins.model.Jenkins;
 import hudson.EnvVars;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.filter.NoBuildFilter;
 
 /**
  * Additional filter used by BuildSelector.
+ * Use {@link BuildFilterDescriptor} for its descriptor.
  * @author Alan Harder
  */
-public class BuildFilter {
+public class BuildFilter extends AbstractDescribableImpl<BuildFilter> {
 
     /**
      * @param run
@@ -55,5 +68,43 @@ public class BuildFilter {
     public boolean isSelectable(@Nonnull Run<?, ?> candidate, @Nonnull CopyArtifactPickContext context) {
         // for backward compatibility.
         return isSelectable(candidate, context.getEnvVars());
+    }
+    
+    /**
+     * @return
+     * @see hudson.model.AbstractDescribableImpl#getDescriptor()
+     */
+    @Override
+    public BuildFilterDescriptor getDescriptor() {
+        return (BuildFilterDescriptor)super.getDescriptor();
+    }
+    
+    /**
+     * @return all descriptors of {@link BuildFilter} without {@link NoBuildFilter}
+     */
+    public static List<BuildFilterDescriptor> all() {
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            return Collections.emptyList();
+        }
+        return Lists.transform(
+                j.getDescriptorList(BuildFilter.class),
+                new Function<Descriptor<?>, BuildFilterDescriptor>() {
+                    @Override
+                    public BuildFilterDescriptor apply(Descriptor<?> arg0) {
+                        return (BuildFilterDescriptor)arg0;
+                    }
+                }
+        );
+    }
+    
+    /**
+     * @return all descriptors of {@link BuildFilter} including {@link NoBuildFilter}
+     */
+    public static List<BuildFilterDescriptor> allWithNoBuildFilter() {
+        List<BuildFilterDescriptor> allFilters = new ArrayList<BuildFilterDescriptor>(all());
+        allFilters.add(0, NoBuildFilter.DESCRIPTOR);
+        
+        return allFilters;
     }
 }
