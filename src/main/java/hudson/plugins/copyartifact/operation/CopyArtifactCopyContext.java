@@ -22,12 +22,19 @@
  * THE SOFTWARE.
  */
 
-package hudson.plugins.copyartifact;
+package hudson.plugins.copyartifact.operation;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
 import hudson.FilePath;
+import hudson.model.Run;
+import hudson.plugins.copyartifact.CopyArtifactOperationContext;
 
 /**
  * Context for file-copy-operation of copyartifact.
@@ -36,14 +43,16 @@ import hudson.FilePath;
  * 
  * @since 2.0
  */
-public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
+public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     private FilePath targetBaseDir;
     private String targetDirPath;
     private String includes;
     private String excludes;
-    private Copier copier;
     private boolean flatten;
     private boolean fingerprintArtifacts;
+    private Run<?,?> src;
+    private MessageDigest md5;
+    private Map<String,String> fingerprints;
 
     /**
      * @param targetBaseDir
@@ -120,21 +129,6 @@ public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * @param copier
-     */
-    public void setCopier(@Nonnull Copier copier) {
-        this.copier = copier;
-    }
-    
-    /**
-     * @return a object to perform file copies.
-     */
-    @Nonnull
-    public Copier getCopier() {
-        return copier;
-    }
-
-    /**
      * @param flatten
      */
     public void setFlatten(boolean flatten) {
@@ -162,33 +156,49 @@ public class CopyArtifactCopyContext extends CopyArtifactCommonContext {
         return fingerprintArtifacts;
     }
 
-    /**
-     * ctor
-     */
-    public CopyArtifactCopyContext() {
+    public void setSrc(Run<?, ?> src) {
+        this.src = src;
     }
 
-    /**
-     * Creates a new instance copying src data.
-     * 
-     * @param src
-     */
-    protected CopyArtifactCopyContext(@Nonnull CopyArtifactCopyContext src) {
+    public Run<?, ?> getSrc() {
+        return src;
+    }
+
+    public void setMd5(MessageDigest md5) {
+        this.md5 = md5;
+    }
+
+    public MessageDigest getMd5() {
+        return md5;
+    }
+
+    public void setFingerprints(Map<String, String> fingerprints) {
+        this.fingerprints = fingerprints;
+    }
+
+    public Map<String, String> getFingerprints() {
+        return fingerprints;
+    }
+
+    public CopyArtifactCopyContext(CopyArtifactOperationContext src) {
+        super(src);
+    }
+
+    public CopyArtifactCopyContext(CopyArtifactCopyContext src) {
         super(src);
         this.targetBaseDir = src.targetBaseDir;
         this.targetDirPath = src.targetDirPath;
         this.includes = src.includes;
         this.excludes = src.excludes;
-        this.copier = src.copier;
         this.flatten = src.flatten;
+        this.fingerprintArtifacts = src.fingerprintArtifacts;
+        this.src = src.src;
+        this.md5 = src.md5;
+        this.fingerprints = src.fingerprints;
     }
 
-    /**
-     * @return
-     * @see hudson.plugins.copyartifact.CopyArtifactCommonContext#clone()
-     */
     @Override
-    protected CopyArtifactCopyContext clone() {
+    public CopyArtifactCopyContext clone() {
         return new CopyArtifactCopyContext(this);
     }
 }

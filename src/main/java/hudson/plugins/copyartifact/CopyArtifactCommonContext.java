@@ -25,9 +25,13 @@
 package hudson.plugins.copyartifact;
 
 import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
@@ -48,6 +52,7 @@ import jenkins.model.Jenkins;
  * @since 2.0
  */
 public class CopyArtifactCommonContext implements Cloneable {
+    private static final Logger LOGGER = Logger.getLogger(CopyArtifactCommonContext.class.getName());
     private Jenkins jenkins;
     private Run<?,?> copierBuild;
     private TaskListener listener;
@@ -278,7 +283,31 @@ public class CopyArtifactCommonContext implements Cloneable {
         this.listener = src.listener;
         this.envVars = new EnvVars(src.envVars);
         this.verbose = src.verbose;
-        this.extensionList = new ArrayList<Object>(src.extensionList);
+        this.extensionList = new ArrayList<Object>();
+        for (Object ext : src.extensionList) {
+            if (ext instanceof Cloneable) {
+                try {
+                    Method m = ext.getClass().getMethod("clone");
+                    this.extensionList.add(m.invoke(ext));
+                } catch(NoSuchMethodException e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "Could not clone {0} as clone() is not public.",
+                            ext.getClass()
+                    );
+                    this.extensionList.add(ext);
+                } catch (Exception e) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            MessageFormat.format("Could not clone {0}.", ext.getClass()),
+                            e
+                    );
+                    this.extensionList.add(ext);
+                }
+            } else {
+                this.extensionList.add(ext);
+            }
+        }
     }
 
     /**

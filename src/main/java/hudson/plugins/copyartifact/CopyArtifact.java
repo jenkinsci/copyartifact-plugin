@@ -41,8 +41,11 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import hudson.plugins.copyartifact.CopyArtifactOperation.Result;
 import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
 import hudson.plugins.copyartifact.filter.NoBuildFilter;
+import hudson.plugins.copyartifact.operation.AbstractCopyOperation;
+import hudson.plugins.copyartifact.operation.CopyArtifactFiles;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -149,51 +152,20 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     };
 
-    /**
-     * The result of copying artifacts.
-     */
-    public static enum CopyArtifactCopyResult {
-        /**
-         * No files to copy.
-         */
-        NoFileToCopy    (0),
-        /**
-         * Copied one or more files.
-         */
-        Copied          (1),
-        ;
-        
-        private int numeric;
-        private CopyArtifactCopyResult(int numeric) {
-            this.numeric = numeric;
-        }
-        
-        private static CopyArtifactCopyResult byNumber(int numeric) {
-            for (CopyArtifactCopyResult v : CopyArtifactCopyResult.values()) {
-                if (v.numeric == numeric) {
-                    return v;
-                }
-            }
-            return null;
-        }
-        
-        public CopyArtifactCopyResult merge(CopyArtifactCopyResult valueToMerge) {
-            return CopyArtifactCopyResult.byNumber(Math.max(numeric, valueToMerge.numeric));
-        }
-    }
-
     @Deprecated private String projectName;
     private String project;
     @Deprecated transient private String parameters;
-    private String filter, target;
-    private String excludes;
+    @Deprecated transient private String filter, target;
+    @Deprecated transient private String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
-    private Boolean flatten, optional;
-    private boolean doNotFingerprintArtifacts;
+    @Deprecated transient private Boolean flatten;
+    private Boolean optional;
+    @Deprecated transient private boolean doNotFingerprintArtifacts;
     private String resultVariableSuffix;
     private boolean verbose;
     private BuildFilter buildFilter;
+    private CopyArtifactOperation operation;
 
     @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -212,15 +184,17 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         this(projectName);
         setParameters(parameters);
-        setFilter(filter);
-        setTarget(target);
-        setExcludes(excludes);
         if (selector == null) {
             selector = DEFAULT_BUILD_SELECTOR;
         }
         setSelector(selector);
-        setFlatten(flatten);
         setOptional(optional);
+        
+        setOperation(null);
+        setFilter(filter);
+        setTarget(target);
+        setExcludes(excludes);
+        setFlatten(flatten);
         setFingerprintArtifacts(fingerprintArtifacts);
     }
 
@@ -229,15 +203,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.project = projectName;
 
         // Apply defaults to all other properties.
-        setFilter(null);
-        setTarget(null);
-        setExcludes(null);
         setSelector(DEFAULT_BUILD_SELECTOR);
-        setFlatten(false);
         setOptional(false);
-        setFingerprintArtifacts(false);
         setResultVariableSuffix(null);
         setBuildFilter(null);
+        setOperation(null);
     }
 
     /**
@@ -251,19 +221,61 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.parameters = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param filter
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setFilter(String filter) {
-        this.filter = Util.fixNull(filter).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setIncludes(filter);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFilter is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.filter = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param target
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setTarget(String target) {
-        this.target = Util.fixNull(target).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setTargetDir(target);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setTarget is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.target = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param excludes
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setExcludes(String excludes) {
-        this.excludes = Util.fixNull(excludes).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setExcludes(excludes);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setExcludes is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.excludes = null;
     }
 
     @DataBoundSetter
@@ -271,9 +283,23 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.selector = selector;
     }
 
-    @DataBoundSetter
+    /**
+     * @param flatten
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setFlatten(boolean flatten) {
-        this.flatten = flatten ? Boolean.TRUE : null;
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setFlatten(flatten);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFlatten is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.flatten = null;
     }
 
     @DataBoundSetter
@@ -281,9 +307,19 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.optional = optional ? Boolean.TRUE : null;
     }
 
-    @DataBoundSetter
+    @Deprecated
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
-        this.doNotFingerprintArtifacts = !fingerprintArtifacts;
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setFingerprintArtifacts(fingerprintArtifacts);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFingerprintArtifacts is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.doNotFingerprintArtifacts = false;
     }
 
     /**
@@ -314,6 +350,26 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.buildFilter = (buildFilter != null)?buildFilter:new NoBuildFilter();
     }
 
+    /**
+     * @param operation
+     * 
+     * @since 2.0
+     */
+    @DataBoundSetter
+    public void setOperation(@CheckForNull CopyArtifactOperation operation) {
+        this.operation = (operation != null)?operation:new CopyArtifactFiles();
+    }
+
+    /**
+     * @return
+     * 
+     * @since 2.0
+     */
+    @Nonnull
+    public CopyArtifactOperation getOperation() {
+        return operation;
+    }
+
     // Upgrade data from old format
     public static class ConverterImpl extends XStream2.PassthruConverter<CopyArtifact> {
         public ConverterImpl(XStream2 xstream) { super(xstream); }
@@ -328,6 +384,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             }
             if (obj.buildFilter == null) {
                 obj.setBuildFilter(null);
+            }
+            if (obj.operation == null) {
+                obj.setOperation(null);
+                obj.setFilter(obj.filter);
+                obj.setTarget(obj.target);
+                obj.setExcludes(obj.excludes);
+                obj.setFlatten(obj.flatten);
+                obj.setFingerprintArtifacts(!obj.doNotFingerprintArtifacts);
             }
             if (obj.isUpgradeNeeded()) {
                 // A Copy Artifact to be upgraded.
@@ -412,19 +476,55 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return selector;
     }
 
+    /**
+     * @return
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getFilter() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getIncludes();
+        }
         return filter;
     }
 
+    /**
+     * @return
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getExcludes() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getExcludes();
+        }
         return excludes;
     }
 
+    /**
+     * @return
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getTarget() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getTargetDir();
+        }
         return target;
     }
 
+    /**
+     * @return
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public boolean isFlatten() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).isFlatten();
+        }
         return flatten != null && flatten;
     }
 
@@ -484,7 +584,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return (projectName != null);
     }
 
+    /**
+     * @return
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public boolean isFingerprintArtifacts() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return !((AbstractCopyOperation)op).isFingerprintArtifacts();
+        }
         return !doNotFingerprintArtifacts;
     }
 
@@ -562,42 +671,21 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
         envData.add(build, pick.build, jobName, getResultVariableSuffix());
         
-        CopyArtifactCopyContext copyContext = new CopyArtifactCopyContext();
+        CopyArtifactOperationContext copyContext = new CopyArtifactOperationContext();
         copyContext.setJenkins(jenkins);
         copyContext.setCopierBuild(build);
         copyContext.setListener(listener);
         copyContext.setEnvVars(env);
         copyContext.setVerbose(isVerbose());
-        copyContext.setFlatten(isFlatten());
-        copyContext.setFingerprintArtifacts(isFingerprintArtifacts());
 
-        FilePath targetBaseDir = workspace;
-        String targetDirPath = "";
-        if (!StringUtils.isEmpty(getTarget())) {
-            targetDirPath = env.expand(getTarget());
-        }
-        String expandedFilter = env.expand(getFilter());
-        if (StringUtils.isBlank(expandedFilter)) {
-            expandedFilter = "**";
-        }
-        String expandedExcludes = env.expand(getExcludes());
-        if (StringUtils.isBlank(expandedExcludes)) {
-            expandedExcludes = null;
-        }
-        copyContext.setTargetBaseDir(targetBaseDir);
-        copyContext.setTargetDirPath(targetDirPath);
-        copyContext.setIncludes(expandedFilter);
-        copyContext.setExcludes(expandedExcludes);
-        copyContext.setCopier(jenkins.getExtensionList(Copier.class).get(0));
-        
-        
-        switch (copyArttifactsFrom(pick.build, copyContext)) {
-        case NoFileToCopy:
+        switch (getOperation().perform(pick.build, copyContext)) {
+        case NothingToDo:
             if (!isOptional()) {
-                throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName, expandedFilter));
+                // TODO
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName, ""));
             }
             // fall through
-        case Copied:
+        case Succeess:
             // nothing to do
             break;
         }
@@ -678,105 +766,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return getRootProject(build.getParent()).getParent();
     }
 
-
-    /**
-     * @param src
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @since 2.0
-     */
-    public static CopyArtifactCopyResult copyArttifactsFrom(Run<?,?> src, CopyArtifactCopyContext context)
-            throws IOException, InterruptedException
-    {
-        
-        if (context.getJenkins().getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
-        // use classes in the "maven-plugin" plugin as might not be installed
-            // Copy artifacts from the build (ArchiveArtifacts build step)
-            CopyArtifactCopyResult copyResult = copyArtifactsFromDirect(src, context);
-            
-            // Copy artifacts from all modules of this Maven build (automatic archiving)
-            for (Run<?, ?> r : ((MavenModuleSetBuild)src).getModuleLastBuilds().values()) {
-                copyResult = copyResult.merge(copyArtifactsFromDirect(r, context));
-            }
-            
-            return copyResult;
-        } else if (src instanceof MatrixBuild) {
-            CopyArtifactCopyResult copyResult = CopyArtifactCopyResult.NoFileToCopy;
-            
-            // Copy artifacts from all configurations of this matrix build
-            // Use MatrixBuild.getExactRuns if available
-            for (Run r : ((MatrixBuild) src).getExactRuns()) {
-                // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                CopyArtifactCopyContext contextForChild = (CopyArtifactCopyContext) context.clone();
-                contextForChild.setTargetBaseDir(context.getTargetBaseDir().child(r.getParent().getName()));
-                copyResult = copyResult.merge(copyArtifactsFromDirect(r, contextForChild));
-            }
-            
-            return copyResult;
-        }
-        
-        return copyArtifactsFromDirect(src, context);
-    }
-
-    private static CopyArtifactCopyResult copyArtifactsFromDirect(Run<?, ?> src, CopyArtifactCopyContext context)
-            throws IOException, InterruptedException {
-        context.logDebug("Copying artifacts from {0}", src.getFullDisplayName());
-        context.getTargetDir().mkdirs();
-        
-        ArtifactManager manager = src.getArtifactManager();
-        VirtualFile srcDir = manager.root();
-        if (srcDir == null || !srcDir.exists()) {
-            context.logDebug("No artifacts to copy");
-            return CopyArtifactCopyResult.NoFileToCopy;
-        }
-
-        context.getCopier().init(src, context);
-        try {
-            VirtualFileScanner scanner = new VirtualFileScanner(
-                    context.getIncludes(),
-                    context.getExcludes(),
-                    false       // useDefaultExcludes
-            );
-            List<VirtualFileWithPathInfo> fileList = scanner.scanFile(srcDir);
-            if (!context.isFlatten()) {
-                for (VirtualFileWithPathInfo file : fileList) {
-                    FilePath path = context.getTargetDir();
-                    for (String fragment : file.pathFragments) {
-                        path = new FilePath(path, fragment);
-                    }
-                    context.logDebug("Copying to {0}", path);
-                    context.getCopier().copy(
-                            file.file,
-                            path,
-                            context
-                    );
-                }
-            } else {
-                for (VirtualFileWithPathInfo file : fileList) {
-                    FilePath path = new FilePath(context.getTargetDir(), file.file.getName());
-                    context.logDebug("Copying to {0}", path);
-                    context.getCopier().copy(
-                            file.file,
-                            path,
-                            context
-                    );
-                }
-            }
-            
-            int cnt = fileList.size();
-
-            context.logInfo(Messages.CopyArtifact_Copied(
-                    cnt,
-                    HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
-                    HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))
-            ));
-            return (cnt > 0)?CopyArtifactCopyResult.Copied:CopyArtifactCopyResult.NoFileToCopy;
-        } finally {
-            context.getCopier().end(context);
-        }
-    }
 
     /**
      * Tests whether specified variable name is valid.
