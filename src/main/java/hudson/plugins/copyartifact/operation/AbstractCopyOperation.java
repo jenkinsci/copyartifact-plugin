@@ -31,10 +31,11 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
-import java.util.List;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+
+import jenkins.util.VirtualFile;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -55,6 +56,8 @@ import hudson.tasks.Fingerprinter.FingerprintAction;
 
 /**
  * A basic operation for copying files.
+ * 
+ * @since 2.0
  */
 public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     private String targetDir;
@@ -64,85 +67,176 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     private boolean flatten;
     private boolean fingerprintArtifacts;
     
+    /**
+     * Information for a file.
+     * 
+     * An abstract layer for file classes (such as {@link FilePath}, {@link VirtualFile}).
+     * Derived classes of {@link AbstractCopyOperation} should extend this
+     * to support file classes it handles.
+     */
     protected abstract static class FileInfo {
-        public abstract FilePath getRelativeFrom(FilePath path);
+        /**
+         * Returns the path where this file copied to.
+         * 
+         * @param basePath
+         * @return the path relative from <code>basePath</code>.
+         */
+        @Nonnull
+        public abstract FilePath getRelativeFrom(@Nonnull FilePath basePath);
+        
+        /**
+         * @return the name of this file.
+         */
+        @Nonnull
         public abstract String getFilename();
+        
+        /**
+         * @return the stream to read contents of this file.
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        @Nonnull
         public abstract InputStream open() throws IOException, InterruptedException;
-        public void copyMetaInfoTo(FilePath dest, CopyArtifactCopyContext context) throws IOException, InterruptedException {
+        
+        /**
+         * Performs additional copy operation, such as setting the permission of the file.
+         * 
+         * @param dest
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
             // nothing to do.
         }
     }
     
+    /**
+     * ctor
+     */
     protected AbstractCopyOperation() {
         setTargetDir("");
         setSrcBaseDir("");
+        setIncludes("");
+        setExcludes("");
+        setFlatten(false);
+        setFingerprintArtifacts(true);
     }
     
+    /**
+     * @param targetDir {@link FilePath} to copy files to.
+     */
     @DataBoundSetter
     public void setTargetDir(@CheckForNull String targetDir) {
         this.targetDir = Util.fixNull(targetDir).trim();
     }
     
+    /**
+     * @return {@link FilePath} to copy files to.
+     */
     @Nonnull
     public String getTargetDir() {
         return targetDir;
     }
     
+    /**
+     * @param srcBaseDir the additional relative path from the source directory
+     */
     @DataBoundSetter
     public void setSrcBaseDir(@CheckForNull String srcBaseDir) {
         this.srcBaseDir = Util.fixNull(srcBaseDir).trim();
     }
     
+    /**
+     * @return the additional relative path from the source directory
+     */
     @Nonnull
     public String getSrcBaseDir() {
         return srcBaseDir;
     }
     
+    /**
+     * @param includes
+     */
     @DataBoundSetter
     public void setIncludes(@CheckForNull String includes) {
         this.includes = Util.fixNull(includes).trim();
     }
     
+    /**
+     * @return comma separated apache-ant file patterns for files to include.
+     */
     @Nonnull
     public String getIncludes() {
         return includes;
     }
     
+    /**
+     * @param excludes
+     */
     @DataBoundSetter
     public void setExcludes(@CheckForNull String excludes) {
         this.excludes = Util.fixNull(excludes).trim();
     }
     
+    /**
+     * @return comma separated apache-ant file patterns for files to exclude.
+     */
     @Nonnull
     public String getExcludes() {
         return excludes;
     }
     
+    /**
+     * @param flatten
+     */
     @DataBoundSetter
     public void setFlatten(boolean flatten) {
         this.flatten = flatten;
     }
     
+    /**
+     * @return whether copy files ignoring directory trees.
+     */
     public boolean isFlatten() {
         return flatten;
     }
     
+    /**
+     * @param fingerprintArtifacts
+     */
     @DataBoundSetter
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         this.fingerprintArtifacts = fingerprintArtifacts;
     }
     
+    /**
+     * @return whether to fingerprint copied artifacts.
+     */
     public boolean isFingerprintArtifacts() {
         return fingerprintArtifacts;
     }
     
+    /**
+     * @param src
+     * @param _context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.CopyArtifactOperation#perform(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactOperationContext)
+     */
     @Override
-    public Result perform(Run<?, ?> src, CopyArtifactOperationContext _context) throws IOException, InterruptedException {
+    @Nonnull
+    public Result perform(@Nonnull Run<?, ?> src, @Nonnull CopyArtifactOperationContext _context) throws IOException, InterruptedException {
         CopyArtifactCopyContext context = new CopyArtifactCopyContext(_context);
         
         String targetDirPath = "";
         if (!StringUtils.isEmpty(getTargetDir())) {
             targetDirPath = context.getEnvVars().expand(getTargetDir());
+        }
+        String srcBaseDir = getSrcBaseDir();
+        if (!StringUtils.isEmpty(srcBaseDir)) {
+            srcBaseDir = context.getEnvVars().expand(srcBaseDir);
         }
         String expandedIncludes = context.getEnvVars().expand(getIncludes());
         if (StringUtils.isBlank(expandedIncludes)) {
@@ -155,6 +249,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         
         context.setTargetBaseDir(context.getWorkspace());
         context.setTargetDirPath(targetDirPath);
+        context.setSrcBaseDir(srcBaseDir);
         context.setIncludes(expandedIncludes);
         context.setExcludes(expandedExcludes);
         context.setFingerprintArtifacts(isFingerprintArtifacts());
@@ -193,7 +288,8 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         return copyArtifactsFromDirect(context);
     }
 
-    private Result copyArtifactsFromDirect(CopyArtifactCopyContext context)
+    @Nonnull
+    private Result copyArtifactsFromDirect(@Nonnull CopyArtifactCopyContext context)
             throws IOException, InterruptedException {
         context.logDebug("Copying artifacts from {0}", context.getSrc().getFullDisplayName());
         context.getTargetDir().mkdirs();
@@ -208,7 +304,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
             
             for (FileInfo file : fileList) {
                 ++cnt;
-                FilePath path = context.isFlatten()
+                FilePath path = (!context.isFlatten())
                         ? file.getRelativeFrom(context.getTargetDir())
                         : new FilePath(context.getTargetDir(), file.getFilename());
                 context.logDebug("Copying to {0}", path);
@@ -227,7 +323,19 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         }
     }
 
-    protected void copyOne(FileInfo file, FilePath path, CopyArtifactCopyContext context)
+    /**
+     * Copy a file.
+     * 
+     * Subclasses can override this class to perform additional operations when copying files.
+     * see also {@link FileInfo#copyMetaInfoTo(FilePath, CopyArtifactCopyContext)}
+     * 
+     * @param file      the file to copy
+     * @param path      the destination path
+     * @param context   context of the operation.
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    protected void copyOne(@Nonnull FileInfo file, @Nonnull FilePath path, @Nonnull CopyArtifactCopyContext context)
             throws IOException, InterruptedException {
         MessageDigest md5 = context.getMd5();
         InputStream in = file.open();
@@ -269,21 +377,30 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     /**
      * Called before copy-artifact operation.
      *
-     * @param src
-     *      The build record from which we are copying artifacts.
      * @param context
      *      parameters to copying operations.
-     *      You can save execution state with {@link CopyArtifactOperationContext#addExtension(Object)}
+     *      You can save execution state with {@link CopyArtifactCopyContext#addExtension(Object)}
+     * @return true to start the copy operation.
      * 
-     * @since 2.0
+     * @see #end(CopyArtifactCopyContext)
      */
-    public boolean init(CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    public boolean init(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         context.setMd5(context.isFingerprintArtifacts() ? newMD5() : null);
         context.setFingerprints(new HashMap<String, String>());
         return true;
     }
     
-    public void end(CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    /**
+     * Called after copy-artifact operation.
+     * Be aware that this may be called even you returned <code>false</code> in {@link #init(CopyArtifactCopyContext)}
+     *
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     * 
+     * @see #init(CopyArtifactCopyContext)
+     */
+    public void end(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         // add action
         for (Run<?,?> r : new Run[]{context.getSrc(), context.getCopierBuild()}) {
             if (context.getFingerprints().size() > 0) {
@@ -297,6 +414,17 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         }
     }
     
-    protected abstract Iterable<? extends FileInfo> scanFilesToCopy(CopyArtifactCopyContext context) throws IOException, InterruptedException;
+    /**
+     * Return the list of files to copy.
+     * Subclasses should override this.
+     * Don't forget to handle {@link CopyArtifactCopyContext#getSrcBaseDir()}.
+     * 
+     * @param context
+     * @return the list of files to copy.
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @Nonnull
+    protected abstract Iterable<? extends FileInfo> scanFilesToCopy(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException;
 
 }

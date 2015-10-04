@@ -26,11 +26,14 @@ package hudson.plugins.copyartifact;
 
 import java.io.IOException;
 
+import javax.annotation.Nonnull;
+
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Run;
 
 /**
- * Operation performed after the source build is decided
+ * Operation performed after the source build is decided.
+ * use {@link CopyArtifactOperationDescriptor} for the descriptor.
  * 
  * @since 2.0
  */
@@ -55,19 +58,32 @@ public abstract class CopyArtifactOperation extends AbstractDescribableImpl<Copy
             this.numeric = numeric;
         }
         
+        @Nonnull
         private static Result byNumber(int numeric) {
             for (Result v : Result.values()) {
                 if (v.numeric == numeric) {
                     return v;
                 }
             }
-            return null;
+            // never happens!
+            return Succeess;
         }
         
-        public Result merge(Result valueToMerge) {
+        @Nonnull
+        public Result merge(@Nonnull Result valueToMerge) {
             return Result.byNumber(Math.max(numeric, valueToMerge.numeric));
         }
     }
 
-    public abstract Result perform(Run<?, ?> src, CopyArtifactOperationContext context) throws IOException, InterruptedException;
+    /**
+     * Performs the operation for the target build.
+     * 
+     * @param src       the target build
+     * @param context   context of the operation
+     * @return  the result of the process
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @Nonnull
+    public abstract Result perform(@Nonnull Run<?, ?> src, @Nonnull CopyArtifactOperationContext context) throws IOException, InterruptedException;
 }

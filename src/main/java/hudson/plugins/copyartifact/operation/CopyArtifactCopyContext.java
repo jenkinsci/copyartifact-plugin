@@ -25,8 +25,6 @@
 package hudson.plugins.copyartifact.operation;
 
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.CheckForNull;
@@ -42,10 +40,12 @@ import hudson.plugins.copyartifact.CopyArtifactOperationContext;
  * existing plugins.
  * 
  * @since 2.0
+ * @see AbstractCopyOperation
  */
 public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     private FilePath targetBaseDir;
     private String targetDirPath;
+    private String srcBaseDir;
     private String includes;
     private String excludes;
     private boolean flatten;
@@ -96,6 +96,21 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     @Nonnull
     public FilePath getTargetDir() {
         return getTargetBaseDir().child(getTargetDirPath());
+    }
+
+    /**
+     * @param srcBaseDir the additional relative path from the source directory
+     */
+    public void setSrcBaseDir(@Nonnull String srcBaseDir) {
+        this.srcBaseDir = srcBaseDir;
+    }
+
+    /**
+     * @return the additional relative path from the source directory
+     */
+    @Nonnull
+    public String getSrcBaseDir() {
+        return srcBaseDir;
     }
 
     /**
@@ -156,35 +171,66 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
         return fingerprintArtifacts;
     }
 
-    public void setSrc(Run<?, ?> src) {
+    /**
+     * @param src the target build
+     */
+    public void setSrc(@Nonnull Run<?, ?> src) {
         this.src = src;
     }
 
+    /**
+     * @return the target build
+     */
+    @Nonnull
     public Run<?, ?> getSrc() {
         return src;
     }
 
-    public void setMd5(MessageDigest md5) {
+    /**
+     * @param md5 used for fingerprinting.
+     */
+    public void setMd5(@CheckForNull MessageDigest md5) {
         this.md5 = md5;
     }
 
+    /**
+     * @return md5 generator for fingerprinting.
+     */
+    @CheckForNull
     public MessageDigest getMd5() {
         return md5;
     }
 
-    public void setFingerprints(Map<String, String> fingerprints) {
+    /**
+     * @param fingerprints a map to store fingerprints for copied files.
+     */
+    public void setFingerprints(@Nonnull Map<String, String> fingerprints) {
         this.fingerprints = fingerprints;
     }
 
+    /**
+     * @return a map to store fingerprints for copied files.
+     */
+    @Nonnull
     public Map<String, String> getFingerprints() {
         return fingerprints;
     }
 
+    /**
+     * Creates a new context extending existing {@link CopyArtifactOperationContext}.
+     * 
+     * @param src
+     */
     public CopyArtifactCopyContext(CopyArtifactOperationContext src) {
         super(src);
     }
 
-    public CopyArtifactCopyContext(CopyArtifactCopyContext src) {
+    /**
+     * ctor to copy.
+     * 
+     * @param src
+     */
+    protected CopyArtifactCopyContext(CopyArtifactCopyContext src) {
         super(src);
         this.targetBaseDir = src.targetBaseDir;
         this.targetDirPath = src.targetDirPath;
@@ -197,6 +243,10 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
         this.fingerprints = src.fingerprints;
     }
 
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.CopyArtifactOperationContext#clone()
+     */
     @Override
     public CopyArtifactCopyContext clone() {
         return new CopyArtifactCopyContext(this);

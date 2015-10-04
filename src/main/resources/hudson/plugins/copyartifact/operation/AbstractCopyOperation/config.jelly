@@ -23,18 +23,22 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry title="${%Project name}" field="projectName">
-    <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
+  <f:entry title="${%Artifacts to copy}" field="includes">
+    <f:textbox/>
   </f:entry>
-  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
-  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filters}" descriptors="${descriptor.buildFilterDescriptorList}" />
-  <f:entry field="optional">
-    <f:checkbox title="${%Optional}" />
+  <f:entry title="${%Artifacts not to copy}" field="excludes">
+    <f:textbox/>
   </f:entry>
-  <f:advanced>
-    <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
-      <f:textbox/>
-    </f:entry>
-  </f:advanced>
-  <f:dropdownDescriptorSelector field="operation" title="${%Operation}" />
+  <f:entry title="${%Target directory}" field="targetDir">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="${%Source base directory}" field="srcBaseDir">
+    <f:textbox/>
+  </f:entry>
+  <f:entry field="flatten">
+    <f:checkbox title="${%Flatten directories}" />
+  </f:entry>
+  <f:entry field="fingerprintArtifacts">
+    <f:checkbox default="true" title="${%Fingerprint Artifacts}" />
+  </f:entry>
 </j:jelly>

@@ -37,6 +37,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
+import hudson.plugins.copyartifact.operation.CopyWorkspaceFiles;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.WrapperBuilder;
@@ -521,6 +522,29 @@ public class CopyArtifactTest {
         assertFile(false, dir + pomName("moduleB", "1.0-SNAPSHOT"), b);
         assertFile(false, dir + "moduleC/1.0-SNAPSHOT/moduleC-1.0-SNAPSHOT.jar", b);
         assertFile(false, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
+    }
+
+    /** Test copy from workspace instead of artifacts area */
+    public void testCopyFromWorkspace() throws Exception {
+        FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
+        CopyArtifact ca = new CopyArtifact(other.getName());
+        ca.setSelector(new StatusBuildSelector(true));
+        ca.setVerbose(true);
+        CopyWorkspaceFiles cwf = new CopyWorkspaceFiles();
+        cwf.setIncludes("**/*.txt");
+        cwf.setTargetDir("");
+        cwf.setFlatten(true);
+        cwf.setFingerprintArtifacts(true);
+        ca.setOperation(cwf);
+        p.getBuildersList().add(ca);
+        // Run a build that places a file in the workspace, but does not archive anything
+        other.getBuildersList().add(new ArtifactBuilder());
+        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
+        FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
+        rule.assertBuildStatusSuccess(b);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "subfoo.txt", b);
+        assertFile(false, "c.log", b);
     }
 
     /** Test copy from workspace containing default ant excludes */
@@ -1677,7 +1701,6 @@ public class CopyArtifactTest {
         return rule.jenkins.getRootPath().mode() != -1;
     }
     
-    @Ignore("VirtualFile (ArtifactArchiver) doesn't support file permissions.")
     @Test
     public void testFilePermission() throws Exception {
         if (!isFilePermissionSupported()) {
@@ -1821,7 +1844,6 @@ public class CopyArtifactTest {
         }
     }
 
-    @Ignore("VirtualFile (ArtifactArchiver) doesn't support symbolic links.")
     @Issue("JENKINS-20546")
     @Test
     public void testSymlinks() throws Exception {

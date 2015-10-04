@@ -25,7 +25,6 @@
 package hudson.plugins.copyartifact;
 
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.MessageFormat;
 import java.util.ArrayList;

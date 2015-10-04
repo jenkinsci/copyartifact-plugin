@@ -52,16 +52,19 @@ public class CopyArtifactUtil {
     public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
                         boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix) {
         CopyArtifact copyArtifact = new CopyArtifact(projectName);
-        copyArtifact.setParameters(parameters);
         copyArtifact.setSelector(selector);
+        copyArtifact.setOptional(optional);
+        copyArtifact.setResultVariableSuffix(resultVariableSuffix);
+        copyArtifact.setVerbose(true);
+        
+        copyArtifact.setParameters(parameters);
+        
+        copyArtifact.setOperation(null);
         copyArtifact.setFilter(filter);
         copyArtifact.setExcludes(excludes);
         copyArtifact.setTarget(target);
         copyArtifact.setFlatten(flatten);
-        copyArtifact.setOptional(optional);
         copyArtifact.setFingerprintArtifacts(fingerprintArtifacts);
-        copyArtifact.setResultVariableSuffix(resultVariableSuffix);
-        copyArtifact.setVerbose(true);
         return copyArtifact;
     }
 }

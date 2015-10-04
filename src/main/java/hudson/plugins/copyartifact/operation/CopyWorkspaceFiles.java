@@ -24,16 +24,32 @@
 
 package hudson.plugins.copyartifact.operation;
 
+import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.AbstractBuild;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.CopyArtifactOperationDescriptor;
 
 import java.io.IOException;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+
 /**
- *
+ * copy files in workspaces.
+ * 
+ * @since 2.0
  */
 public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
+    /**
+     * ctor
+     */
+    @DataBoundConstructor
+    public CopyWorkspaceFiles() {
+    }
+    
     /**
      * @param context
      * @return
@@ -42,7 +58,8 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
      * @see hudson.plugins.copyartifact.operation.AbstractFilePathCopyOperation#getSrcDir(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
      */
     @Override
-    protected FilePath getSrcDir(CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    @CheckForNull
+    protected FilePath getSrcDir(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         Run<?, ?> src = context.getSrc();
         if (!(src instanceof AbstractBuild<?, ?>)) {
             context.logInfo("Workspaces are available only for AbstractBuild.");
@@ -51,5 +68,14 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
         return ((AbstractBuild<?, ?>)src).getWorkspace();
     }
     
-    
+    /**
+     * Descriptor for {@link CopyWorkspaceFiles}
+     */
+    @Extension
+    public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.CopyWorkspaceFiles_DisplayName();
+        }
+    }
 }

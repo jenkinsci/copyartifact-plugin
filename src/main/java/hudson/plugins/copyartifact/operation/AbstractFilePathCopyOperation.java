@@ -30,19 +30,36 @@ import hudson.os.PosixException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.Collections;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
+import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
 /**
- *
+ * Copy files from {@link FilePath}.
+ * 
+ * @since 2.0
  */
 public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperation {
+    /**
+     * {@link FileInfo} for {@link FilePath}.
+     */
     protected class FileInfoImpl extends FileInfo {
         private final FilePath src;
         private final String relativePath;
 
-        public FileInfoImpl(FilePath src, FilePath baseDir) {
+        /**
+         * ctor
+         * 
+         * @param src
+         * @param baseDir
+         */
+        public FileInfoImpl(@Nonnull FilePath src, @Nonnull FilePath baseDir) {
             this.src = src;
             String relativePath = src.getRemote().substring(baseDir.getRemote().length());
             if (relativePath.startsWith("\\") || relativePath.startsWith("/")) {
@@ -51,23 +68,49 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
             this.relativePath = relativePath;
         }
 
+        /**
+         * @param path
+         * @return
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getRelativeFrom(hudson.FilePath)
+         */
         @Override
-        public FilePath getRelativeFrom(FilePath path) {
+        @Nonnull
+        public FilePath getRelativeFrom(@Nonnull FilePath path) {
             return new FilePath(path, relativePath);
         }
 
+        /**
+         * @return
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getFilename()
+         */
         @Override
+        @Nonnull
         public String getFilename() {
             return src.getName();
         }
 
+        /**
+         * @return
+         * @throws IOException
+         * @throws InterruptedException
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#open()
+         */
         @Override
+        @Nonnull
         public InputStream open() throws IOException, InterruptedException {
             return src.read();
         }
 
+        /**
+         * @param dest
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#copyMetaInfoTo(hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+         */
         @Override
-        public void copyMetaInfoTo(FilePath dest, CopyArtifactCopyContext context) throws IOException, InterruptedException {
+        @Nonnull
+        public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
             super.copyMetaInfoTo(dest, context);
             
             try {
@@ -86,8 +129,18 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
     
     
     
+    /**
+     * Additional to original behavior, handles symbolic links.
+     * 
+     * @param file
+     * @param path
+     * @param context
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#copyOne(hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo, hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     */
     @Override
-    protected void copyOne(FileInfo file, FilePath path, CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    protected void copyOne(@Nonnull FileInfo file, @Nonnull FilePath path, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         if (file instanceof FileInfoImpl) {    // this should be.
             FileInfoImpl s = (FileInfoImpl)file;
             String link = s.src.readLink();
@@ -108,8 +161,20 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
      * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#scanFilesToCopy(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
      */
     @Override
-    protected Iterable<? extends FileInfoImpl> scanFilesToCopy(CopyArtifactCopyContext context) throws IOException, InterruptedException {
-        final FilePath srcDir = getSrcDir(context);
+    @Nonnull
+    protected Iterable<? extends FileInfoImpl> scanFilesToCopy(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
+        FilePath srcBaseDir = getSrcDir(context);
+        if (srcBaseDir == null || !srcBaseDir.exists()) {
+            return Collections.<FileInfoImpl>emptyList();
+        }
+        
+        final FilePath srcDir = !StringUtils.isBlank(context.getSrcBaseDir())
+                ? new FilePath(srcBaseDir, context.getSrcBaseDir())
+                : srcBaseDir;
+        if (!srcDir.exists()) {
+            return Collections.<FileInfoImpl>emptyList();
+        }
+        
         FilePath[] list = srcDir.list(
                 context.getIncludes(),
                 context.getExcludes(),
@@ -126,5 +191,15 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         );
     }
     
-    protected abstract FilePath getSrcDir(CopyArtifactCopyContext context) throws IOException, InterruptedException ;
+    /**
+     * Returns the source directory to copy files from.
+     * You do not need to handle {@link CopyArtifactCopyContext#getSrcBaseDir()
+     * 
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @CheckForNull
+    protected abstract FilePath getSrcDir(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException ;
 }

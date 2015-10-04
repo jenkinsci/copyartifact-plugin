@@ -25,13 +25,20 @@
 package hudson.plugins.copyartifact.operation;
 
 
+import hudson.Extension;
 import hudson.FilePath;
+import hudson.plugins.copyartifact.CopyArtifactOperationDescriptor;
 import hudson.plugins.copyartifact.VirtualFileScanner;
 import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.util.Collections;
+
+import javax.annotation.Nonnull;
+
+import org.apache.commons.lang.StringUtils;
+import org.kohsuke.stapler.DataBoundConstructor;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -40,36 +47,68 @@ import jenkins.model.ArtifactManager;
 import jenkins.util.VirtualFile;
 
 /**
- *
+ * Copy files from {@link ArtifactManager}.
+ * 
+ * @since 2.0
  */
 public class CopyArtifactFiles extends AbstractCopyOperation {
+    /**
+     * {@link FileInfo} wrapping {@link VirtualFile}.
+     */
     protected class FileInfoImpl extends FileInfo {
         private final VirtualFileWithPathInfo file;
         
-        protected FileInfoImpl(VirtualFileWithPathInfo file) {
+        /**
+         * @param file
+         */
+        protected FileInfoImpl(@Nonnull VirtualFileWithPathInfo file) {
             this.file = file;
         }
 
+        /**
+         * @param path
+         * @return
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getRelativeFrom(hudson.FilePath)
+         */
         @Override
-        public FilePath getRelativeFrom(FilePath path) {
+        @Nonnull
+        public FilePath getRelativeFrom(@Nonnull FilePath path) {
             for (String fragment : file.pathFragments) {
                 path = new FilePath(path, fragment);
             }
             return path;
         }
 
+        /**
+         * @return
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getFilename()
+         */
         @Override
+        @Nonnull
         public String getFilename() {
             return file.file.getName();
         }
 
+        /**
+         * @return
+         * @throws IOException
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#open()
+         */
         @Override
+        @Nonnull
         public InputStream open() throws IOException {
             return file.file.open();
         }
 
+        /**
+         * @param dest
+         * @param context
+         * @throws IOException
+         * @throws InterruptedException
+         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#copyMetaInfoTo(hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+         */
         @Override
-        public void copyMetaInfoTo(FilePath dest, CopyArtifactCopyContext context) throws IOException, InterruptedException {
+        public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
             super.copyMetaInfoTo(dest, context);
             try {
                 dest.touch(file.file.lastModified());
@@ -79,8 +118,22 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
     }
     
+    /**
+     * 
+     */
+    @DataBoundConstructor
+    public CopyArtifactFiles() {
+    }
+    
+    /**
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#init(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     */
     @Override
-    public boolean init(CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    public boolean init(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         ArtifactManager manager = context.getSrc().getArtifactManager();
         VirtualFile srcDir = manager.root();
         if (srcDir == null || !srcDir.exists()) {
@@ -90,10 +143,26 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         return super.init(context);
     }
     
+    /**
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#scanFilesToCopy(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     */
     @Override
-    public Iterable<? extends FileInfoImpl> scanFilesToCopy(CopyArtifactCopyContext context) throws IOException, InterruptedException {
+    @Nonnull
+    public Iterable<? extends FileInfoImpl> scanFilesToCopy(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
         ArtifactManager manager = context.getSrc().getArtifactManager();
         VirtualFile srcDir = manager.root();
+        
+        if (StringUtils.isBlank(context.getSrcBaseDir())) {
+            srcDir = srcDir.child(context.getSrcBaseDir());
+        }
+        
+        if (srcDir == null || !srcDir.exists()) {
+            return Collections.emptyList();
+        }
         
         VirtualFileScanner scanner = new VirtualFileScanner(
                 context.getIncludes(),
@@ -109,5 +178,16 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
                     }
                 }
         );
+    }
+    
+    /**
+     * Descriptor for {@link CopyArtifactFiles}
+     */
+    @Extension
+    public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.CopyArtifactFiles_DisplayName();
+        }
     }
 }

@@ -31,21 +31,16 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
-import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
-import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
-import hudson.plugins.copyartifact.CopyArtifactOperation.Result;
-import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
 import hudson.plugins.copyartifact.filter.NoBuildFilter;
 import hudson.plugins.copyartifact.operation.AbstractCopyOperation;
-import hudson.plugins.copyartifact.operation.CopyArtifactFiles;
+import hudson.plugins.copyartifact.operation.CopyLegacyArtifactFiles;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -63,11 +58,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import jenkins.model.ArtifactManager;
 import jenkins.model.Jenkins;
-
 import jenkins.tasks.SimpleBuildStep;
-import jenkins.util.VirtualFile;
 
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
@@ -307,6 +299,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.optional = optional ? Boolean.TRUE : null;
     }
 
+    /**
+     * @param fingerprintArtifacts
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
     @Deprecated
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         CopyArtifactOperation op = getOperation();
@@ -357,17 +353,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      */
     @DataBoundSetter
     public void setOperation(@CheckForNull CopyArtifactOperation operation) {
-        this.operation = (operation != null)?operation:new CopyArtifactFiles();
-    }
-
-    /**
-     * @return
-     * 
-     * @since 2.0
-     */
-    @Nonnull
-    public CopyArtifactOperation getOperation() {
-        return operation;
+        this.operation = (operation != null)?operation:new CopyLegacyArtifactFiles();
     }
 
     // Upgrade data from old format
@@ -380,7 +366,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             }
             if (obj.parameters != null) {
                 obj.setParameters(obj.parameters);
-                obj.parameters = null;
             }
             if (obj.buildFilter == null) {
                 obj.setBuildFilter(null);
@@ -390,7 +375,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 obj.setFilter(obj.filter);
                 obj.setTarget(obj.target);
                 obj.setExcludes(obj.excludes);
-                obj.setFlatten(obj.flatten);
+                obj.setFlatten((obj.flatten != null)?obj.flatten:false);
                 obj.setFingerprintArtifacts(!obj.doNotFingerprintArtifacts);
             }
             if (obj.isUpgradeNeeded()) {
@@ -556,6 +541,15 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return buildFilter;
     }
 
+    /**
+     * @return the operation performed against the target build.
+     * @since 2.0
+     */
+    @Nonnull
+    public CopyArtifactOperation getOperation() {
+        return operation;
+    }
+
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
             Jenkins jenkins = Jenkins.getInstance();
@@ -592,7 +586,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public boolean isFingerprintArtifacts() {
         CopyArtifactOperation op = getOperation();
         if (op instanceof AbstractCopyOperation) {
-            return !((AbstractCopyOperation)op).isFingerprintArtifacts();
+            return ((AbstractCopyOperation)op).isFingerprintArtifacts();
         }
         return !doNotFingerprintArtifacts;
     }
@@ -677,11 +671,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         copyContext.setListener(listener);
         copyContext.setEnvVars(env);
         copyContext.setVerbose(isVerbose());
+        copyContext.setWorkspace(workspace);
 
         switch (getOperation().perform(pick.build, copyContext)) {
         case NothingToDo:
             if (!isOptional()) {
-                // TODO
+                // TODO: filter is no longer available here.
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName, ""));
             }
             // fall through
