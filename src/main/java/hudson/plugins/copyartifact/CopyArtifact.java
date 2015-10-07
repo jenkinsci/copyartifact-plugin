@@ -365,12 +365,24 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             upgradeIfNecessary(((AbstractBuild)build).getProject());
         }
 
-        EnvVars env;
+        EnvVars env = build.getEnvironment(listener);
         if (build instanceof AbstractBuild) {
-            env = build.getEnvironment(listener);
             env.overrideAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
         } else {
-            env = new EnvVars();
+            // Abstract#getEnvironment(TaskListener) put build parameters to
+            // environments, but Run#getEnvironment(TaskListener) doesn't.
+            // That means we can't retrieve build parameters from WorkflowRun
+            // as it is a subclass of Run, not of AbstractBuild.
+            // We need expand build parameters manually.
+            // See JENKINS-26694, JENKINS-30357 for details.
+            for(ParametersAction pa: build.getActions(ParametersAction.class)) {
+                // We have to extract parameters manally as ParametersAction#buildEnvVars
+                // (overrides EnvironmentContributingAction#buildEnvVars)
+                // is applicable only for AbstractBuild.
+                for(ParameterValue pv: pa.getParameters()) {
+                    pv.buildEnvironment(build, env);
+                }
+            }
         }
 
         PrintStream console = listener.getLogger();
