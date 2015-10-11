@@ -83,7 +83,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
     private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
-    private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
 
     /**
      * The result of picking the build to copy from.
@@ -176,9 +175,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         this(projectName);
         setParameters(parameters);
-        if (selector == null) {
-            selector = DEFAULT_BUILD_SELECTOR;
-        }
         setSelector(selector);
         setOptional(optional);
         
@@ -195,7 +191,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.project = projectName;
 
         // Apply defaults to all other properties.
-        setSelector(DEFAULT_BUILD_SELECTOR);
+        setSelector(null);
         setOptional(false);
         setResultVariableSuffix(null);
         setBuildFilter(null);
@@ -271,8 +267,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @DataBoundSetter
-    public void setSelector(@Nonnull BuildSelector selector) {
-        this.selector = selector;
+    public void setSelector(@CheckForNull BuildSelector selector) {
+        this.selector = (selector != null)?selector:new StatusBuildSelector();
     }
 
     /**
@@ -361,7 +357,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public ConverterImpl(XStream2 xstream) { super(xstream); }
         @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
             if (obj.selector == null) {
-                obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
+                obj.setSelector(new StatusBuildSelector((obj.stable != null)?obj.stable.booleanValue():true));
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
             if (obj.parameters != null) {

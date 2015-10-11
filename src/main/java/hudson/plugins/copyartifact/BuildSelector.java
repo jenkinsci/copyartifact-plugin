@@ -34,15 +34,11 @@ import hudson.model.Run;
 import javax.annotation.Nonnull;
 
 /**
- * Extension point for selecting the build to copy artifacts from.
- * In a subclass override just isSelectable() for a standard loop through completed
- * builds, starting with the most recent.  Otherwise override getBuild() to provide
- * different build selection logic.
- * @author Alan Harder
+ * Extension point for enumerating builds to copy artifacts from.
+ * Subclasses should override {@link #getNextBuild(Job, CopyArtifactPickContext)}.
  * 
- * @deprecated inherit {@link BuildSelector2} instead.
+ * @author Alan Harder
  */
-@Deprecated
 public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint {
     /**
      * @param job       the job to pick a build from.
@@ -77,6 +73,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
         context.setLastMatchBuild(null);
         while (true) {
             Run<?, ?> candidate = getNextBuild(job, context);
+            context.setLastMatchBuild(candidate);
             if (candidate == null) {
                 context.logDebug("{0}: No more matching builds.", getDescriptor().getDisplayName());
                 return null;
@@ -85,6 +82,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             if (context.getBuildFilter() != null) {
                 if (!context.getBuildFilter().isSelectable(candidate, context)) {
                     context.logDebug("{0}: {1} is declined by the filter", getDescriptor().getDisplayName(), candidate.getDisplayName());
+                    continue;
                 }
             }
             context.logDebug("{0}: {1} satisfied conditions.", getDescriptor().getDisplayName(), candidate.getDisplayName());

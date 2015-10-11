@@ -23,7 +23,7 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry field="stable">
-    <f:checkbox title="${%Stable build only}"/>
+  <f:entry field="buildStatus" title="${%Build status}">
+    <f:enum>${it.displayName}</f:enum>
   </f:entry>
 </j:jelly>
