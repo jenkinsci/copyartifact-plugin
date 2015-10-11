@@ -104,10 +104,24 @@ public class ParametersBuildFilter extends BuildFilter {
         List<StringParameterValue> filters = getFilerParameters(context);
         for (StringParameterValue spv : filters) {
             if (!spv.value.equals(otherEnv.get(spv.getName()))) {
+                context.logDebug(
+                        "{0}: {1} is declined",
+                        getDisplayName(),
+                        run.getDisplayName()
+                );
                 return false;
             }
         }
         return true;
+    }
+    
+    @Override
+    public String getDisplayName() {
+        return String.format(
+                "%s (%s)",
+                super.getDisplayName(),
+                getParamsToMatch()
+        );
     }
     
     @Extension

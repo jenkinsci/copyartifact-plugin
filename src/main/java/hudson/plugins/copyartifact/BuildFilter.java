@@ -30,7 +30,6 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 
 import jenkins.model.Jenkins;
@@ -106,5 +105,25 @@ public class BuildFilter extends AbstractDescribableImpl<BuildFilter> {
         allFilters.add(0, NoBuildFilter.DESCRIPTOR);
         
         return allFilters;
+    }
+    
+    /**
+     * Returns the display name for this filter.
+     * You can override this to output configurations of this filter
+     * in verbose logs.
+     * 
+     * @return the display name for this filter.
+     * 
+     * @since 2.0
+     */
+    public String getDisplayName() {
+        try {
+            return getDescriptor().getDisplayName();
+        } catch (AssertionError e) {
+            // getDescriptor throws AssertionException
+            // if there's no descriptor available
+            // (e.g. selectors in unit tests)
+            return getClass().getName();
+        }
     }
 }

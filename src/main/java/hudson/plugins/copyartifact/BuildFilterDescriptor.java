@@ -24,11 +24,15 @@
 
 package hudson.plugins.copyartifact;
 
+import java.util.List;
+
 import hudson.model.Descriptor;
 
 /**
  * Descriptor for {@link BuildFilter}
  */
 public abstract class BuildFilterDescriptor extends Descriptor<BuildFilter> {
-
+    public List<BuildFilterDescriptor> getDescriptorList() {
+        return BuildFilter.all();
+    }
 }

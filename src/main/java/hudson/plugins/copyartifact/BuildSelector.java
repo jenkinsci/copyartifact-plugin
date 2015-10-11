@@ -75,17 +75,21 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             Run<?, ?> candidate = getNextBuild(job, context);
             context.setLastMatchBuild(candidate);
             if (candidate == null) {
-                context.logDebug("{0}: No more matching builds.", getDescriptor().getDisplayName());
+                context.logDebug("{0}: No more matching builds.", getDisplayName());
                 return null;
             }
-            context.logDebug("{0}: {1} found", getDescriptor().getDisplayName(), candidate.getDisplayName());
-            if (context.getBuildFilter() != null) {
-                if (!context.getBuildFilter().isSelectable(candidate, context)) {
-                    context.logDebug("{0}: {1} is declined by the filter", getDescriptor().getDisplayName(), candidate.getDisplayName());
-                    continue;
-                }
+            context.logDebug("{0}: {1} found", getDisplayName(), candidate.getDisplayName());
+            BuildFilter filter = context.getBuildFilter();
+            if (!filter.isSelectable(candidate, context)) {
+                context.logDebug(
+                        "{0}: {1} is declined by the filter {2}",
+                        getDisplayName(),
+                        candidate.getDisplayName(),
+                        filter.getDisplayName()
+                );
+                continue;
             }
-            context.logDebug("{0}: {1} satisfied conditions.", getDescriptor().getDisplayName(), candidate.getDisplayName());
+            context.logDebug("{0}: {1} satisfied conditions.", getDisplayName(), candidate.getDisplayName());
             return candidate;
         }
     }
@@ -110,6 +114,10 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     }
 
     /**
+     * Returns the display name for this selector.
+     * You can override this to output configurations of this selector
+     * in verbose logs.
+     * 
      * @return the display name for this selector.
      * 
      * @since 2.0

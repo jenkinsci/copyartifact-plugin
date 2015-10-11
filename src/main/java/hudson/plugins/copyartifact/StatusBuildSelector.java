@@ -186,6 +186,15 @@ public class StatusBuildSelector extends BuildSelector {
         return null;
     }
     
+    @Override
+    public String getDisplayName() {
+        return String.format(
+                "%s (%s)",
+                super.getDisplayName(),
+                getBuildStatus().toString()
+        );
+    }
+    
     @Extension(ordinal=100)
     public static final Descriptor<BuildSelector> DESCRIPTOR =
             new SimpleBuildSelectorDescriptor(

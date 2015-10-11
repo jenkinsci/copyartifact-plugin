@@ -1,7 +1,7 @@
 <!--
 The MIT License
 
-Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
+Copyright (c) 2015 IKEDA Yasuyuki
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,22 +22,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry title="${%Project name}" field="projectName">
-    <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
-  </f:entry>
-  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
-  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filters}" descriptors="${descriptor.buildFilterDescriptorList}" />
-  <f:entry field="optional">
-    <f:checkbox title="${%Optional}" />
-  </f:entry>
-  <f:entry field="verbose">
-    <f:checkbox title="${%Debug output}" />
-  </f:entry>
-  <f:advanced>
-    <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
-      <f:textbox/>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+    <f:entry title="${%Build filter}" field="buildFilterList">
+      <f:hetero-list name="buildFilterList" hasHeader="true"
+        descriptors="${descriptor.descriptorList}" items="${instance.buildFilterList}" />
     </f:entry>
-  </f:advanced>
-  <f:dropdownDescriptorSelector field="operation" title="${%Operation}" />
 </j:jelly>
