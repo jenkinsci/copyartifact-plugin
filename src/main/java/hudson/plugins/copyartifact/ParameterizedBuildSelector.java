@@ -23,10 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
@@ -42,7 +41,6 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class ParameterizedBuildSelector extends BuildSelector {
     private String parameterName;
-    private static final Logger LOG = Logger.getLogger(ParameterizedBuildSelector.class.getName());
 
     @DataBoundConstructor
     public ParameterizedBuildSelector(String parameterName) {
@@ -53,22 +51,30 @@ public class ParameterizedBuildSelector extends BuildSelector {
         return parameterName;
     }
 
-    @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        String xml = resolveParameter(env);
+    @CheckForNull
+    private BuildSelector getSelector(@Nonnull CopyArtifactPickContext context) {
+        String xml = resolveParameter(context);
         if (xml == null) {
             return null;
         }
-        BuildSelector selector = null;
         try {
-            selector = BuildSelectorParameter.getSelectorFromXml(xml);
+            return BuildSelectorParameter.getSelectorFromXml(xml);
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, String.format("Failed to resolve selector: %s", xml), e);
+            context.logException(String.format("Failed to resolve selector: %s", xml), e);
             return null;
         }
-        return selector.getBuild(job, env, filter, parent);
     }
-
+    
+    @Override
+    public Run<?, ?> pickBuildToCopyFrom(Job<?, ?> job, CopyArtifactPickContext context) {
+        BuildSelector selector = getSelector(context);
+        if (selector == null) {
+            context.logInfo("No selector was resolved.");
+            return null;
+        }
+        return selector.pickBuildToCopyFrom(job, context);
+    }
+    
     /**
      * Expand the parameter and resolve it to a xstream expression.
      * <ol>
@@ -79,25 +85,26 @@ public class ParameterizedBuildSelector extends BuildSelector {
      *   <li>Otherwise, considers a variable name.</li>
      * </ol>
      * 
-     * @param env
+     * @param context
      * @return xstream expression.
      */
-    private String resolveParameter(EnvVars env) {
+    @CheckForNull
+    private String resolveParameter(@Nonnull CopyArtifactPickContext context) {
         if (StringUtils.isBlank(getParameterName())) {
-            LOG.log(Level.WARNING, "Parameter name is not specified");
+            context.logInfo("Parameter name is not specified");
             return null;
         }
         if (getParameterName().contains("<")) {
-            LOG.log(Level.FINEST, "{0} is considered a xstream expression", getParameterName());
+            context.logDebug("{0} is considered a xstream expression", getParameterName());
             return getParameterName();
         }
         if (getParameterName().contains("$")) {
-            LOG.log(Level.FINEST, "{0} is considered a variable expression", getParameterName());
-            return env.expand(getParameterName());
+            context.logDebug("{0} is considered a variable expression", getParameterName());
+            return context.getEnvVars().expand(getParameterName());
         }
-        String xml = env.get(getParameterName());
+        String xml = context.getEnvVars().get(getParameterName());
         if (xml == null) {
-            LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
+            context.logInfo("{0} is not defined", getParameterName());
         }
         return xml;
     }
