@@ -23,50 +23,28 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.model.AbstractBuild;
 import hudson.model.Descriptor;
-import hudson.model.Run;
-import java.io.IOException;
-import java.io.PrintStream;
-import org.kohsuke.stapler.DataBoundConstructor;
+import hudson.plugins.copyartifact.operation.CopyWorkspaceFiles;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 
 /**
  * Copy artifacts from the *workspace* of the latest completed build.
  * @author Alan Harder
+ * 
+ * @deprecated use {@link CopyWorkspaceFiles} instead.
  */
-public class WorkspaceSelector extends BuildSelector {
-
-    @DataBoundConstructor
-    public WorkspaceSelector() {
-    }
-
-    @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return true;
-    }
-
-    /*
-    // TODO: No longer supports to copy from non-artifacts.
-    @Override protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
-        if (src instanceof AbstractBuild) {
-            FilePath srcDir = ((AbstractBuild) src).getWorkspace();
-            if (srcDir != null && srcDir.exists()) {
-                return srcDir;
-            } else {
-                console.println(Messages.CopyArtifact_MissingSrcWorkspace()); // (see JENKINS-3330)
-                return null;
-            }
-        } else {
-            return super.getSourceDirectory(src, console);
-        }
-    }
-    */
-
-    @Extension(ordinal=-20)
+@Deprecated
+public class WorkspaceSelector extends Version1BuildSelector {
     public static final Descriptor<BuildSelector> DESCRIPTOR =
             new SimpleBuildSelectorDescriptor(
                 WorkspaceSelector.class, Messages._WorkspaceSelector_DisplayName());
+    
+    @Override
+    public MigratedConfiguration migrateToVersion2() {
+        MigratedConfiguration conf = new MigratedConfiguration(
+                new StatusBuildSelector(StatusBuildSelector.BuildStatus.Completed)
+        );
+        conf.copyArtifactOperation = new CopyWorkspaceFiles();
+        return conf;
+    }
 }

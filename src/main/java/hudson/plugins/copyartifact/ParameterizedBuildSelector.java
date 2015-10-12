@@ -23,6 +23,8 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.io.IOException;
+
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
@@ -66,7 +68,9 @@ public class ParameterizedBuildSelector extends BuildSelector {
     }
     
     @Override
-    public Run<?, ?> pickBuildToCopyFrom(Job<?, ?> job, CopyArtifactPickContext context) {
+    public Run<?, ?> pickBuildToCopyFrom(Job<?, ?> job, CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
         BuildSelector selector = getSelector(context);
         if (selector == null) {
             context.logInfo("No selector was resolved.");

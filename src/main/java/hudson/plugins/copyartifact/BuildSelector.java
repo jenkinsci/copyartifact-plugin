@@ -23,6 +23,8 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.io.IOException;
+
 import hudson.EnvVars;
 import hudson.ExtensionPoint;
 import hudson.Util;
@@ -48,7 +50,9 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * 
      * @since 2.0
      */
-    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?,?> job, @Nonnull final CopyArtifactPickContext context) {
+    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?,?> job, @Nonnull final CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
         if (!Util.isOverridden(
                 BuildSelector.class,
                 getClass(),
@@ -113,7 +117,9 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * 
      * @since 2.0
      */
-    public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) {
+    public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
         // Though this can be protected,
         // Util#isOverridden is applicable only for public methods.
         return null;

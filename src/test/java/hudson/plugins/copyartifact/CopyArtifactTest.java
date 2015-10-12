@@ -527,15 +527,9 @@ public class CopyArtifactTest {
     /** Test copy from workspace instead of artifacts area */
     public void testCopyFromWorkspace() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        CopyArtifact ca = new CopyArtifact(other.getName());
-        ca.setSelector(new StatusBuildSelector(true));
-        ca.setVerbose(true);
-        CopyWorkspaceFiles cwf = new CopyWorkspaceFiles();
-        cwf.setIncludes("**/*.txt");
-        cwf.setTargetDir("");
-        cwf.setFlatten(true);
-        cwf.setFingerprintArtifacts(true);
-        ca.setOperation(cwf);
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(), null, new WorkspaceSelector(),
+                "**/*.txt", "", true, false, true);
+        assertTrue(ca.upgradeFromCopyartifact10());
         p.getBuildersList().add(ca);
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());

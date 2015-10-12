@@ -24,6 +24,7 @@
 
 package hudson.plugins.copyartifact.selector;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -175,7 +176,9 @@ public class FallbackBuildSelector extends BuildSelector {
      */
     @Override
     @CheckForNull
-    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) {
+    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
         for (Entry entry : getEntryList()) {
             CopyArtifactPickContext childContext = context.clone();
             if (entry.getBuildFilter() instanceof NoBuildFilter) {

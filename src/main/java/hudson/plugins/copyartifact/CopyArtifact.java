@@ -38,9 +38,11 @@ import hudson.matrix.MatrixProject;
 import hudson.maven.MavenModuleSet;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import hudson.plugins.copyartifact.filter.AndBuildFilter;
 import hudson.plugins.copyartifact.filter.NoBuildFilter;
 import hudson.plugins.copyartifact.operation.AbstractCopyOperation;
 import hudson.plugins.copyartifact.operation.CopyLegacyArtifactFiles;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -380,6 +382,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 // The upgrade will be performed by upgradeCopyArtifact.
                 setUpgradeNeeded();
             }
+            obj.upgradeFromCopyartifact10();
         }
     }
 
@@ -433,6 +436,45 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             // No CopyArtifact is upgraded.
             LOGGER.warning("Update of CopyArtifact is scheduled, but no CopyArtifact to upgrade was found!");
         }
+    }
+
+    @SuppressWarnings("deprecation")
+    public boolean upgradeFromCopyartifact10() {
+        if (!(getSelector() instanceof Version1BuildSelector)) {
+            return false;
+        }
+        Version1BuildSelector selector = (Version1BuildSelector)getSelector();
+        Version1BuildSelector.MigratedConfiguration conf = selector.migrateToVersion2();
+        setSelector(conf.buildSelector);
+        if (conf.buildFilter != null && !(conf.buildFilter instanceof NoBuildFilter)) {
+            if (getBuildFilter() instanceof NoBuildFilter) {
+                setBuildFilter(conf.buildFilter);
+            } else {
+                setBuildFilter(new AndBuildFilter(
+                        conf.buildFilter,
+                        getBuildFilter()
+                ));
+            }
+        }
+        if (conf.copyArtifactOperation != null) {
+            if (
+                    conf.copyArtifactOperation instanceof AbstractCopyOperation
+                    && getOperation() != null
+                    && getOperation() instanceof AbstractCopyOperation
+            ) {
+                // copy configurations.
+                AbstractCopyOperation from = (AbstractCopyOperation)getOperation();
+                AbstractCopyOperation to = (AbstractCopyOperation)conf.copyArtifactOperation;
+                to.setTargetDir(from.getTargetDir());
+                to.setSrcBaseDir(from.getSrcBaseDir());
+                to.setIncludes(from.getIncludes());
+                to.setExcludes(from.getExcludes());
+                to.setFingerprintArtifacts(from.isFingerprintArtifacts());
+                to.setFlatten(from.isFlatten());
+            }
+            setOperation(conf.copyArtifactOperation);
+        }
+        return true;
     }
 
     public String getProjectName() {
@@ -689,7 +731,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * @return
      * @since 2.0
      */
-    public static CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context) {
+    public static CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
         Job<?, ?> job = context.getJenkins().getItem(
                 context.getProjectName(),
                 getItemGroup(context.getCopierBuild()),
