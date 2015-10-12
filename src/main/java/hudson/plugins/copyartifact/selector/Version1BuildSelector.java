@@ -75,7 +75,12 @@ public abstract class Version1BuildSelector extends BuildSelector {
         public CopyArtifactOperation copyArtifactOperation;
         
         public MigratedConfiguration(@Nonnull BuildSelector buildSelector) {
+            this(buildSelector, null);
+        }
+        
+        public MigratedConfiguration(@Nonnull BuildSelector buildSelector, @CheckForNull BuildFilter buildFilter) {
             this.buildSelector = buildSelector;
+            this.buildFilter = buildFilter;
         }
     }
     
