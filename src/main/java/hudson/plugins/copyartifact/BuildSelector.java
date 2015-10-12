@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 /**
  * Extension point for enumerating builds to copy artifacts from.
  * Subclasses should override {@link #getNextBuild(Job, CopyArtifactPickContext)}.
+ * use {@link BuildSelectorDescriptor} for its descriptor.
  * 
  * @author Alan Harder
  */
@@ -57,7 +58,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
         )) {
             // backward compatibility.
             context.logInfo("WARNING: {0} is desined for the older version of Copyartifact and might not fully finctions.", getDisplayName());
-            return getBuild(
+            Run<?, ?> candidate = getBuild(
                     job,
                     context.getEnvVars(),
                     new BuildFilter() {
@@ -68,6 +69,12 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
                     },
                     context.getCopierBuild()
             );
+            if (candidate != null) {
+                context.logDebug("{0}: {1} found", getDisplayName(), candidate.getFullDisplayName());
+            } else {
+                context.logDebug("{0}: No matching build", getDisplayName());
+            }
+            return candidate;
         }
         
         context.setLastMatchBuild(null);
@@ -82,14 +89,13 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             BuildFilter filter = context.getBuildFilter();
             if (!filter.isSelectable(candidate, context)) {
                 context.logDebug(
-                        "{0}: {1} is declined by the filter {2}",
-                        getDisplayName(),
-                        candidate.getDisplayName(),
+                        "{0}: declined by the filter {1}",
+                        candidate.getFullDisplayName(),
                         filter.getDisplayName()
                 );
                 continue;
             }
-            context.logDebug("{0}: {1} satisfied conditions.", getDisplayName(), candidate.getDisplayName());
+            context.logDebug("{0}: satisfied conditions.", candidate.getFullDisplayName());
             return candidate;
         }
     }

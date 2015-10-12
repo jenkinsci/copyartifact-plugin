@@ -56,9 +56,8 @@ public class NotBuildFilter extends BuildFilter {
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
         boolean result = getBuildFilter().isSelectable(candidate, context);
         context.logDebug(
-                "{0}: filter result for {1} by {2} is reverted: {3} -> {4}",
-                getDisplayName(),
-                candidate.getDisplayName(),
+                "{0}: filter result by {1} is reverted: {2} -> {3}",
+                candidate.getFullDisplayName(),
                 getBuildFilter().getDisplayName(),
                 result,
                 !result

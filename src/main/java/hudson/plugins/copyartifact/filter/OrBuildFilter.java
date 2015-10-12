@@ -24,6 +24,7 @@
 
 package hudson.plugins.copyartifact.filter;
 
+import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nonnull;
@@ -44,25 +45,46 @@ public class OrBuildFilter extends BuildFilter {
     @Nonnull
     private final List<BuildFilter> buildFilterList;
     
+    /**
+     * @param buildFilterList
+     */
     @DataBoundConstructor
     public OrBuildFilter(@Nonnull List<BuildFilter> buildFilterList) {
         this.buildFilterList = buildFilterList;
     }
     
+    /**
+     * Convenient constructor.
+     * 
+     * @param buildFilters
+     */
+    public OrBuildFilter(@Nonnull BuildFilter... buildFilters) {
+        this(Arrays.asList(buildFilters));
+    }
+    
+    /**
+     * @return
+     */
     @Nonnull
     public List<BuildFilter> getBuildFilterList() {
         return buildFilterList;
     }
     
+    /**
+     * @param candidate
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
         for (BuildFilter filter: getBuildFilterList()) {
             if (filter.isSelectable(candidate, context)) {
                 context.logDebug(
-                        "{0}: {1} is accepted by the filter {2}",
-                        getDisplayName(),
-                        candidate.getDisplayName(),
-                        filter.getDisplayName()
+                        "{0}: accepted by the filter {1} in {2}",
+                        candidate.getFullDisplayName(),
+                        filter.getDisplayName(),
+                        getDisplayName()
                 );
                 return true;
             }
@@ -70,8 +92,15 @@ public class OrBuildFilter extends BuildFilter {
         return false;
     }
     
+    /**
+     *
+     */
     @Extension(ordinal=-101)    // bottom most
     public static class DescriptorImpl extends BuildFilterDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.OrBuildFilter_DisplayName();

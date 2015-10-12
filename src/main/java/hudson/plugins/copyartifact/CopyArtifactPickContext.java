@@ -116,7 +116,7 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
      * @see hudson.plugins.copyartifact.CopyArtifactCommonContext#clone()
      */
     @Override
-    protected CopyArtifactPickContext clone() {
+    public CopyArtifactPickContext clone() {
         return new CopyArtifactPickContext(this);
     }
 }
