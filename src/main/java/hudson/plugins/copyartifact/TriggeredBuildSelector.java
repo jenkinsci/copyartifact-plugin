@@ -178,8 +178,8 @@ public class TriggeredBuildSelector extends BuildSelector {
             AbstractBuild<?, ?> parentBuild = (AbstractBuild<?,?>)parent;
             
             Map<AbstractProject, Integer> parentUpstreamBuilds = parentBuild.getUpstreamBuilds();
-            for (AbstractProject project : parentUpstreamBuilds.keySet()) {
-                upstreamBuilds.add(project.getBuildByNumber(parentUpstreamBuilds.get(project)));
+            for (Map.Entry<AbstractProject, Integer> buildEntry : parentUpstreamBuilds.entrySet()) {
+                upstreamBuilds.add(buildEntry.getKey().getBuildByNumber(buildEntry.getValue()));
             }
 
         }
