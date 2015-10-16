@@ -105,6 +105,11 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
 
     @Deprecated
+    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
+        this(fallbackToLastSuccessful, upstreamFilterStrategy, false);
+    }
+
+    @Deprecated
     public TriggeredBuildSelector(boolean fallback) {
         this(fallback, UpstreamFilterStrategy.UseGlobalSetting, false);
     }
