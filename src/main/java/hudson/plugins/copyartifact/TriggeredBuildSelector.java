@@ -95,13 +95,13 @@ public class TriggeredBuildSelector extends BuildSelector {
     };
     private Boolean fallbackToLastSuccessful;
     private final UpstreamFilterStrategy upstreamFilterStrategy;
-    private Boolean allowUpstreamDependencies;
+    private boolean allowUpstreamDependencies;
 
     @DataBoundConstructor
     public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
         this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
         this.upstreamFilterStrategy = upstreamFilterStrategy;
-        this.allowUpstreamDependencies = allowUpstreamDependencies ? Boolean.TRUE : null;
+        this.allowUpstreamDependencies = allowUpstreamDependencies;
     }
 
     @Deprecated
@@ -143,7 +143,7 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     public boolean isAllowUpstreamDependencies() {
-        return allowUpstreamDependencies != null && allowUpstreamDependencies.booleanValue();
+        return allowUpstreamDependencies;
     }
     
     @Override
