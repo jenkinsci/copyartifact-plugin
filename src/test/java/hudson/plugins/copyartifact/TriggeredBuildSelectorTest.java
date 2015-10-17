@@ -27,6 +27,8 @@ package hudson.plugins.copyartifact;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
+import java.io.File;
+import org.apache.commons.io.FileUtils;
 
 import hudson.Util;
 import hudson.maven.MavenModuleSet;
@@ -48,6 +50,7 @@ import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
+import org.jvnet.hudson.test.SleepBuilder;
 
 /**
  * Tests for {@link TriggeredBuildSelector}.
@@ -69,7 +72,7 @@ public class TriggeredBuildSelectorTest {
             p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
-                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
+                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, false),
                     "",
                     "",
                     false,
@@ -100,7 +103,7 @@ public class TriggeredBuildSelectorTest {
             p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
-                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, false),
                     "",
                     "",
                     false,
@@ -131,7 +134,7 @@ public class TriggeredBuildSelectorTest {
             p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     "${upstream}",
                     "",
-                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                     "",
                     "",
                     false,
@@ -186,7 +189,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, false),
                 "artifact.txt",
                 "",
                 false,
@@ -235,7 +238,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                 "artifact.txt",
                 "",
                 false,
@@ -282,7 +285,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, false),
                 "artifact.txt",
                 "",
                 false,
@@ -331,7 +334,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                 "artifact.txt",
                 "",
                 false,
@@ -388,7 +391,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, false),
                 "artifact.txt",
                 "",
                 false,
@@ -475,7 +478,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest),
+                new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, false),
                 "artifact.txt",
                 "",
                 false,
@@ -555,7 +558,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream.getName(),
                 "",
-                new TriggeredBuildSelector(false, null),
+                new TriggeredBuildSelector(false, null, false),
                 "artifact.txt",
                 "",
                 false,
@@ -602,24 +605,139 @@ public class TriggeredBuildSelectorTest {
         TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
         
         d.setGlobalUpstreamFilterStrategy(null);
-        assertFalse(new TriggeredBuildSelector(false, null).isUseNewest());
+        assertFalse(new TriggeredBuildSelector(false, null, false).isUseNewest());
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting);
-        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false).isUseNewest());
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
-        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false).isUseNewest());
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
-        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting).isUseNewest());
+        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false).isUseNewest());
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
-        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest).isUseNewest());
+        assertTrue(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest, false).isUseNewest());
         
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
-        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest).isUseNewest());
+        assertFalse(new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest, false).isUseNewest());
     }
     
+    private String getDownstreamAfterOverlappingFlow(boolean allowUpstreamDependencies) throws Exception {
+        //
+        //     upstream   |   intermediate   |   downstream
+        //
+        // Initital build
+        // 1     #1 -------.
+        // 2               '-----> #1 ---------.
+        // 3                                   '-----> #1
+        //
+        // Direct trigger of intermediate, then upstream
+        // 4                 *---> #2 -------.
+        // 5     #2 -----.                   |
+        // 6             |                   '-------> #2
+        // 7             '-------> #3 -----.
+        // 8                               '---------> #3
+        //
+
+        FreeStyleProject upstream = j.createFreeStyleProject("upstream");
+        FreeStyleProject intermediate = j.createFreeStyleProject("intermediate");
+        FreeStyleProject downstream = j.createFreeStyleProject("downstream");
+
+        upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
+        upstream.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
+        upstream.getPublishersList().add(new BuildTrigger(intermediate.getName(), Result.SUCCESS));
+        upstream.setQuietPeriod(0);
+
+        intermediate.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                upstream.getName(),
+                "",
+                new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, allowUpstreamDependencies),
+                "artifact.txt",
+                "",
+                false,
+                false,
+                true
+        ));        
+        intermediate.getBuildersList().add(new SleepBuilder(1000));
+        intermediate.getPublishersList().add(new ArtifactArchiver("artifact.txt", "", false, false));
+        intermediate.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
+        intermediate.setQuietPeriod(0);
+        
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                upstream.getName(),
+                "",
+                new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, allowUpstreamDependencies),
+                "artifact.txt",
+                "upstream/",
+                false,
+                false,
+                true
+        ));
+        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                intermediate.getName(),
+                "",
+                new TriggeredBuildSelector(true, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, allowUpstreamDependencies),
+                "artifact.txt",
+                "intermediate/",
+                false,
+                false,
+                true
+        ));
+        downstream.getPublishersList().add(new ArtifactArchiver("upstream/artifact.txt,intermediate/artifact.txt", "", false, false));
+        downstream.setQuietPeriod(0);
+        
+        upstream.save();
+        intermediate.save();
+        downstream.save();
+        j.jenkins.rebuildDependencyGraph();
+
+        // First (initial) build for each job
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue1"))));
+        
+        j.waitUntilNoActivity();
+
+        // Trigger directly an 'intermediate#2' build, which depends on 'upstream#1'
+        intermediate.scheduleBuild2(0, new Cause.UserCause()).waitForStart();
+
+        // 'intermediate#2' build is running. Meanwhile, a new 'upstream#2' is completing and triggers 'intermediate#3':
+        upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue2")));
+        
+        j.waitUntilNoActivity();
+
+        assertEquals("Number of upstream builds", 2, upstream.getBuilds().size());
+        assertEquals("Number of intermediate builds", 3, intermediate.getBuilds().size());
+        assertEquals("Number of downstream builds", 3, downstream.getBuilds().size());
+
+        // Get the 'downstream#2' build ...
+        FreeStyleBuild downstreamBuild2 = downstream.getBuildByNumber(2);
+        assertNotNull(downstreamBuild2);
+        j.assertBuildStatusSuccess(downstreamBuild2);
+        // ... that were triggered by the directly triggered 'intermediate#2' build.
+        Cause.UpstreamCause cause = downstreamBuild2.getCause(Cause.UpstreamCause.class);
+        assertNotNull(cause);
+        assertEquals("intermediate #2", cause.getUpstreamRun().getFullDisplayName());
+
+        // Return artifacts from downstream#2. One of them was copied from 'upstream' that is
+        // - either the last successful upstream#2 build
+        // - or upstream#1, which is the same that the triggering intermediate#2 depends on
+        // depending on the value of allowUpstreamDependencies
+        String artifactFromUpstream = FileUtils.readFileToString(new File(downstreamBuild2.getArtifactsDir(), "upstream/artifact.txt"), "UTF-8");
+        String artifactFromIntermediate = FileUtils.readFileToString(new File(downstreamBuild2.getArtifactsDir(), "intermediate/artifact.txt"), "UTF-8");
+
+        return artifactFromIntermediate + "," + artifactFromUpstream;
+    }
+
+    @Test
+    public void testTryUpstreamBuildDisabled() throws Exception {
+        assertEquals("upstreamValue1,upstreamValue2", getDownstreamAfterOverlappingFlow(false));
+    }
+
+    @Test
+    public void testTryUpstreamBuildEnabled() throws Exception {
+        assertEquals("upstreamValue1,upstreamValue1", getDownstreamAfterOverlappingFlow(true));
+    }
+
     @Bug(18804)
     @Test
     public void testUpstreamWasRemoved() throws Exception {
@@ -648,7 +766,7 @@ public class TriggeredBuildSelectorTest {
             downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
-                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                     "**/*",
                     "",
                     "",
@@ -697,7 +815,7 @@ public class TriggeredBuildSelectorTest {
             downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
-                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                     "**/*",
                     "",
                     "",
@@ -747,7 +865,7 @@ public class TriggeredBuildSelectorTest {
             downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     upstream.getFullName(),
                     "",
-                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
+                    new TriggeredBuildSelector(false, TriggeredBuildSelector.UpstreamFilterStrategy.UseGlobalSetting, false),
                     "**/*",
                     "",
                     "",
@@ -781,7 +899,7 @@ public class TriggeredBuildSelectorTest {
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 String.format("%s/org.jvnet.hudson.main.test.multimod$moduleB", upstream.getName()),
                 "",
-                new TriggeredBuildSelector(false, null),
+                new TriggeredBuildSelector(false, null, false),
                 "**/*",
                 "",
                 "",

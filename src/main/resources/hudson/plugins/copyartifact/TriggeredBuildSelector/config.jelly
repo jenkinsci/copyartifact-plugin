@@ -30,5 +30,8 @@ THE SOFTWARE.
   <f:entry field="upstreamFilterStrategy" title="${%Which for multiple upstream}">
     <f:enum field="upstreamFilterStrategy">${it.displayName}</f:enum>
   </f:entry>
+  <f:entry field="allowUpstreamDependencies">
+    <f:checkbox title="${%Allow upstream build whose artifacts feed into this build}"/>
+  </f:entry>
   </f:advanced>
 </j:jelly>

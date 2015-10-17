@@ -133,7 +133,8 @@ public class DownstreamBuildSelectorTest {
                 "",
                 new TriggeredBuildSelector(
                         false,
-                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest
+                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest,
+                        false
                 ),
                 "**/*",
                 "",
@@ -302,7 +303,8 @@ public class DownstreamBuildSelectorTest {
                 "",
                 new TriggeredBuildSelector(
                         false,
-                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest
+                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest,
+                        false
                 ),
                 "**/*",
                 "",
@@ -448,7 +450,8 @@ public class DownstreamBuildSelectorTest {
                 "",
                 new TriggeredBuildSelector(
                         false,
-                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest
+                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest,
+                        false
                 ),
                 "**/*",
                 "",

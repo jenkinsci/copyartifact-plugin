@@ -27,12 +27,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Result;
 import hudson.model.AbstractProject;
+import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
@@ -93,16 +95,23 @@ public class TriggeredBuildSelector extends BuildSelector {
     };
     private Boolean fallbackToLastSuccessful;
     private final UpstreamFilterStrategy upstreamFilterStrategy;
+    private boolean allowUpstreamDependencies;
 
     @DataBoundConstructor
-    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
+    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
         this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
         this.upstreamFilterStrategy = upstreamFilterStrategy;
+        this.allowUpstreamDependencies = allowUpstreamDependencies;
+    }
+
+    @Deprecated
+    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
+        this(fallbackToLastSuccessful, upstreamFilterStrategy, false);
     }
 
     @Deprecated
     public TriggeredBuildSelector(boolean fallback) {
-        this(fallback, UpstreamFilterStrategy.UseGlobalSetting);
+        this(fallback, UpstreamFilterStrategy.UseGlobalSetting, false);
     }
     
     public boolean isFallbackToLastSuccessful() {
@@ -115,7 +124,7 @@ public class TriggeredBuildSelector extends BuildSelector {
     public UpstreamFilterStrategy getUpstreamFilterStrategy() {
         return upstreamFilterStrategy;
     }
-    
+
     /**
      * @return whether to use the newest upstream or not (use the oldest) when there are multiple upstreams.
      */
@@ -138,69 +147,61 @@ public class TriggeredBuildSelector extends BuildSelector {
         }
     }
     
+    public boolean isAllowUpstreamDependencies() {
+        return allowUpstreamDependencies;
+    }
+    
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         Run<?,?> result = null;
+
         // Upstream job for matrix will be parent project, not only individual configuration:
         List<String> jobNames = new ArrayList<String>();
         jobNames.add(job.getFullName());
         if ((job instanceof AbstractProject<?,?>) && ((AbstractProject<?,?>)job).getRootProject() != job) {
             jobNames.add(((AbstractProject<?,?>)job).getRootProject().getFullName());
         }
+
+        List<Run<?, ?>> upstreamBuilds = new ArrayList<Run<?, ?>>();
+
         for (Cause cause: parent.getCauses()) {
             if (cause instanceof UpstreamCause) {
                 UpstreamCause upstream = (UpstreamCause) cause;
-                String upstreamProject = upstream.getUpstreamProject();
-                int upstreamBuild = upstream.getUpstreamBuild();
-                if (jobNames.contains(upstreamProject)) {
-                    Run<?,?> run = job.getBuildByNumber(upstreamBuild);
-                    if (run != null && filter.isSelectable(run, env)){
-                        if (
-                                (result == null)
-                                || (isUseNewest() && result.getNumber() < run.getNumber())
-                                || (!isUseNewest() && result.getNumber() > run.getNumber())
-                        ) {
-                            result = run;
-                        }
-                    }
-                } else {
-                    // Figure out the parent job and do a recursive call to getBuild
-                    Jenkins jenkins = Jenkins.getInstance();
-                    if (jenkins == null) {
-                        // to suppress findbugs warnings.
-                        LOGGER.log(
-                                Level.SEVERE,
-                                "Jenkins instance is unavailable and cannot perform copyartifact from {0} for {1}",
-                                new Object[] {
-                                        job.getFullName(),
-                                        parent.getDisplayName(),
-                                }
-                        );
-                        return null;
-                    }
-                    Job<?,?> parentJob = jenkins.getItemByFullName(upstreamProject, Job.class);
-                    if (parentJob == null) {
-                        LOGGER.log(Level.WARNING, "Upstream project doesn't exist (may be removed): {0}", upstreamProject);
-                        continue;
-                    }
-                    if (parentJob.getBuildByNumber(upstreamBuild) == null) {
-                        LOGGER.log(Level.WARNING, "Upstream build doesn't exist (may be removed): {0} #{1}", new Object[]{upstreamProject, upstreamBuild});
-                        continue;
-                    }
-                    Run<?,?> run = getBuild(
-                        job,
-                        env,
-                        filter,
-                        parentJob.getBuildByNumber(upstreamBuild));
-                    if (run != null && filter.isSelectable(run, env)) {
-                        if (
-                                (result == null)
-                                || (isUseNewest() && result.getNumber() < run.getNumber())
-                                || (!isUseNewest() && result.getNumber() > run.getNumber())
-                        ) {
-                            result = run;
-                        }
-                    }
+                Run<?, ?> upstreamRun = upstream.getUpstreamRun();
+                if (upstreamRun != null) {
+                    upstreamBuilds.add(upstreamRun);
+                }
+            }
+        }
+
+        if (isAllowUpstreamDependencies() && (parent instanceof AbstractBuild)) {
+            AbstractBuild<?, ?> parentBuild = (AbstractBuild<?,?>)parent;
+            
+            Map<AbstractProject, Integer> parentUpstreamBuilds = parentBuild.getUpstreamBuilds();
+            for (Map.Entry<AbstractProject, Integer> buildEntry : parentUpstreamBuilds.entrySet()) {
+                upstreamBuilds.add(buildEntry.getKey().getBuildByNumber(buildEntry.getValue()));
+            }
+
+        }
+
+        for (Run<?, ?> upstreamBuild : upstreamBuilds) {
+            Run<?,?> run = null;
+
+            if (jobNames.contains(upstreamBuild.getParent().getFullName())) {
+                // Use the 'job' parameter instead of directly the 'upstreamBuild', because of Matrix jobs.
+                run = job.getBuildByNumber(upstreamBuild.getNumber());
+            } else {
+                // Figure out the parent job and do a recursive call to getBuild
+                run = getBuild(job, env, filter, upstreamBuild);
+            }
+
+            if (run != null && filter.isSelectable(run, env)){
+                if (
+                        (result == null)
+                        || (isUseNewest() && result.getNumber() < run.getNumber())
+                        || (!isUseNewest() && result.getNumber() > run.getNumber())
+                ) {
+                    result = run;
                 }
             }
         }
