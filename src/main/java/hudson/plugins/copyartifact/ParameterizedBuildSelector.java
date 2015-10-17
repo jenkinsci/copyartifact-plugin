@@ -32,6 +32,9 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.filter.AndBuildFilter;
+import hudson.plugins.copyartifact.filter.NoBuildFilter;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -67,6 +70,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
         }
     }
     
+    @SuppressWarnings("deprecation")
     @Override
     public Run<?, ?> pickBuildToCopyFrom(Job<?, ?> job, CopyArtifactPickContext context)
             throws IOException, InterruptedException
@@ -75,6 +79,31 @@ public class ParameterizedBuildSelector extends BuildSelector {
         if (selector == null) {
             context.logInfo("No selector was resolved.");
             return null;
+        }
+        if (selector instanceof Version1BuildSelector) {
+            Version1BuildSelector.MigratedConfiguration conf = 
+                    ((Version1BuildSelector)selector).migrateToVersion2();
+            if (conf.buildFilter != null && !(conf.buildFilter instanceof NoBuildFilter)) {
+                context = context.clone();
+                if (context.getBuildFilter() instanceof NoBuildFilter) {
+                    context.setBuildFilter(conf.buildFilter);
+                } else {
+                    context.setBuildFilter(new AndBuildFilter(
+                            conf.buildFilter,
+                            context.getBuildFilter()
+                    ));
+                }
+            }
+            if (conf.copyArtifactOperation != null) {
+                context.logInfo(
+                        "{0} specified {1} as copy operation, but doesn't supported by {2}."
+                        + "It may not work as you expect.",
+                        selector.getDisplayName(),
+                        conf.copyArtifactOperation.getDescriptor().getDisplayName(),
+                        getDisplayName()
+                );
+            }
+            selector = conf.buildSelector;
         }
         return selector.pickBuildToCopyFrom(job, context);
     }

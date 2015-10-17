@@ -95,7 +95,7 @@ public abstract class Version1BuildSelector extends BuildSelector {
     {
         throw new AbortException(String.format(
                 "%s is designed for copyartifact-1.0"
-                + "and the configuration should be migrated to copyartifact-2.0."
+                + " and the configuration should be migrated to copyartifact-2.0."
                 + "It can be automatically performed by restarting Jenkins."
                 , getDisplayName()
         ));

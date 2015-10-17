@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2004-2011, Sun Microsystems, Inc., Alan Harder
+ * Copyright (c) 2004-2010, Sun Microsystems, Inc., Alan Harder
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,20 +23,21 @@
  */
 package hudson.plugins.copyartifact;
 
+import hudson.plugins.copyartifact.filter.SavedBuildFilter;
 import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 
 /**
- * Copy artifacts from the latest build (ignoring the build status)
- * @author Helmut Schaa
- * @deprecated Use {@link StatusBuildSelector} instead.
+ * Copy artifacts from the saved build (marked "keep forever").
+ * @author Alan Harder
+ * @deprecated use {@link SavedBuildFilter} instead.
  */
 @Deprecated
-public class LastCompletedBuildSelector extends Version1BuildSelector {
-
+public class SavedBuildSelector extends Version1BuildSelector {
     @Override
     public MigratedConfiguration migrateToVersion2() {
         return new MigratedConfiguration(
-                new StatusBuildSelector(StatusBuildSelector.BuildStatus.Completed)
+                new StatusBuildSelector(StatusBuildSelector.BuildStatus.Completed),
+                new SavedBuildFilter()
         );
     }
 }

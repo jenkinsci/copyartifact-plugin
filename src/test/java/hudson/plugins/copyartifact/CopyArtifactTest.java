@@ -631,8 +631,10 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new SavedBuildSelector(), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new SavedBuildSelector(), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         rule.assertBuildStatusSuccess(b);
@@ -1255,8 +1257,10 @@ public class CopyArtifactTest {
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         rule.assertBuildStatusSuccess(b);
         b.keepLog(true);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "FOO=buildone",
-                new SavedBuildSelector(), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(), "FOO=buildone",
+                new SavedBuildSelector(), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         rule.assertBuildStatusSuccess(b = other.scheduleBuild2(0, new UserCause()).get());
         b.keepLog(true); // Keep #2 too, but it doesn't have FOO=buildone so should not be selected
         rule.assertBuildStatusSuccess(b = p.scheduleBuild2(0, new UserCause()).get());

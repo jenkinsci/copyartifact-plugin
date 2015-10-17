@@ -21,29 +21,35 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package hudson.plugins.copyartifact;
+package hudson.plugins.copyartifact.filter;
 
-import hudson.EnvVars;
 import hudson.Extension;
-import hudson.model.Descriptor;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.BuildFilter;
+import hudson.plugins.copyartifact.BuildFilterDescriptor;
+import hudson.plugins.copyartifact.CopyArtifactPickContext;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
- * Copy artifacts from the latest saved build (marked "keep forever").
+ * Copy artifacts from the saved build (marked "keep forever").
  * @author Alan Harder
+ * @since 2.0
  */
-public class SavedBuildSelector extends BuildSelector {
+public class SavedBuildFilter extends BuildFilter {
     @DataBoundConstructor
-    public SavedBuildSelector() { }
+    public SavedBuildFilter() { }
 
     @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?, ?> run, CopyArtifactPickContext context) {
         return run.isKeepLog();
     }
 
-    @Extension(ordinal=50)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                SavedBuildSelector.class, Messages._SavedBuildSelector_DisplayName());
+    @Extension
+    public static class DescriptorImpl extends BuildFilterDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.SavedBuildFilter_DisplayName();
+        }
+    }
 }
