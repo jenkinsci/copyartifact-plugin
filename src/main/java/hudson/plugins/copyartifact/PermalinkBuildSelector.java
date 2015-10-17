@@ -23,15 +23,18 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import hudson.Extension;
 import hudson.RelativePath;
-import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.selector.AbstractSpecificBuildSelector;
 import hudson.util.ComboBoxModel;
 import jenkins.model.Jenkins;
+
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -41,7 +44,7 @@ import org.kohsuke.stapler.QueryParameter;
  *
  * @author Kohsuke Kawaguchi
  */
-public class PermalinkBuildSelector extends BuildSelector {
+public class PermalinkBuildSelector extends AbstractSpecificBuildSelector {
     public final String id;
 
     @DataBoundConstructor
@@ -50,15 +53,15 @@ public class PermalinkBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+    @CheckForNull
+    public Run<?, ?> getBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) {
         Permalink p = job.getPermalinks().get(id);
         if (p==null)    return null;
-        Run<?,?> run = p.resolve(job);
-        return (run != null && filter.isSelectable(run, env)) ? run : null;
+        return p.resolve(job);
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<BuildSelector> {
+    public static class DescriptorImpl extends BuildSelectorDescriptor {
         @Override
         public String getDisplayName() {
             return Messages.PermalinkBuildSelector_DisplayName();
@@ -77,4 +80,5 @@ public class PermalinkBuildSelector extends BuildSelector {
             return r;
         }
     }
+
 }
