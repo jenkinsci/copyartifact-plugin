@@ -33,6 +33,7 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.io.File;
+
 import org.apache.commons.io.FileUtils;
 
 import hudson.Util;
@@ -173,9 +174,10 @@ public class TriggeredBuildSelectorTest {
     }
     
     @Test
+    @Ignore("Replaced by TriggeringBuildSelector")
     public void testGlobalConfiguration() throws Exception {
         WebClient wc = j.createWebClient();
-        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        TriggeredBuildSelector.DescriptorImpl d = TriggeredBuildSelector.DESCRIPTOR;
         {
             d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
             j.submit(wc.getPage(j.jenkins, "configure").getFormByName("config"));
@@ -241,7 +243,7 @@ public class TriggeredBuildSelectorTest {
     
     @Test
     public void testUseOldestByGlobalSetting() throws Exception {
-        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        TriggeredBuildSelector.DescriptorImpl d = TriggeredBuildSelector.DESCRIPTOR;
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
@@ -347,7 +349,7 @@ public class TriggeredBuildSelectorTest {
     
     @Test
     public void testUseNewestByGlobalSetting() throws Exception {
-        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        TriggeredBuildSelector.DescriptorImpl d = TriggeredBuildSelector.DESCRIPTOR;
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
@@ -586,7 +588,7 @@ public class TriggeredBuildSelectorTest {
     
     @Test
     public void testBackwardCompatibility() throws Exception {
-        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        TriggeredBuildSelector.DescriptorImpl d = TriggeredBuildSelector.DESCRIPTOR;
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
@@ -648,7 +650,7 @@ public class TriggeredBuildSelectorTest {
         // |UseNewest       |UseGlobalSetting|true  |
         // |UseOldest       |UseNewest       |true  |
         // |UseNewest       |UseOldest       |false |
-        TriggeredBuildSelector.DescriptorImpl d = (TriggeredBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(TriggeredBuildSelector.class);
+        TriggeredBuildSelector.DescriptorImpl d = TriggeredBuildSelector.DESCRIPTOR;
         
         d.setGlobalUpstreamFilterStrategy(null);
         assertFalse(new TriggeredBuildSelector(false, null, false).isUseNewest());

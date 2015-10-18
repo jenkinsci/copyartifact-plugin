@@ -207,4 +207,11 @@ public class TriggeredBuildSelector extends Version1BuildSelector {
             return super.configure(req, json);
         }
     }
+    
+    public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+    
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return DESCRIPTOR;
+    }
 }

@@ -240,7 +240,7 @@ public class TriggeringBuildSelector extends BuildSelector {
         
         @SuppressWarnings("deprecation")
         public DescriptorImpl() {
-            globalUpstreamFilterStrategy = new TriggeredBuildSelector.DescriptorImpl()
+            globalUpstreamFilterStrategy = TriggeredBuildSelector.DESCRIPTOR
                 .getGlobalUpstreamFilterStrategy().getOrigin();
             load();
         }
