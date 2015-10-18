@@ -21,24 +21,30 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package hudson.plugins.copyartifact;
+package hudson.plugins.copyartifact.selector;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import jenkins.model.Jenkins;
-import hudson.EnvVars;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import hudson.Extension;
-import hudson.model.Result;
 import hudson.model.AbstractProject;
 import hudson.model.AbstractBuild;
 import hudson.model.Cause;
 import hudson.model.Cause.UpstreamCause;
 import hudson.model.Job;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.BuildSelector;
+import hudson.plugins.copyartifact.BuildSelectorDescriptor;
+import hudson.plugins.copyartifact.CopyArtifactPickContext;
+import hudson.plugins.copyartifact.TriggeredBuildSelector;
 import net.sf.json.JSONObject;
 
 import org.jvnet.localizer.Localizable;
@@ -48,9 +54,9 @@ import org.kohsuke.stapler.StaplerRequest;
 /**
  * Copy artifacts from the build that triggered this build.
  * @author Alan Harder
+ * @since 2.0
  */
-public class TriggeredBuildSelector extends BuildSelector {
-    private static final Logger LOGGER = Logger.getLogger(TriggeredBuildSelector.class.getName());
+public class TriggeringBuildSelector extends BuildSelector {
     /**
      * Which build should be used if triggered by multiple upstream builds.
      * 
@@ -64,17 +70,17 @@ public class TriggeredBuildSelector extends BuildSelector {
          * Should not be specified in the global configuration.
          * 
          */
-        UseGlobalSetting(false, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseGlobalSetting()),
+        UseGlobalSetting(false, Messages._TriggeringBuildSelector_UpstreamFilterStrategy_UseGlobalSetting()),
         /**
          * Use the oldest build.
          * 
          * The default value for the global configuration.
          */
-        UseOldest(true,  Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseOldest()),
+        UseOldest(true,  Messages._TriggeringBuildSelector_UpstreamFilterStrategy_UseOldest()),
         /**
          * Use the newest build.
          */
-        UseNewest(true, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseNewest()),
+        UseNewest(true, Messages._TriggeringBuildSelector_UpstreamFilterStrategy_UseNewest()),
         ;
         
         private final boolean forGlobalSetting;
@@ -93,31 +99,27 @@ public class TriggeredBuildSelector extends BuildSelector {
             return forGlobalSetting;
         }
     };
-    private Boolean fallbackToLastSuccessful;
+    
+    /**
+     * An extension for {@link CopyArtifactPickContext}
+     * that holds enumeration status.
+     */
+    private static class ContextExtension {
+        /**
+         * enumerated builds.
+         */
+        public Iterator<Run<?, ?>> nextBuild;
+    };
+    
     private final UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;
 
     @DataBoundConstructor
-    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
-        this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
+    public TriggeringBuildSelector(UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
         this.upstreamFilterStrategy = upstreamFilterStrategy;
         this.allowUpstreamDependencies = allowUpstreamDependencies;
     }
 
-    @Deprecated
-    public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
-        this(fallbackToLastSuccessful, upstreamFilterStrategy, false);
-    }
-
-    @Deprecated
-    public TriggeredBuildSelector(boolean fallback) {
-        this(fallback, UpstreamFilterStrategy.UseGlobalSetting, false);
-    }
-    
-    public boolean isFallbackToLastSuccessful() {
-        return fallbackToLastSuccessful != null && fallbackToLastSuccessful.booleanValue();
-    }
-    
     /**
      * @return Which build should be used if triggered by multiple upstream builds.
      */
@@ -152,9 +154,44 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        Run<?,?> result = null;
-
+    @CheckForNull
+    public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) {
+        ContextExtension ext = context.getExtension(ContextExtension.class);
+        if (ext == null) {
+            // first time to be called.
+            ext = new ContextExtension();
+            List<Run<?, ?>> result = new ArrayList<Run<?, ?>>(
+                    getAllUpstreamBuilds(job, context, context.getCopierBuild())
+            );
+            // sort builds by the strategy.
+            Collections.sort(
+                    result,
+                    new Comparator<Run<?, ?>>() {
+                        @Override
+                        public int compare(Run<?, ?> o1, Run<?, ?> o2) {
+                            return isUseNewest()
+                                    ?o2.getNumber() - o1.getNumber()
+                                    :o1.getNumber() - o2.getNumber();
+                        }
+                    }
+            );
+            
+            ext.nextBuild = result.iterator();
+            context.addExtension(ext);
+        }
+        if (!ext.nextBuild.hasNext()) {
+            // no matching build.
+            context.removeExtension(ext);
+            return null;
+        }
+        
+        return ext.nextBuild.next();
+    }
+    
+    @Nonnull
+    private HashSet<Run<?, ?>> getAllUpstreamBuilds(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context, @Nonnull Run<?, ?> parent) {
+        HashSet<Run<?, ?>> result = new HashSet<Run<?, ?>>();
+        
         // Upstream job for matrix will be parent project, not only individual configuration:
         List<String> jobNames = new ArrayList<String>();
         jobNames.add(job.getFullName());
@@ -185,47 +222,32 @@ public class TriggeredBuildSelector extends BuildSelector {
         }
 
         for (Run<?, ?> upstreamBuild : upstreamBuilds) {
-            Run<?,?> run = null;
-
             if (jobNames.contains(upstreamBuild.getParent().getFullName())) {
                 // Use the 'job' parameter instead of directly the 'upstreamBuild', because of Matrix jobs.
-                run = job.getBuildByNumber(upstreamBuild.getNumber());
+                result.add(job.getBuildByNumber(upstreamBuild.getNumber()));
             } else {
                 // Figure out the parent job and do a recursive call to getBuild
-                run = getBuild(job, env, filter, upstreamBuild);
-            }
-
-            if (run != null && filter.isSelectable(run, env)){
-                if (
-                        (result == null)
-                        || (isUseNewest() && result.getNumber() < run.getNumber())
-                        || (!isUseNewest() && result.getNumber() > run.getNumber())
-                ) {
-                    result = run;
-                }
+                result.addAll(getAllUpstreamBuilds(job, context, upstreamBuild));
             }
         }
         
-        if (result == null && isFallbackToLastSuccessful()) {
-            //TODO: Write to console, that fallback is used.
-            result = super.getBuild(job, env, filter, parent);
-        }
         return result;
     }
     
-    @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
-    }
-
-    @Extension(ordinal=25)
-    public static class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+    @Extension
+    public static class DescriptorImpl extends BuildSelectorDescriptor {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         
+        @SuppressWarnings("deprecation")
         public DescriptorImpl() {
-            super(TriggeredBuildSelector.class, Messages._TriggeredBuildSelector_DisplayName());
-            globalUpstreamFilterStrategy = UpstreamFilterStrategy.UseOldest;
+            globalUpstreamFilterStrategy = new TriggeredBuildSelector.DescriptorImpl()
+                .getGlobalUpstreamFilterStrategy().getOrigin();
             load();
+        }
+        
+        @Override
+        public String getDisplayName() {
+            return Messages.TriggeringBuildSelector_DisplayName();
         }
         
         public void setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy globalUpstreamFilterStrategy) {

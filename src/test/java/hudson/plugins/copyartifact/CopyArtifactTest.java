@@ -745,8 +745,10 @@ public class CopyArtifactTest {
     public void testTriggeredBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca1.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca1);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
@@ -768,8 +770,10 @@ public class CopyArtifactTest {
         rule.assertBuildStatus(Result.FAILURE, other.scheduleBuild2(0, new UserCause()).get());
         
         p.getBuildersList().remove(CopyArtifact.class);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(true), "*.txt", "", false, false, true);
+        ca2.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca2);
         rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
@@ -778,8 +782,10 @@ public class CopyArtifactTest {
         FreeStyleProject grandparent = createArtifactProject(),
                          parent = rule.createFreeStyleProject(),
                          p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
-                new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
+                new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca1.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca1);
         parent.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         grandparent.getPublishersList().add(new BuildTrigger(parent.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
@@ -808,8 +814,10 @@ public class CopyArtifactTest {
         rule.assertBuildStatus(Result.FAILURE, grandparent.scheduleBuild2(0, new UserCause()).get());
         
         p.getBuildersList().remove(CopyArtifact.class);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
-                new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
+                new TriggeredBuildSelector(true), "*.txt", "", false, false, true);
+        ca2.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca2);
         rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
@@ -821,8 +829,10 @@ public class CopyArtifactTest {
     public void testTriggeredBuildSelectorFromMatrix() throws Exception {
         MatrixProject other = createMatrixArtifactProject();
         FreeStyleProject p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName() + "/FOO=two",
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName() + "/FOO=two",
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -845,8 +855,10 @@ public class CopyArtifactTest {
         FreeStyleProject other = createArtifactProject();
         MatrixProject p = createMatrixProject();
         p.setAxes(new AxisList(new Axis("FOO", "one", "two")));
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -1649,7 +1661,7 @@ public class CopyArtifactTest {
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream2.getName(),
                 "param=value",
-                new TriggeredBuildSelector(false),
+                new ParameterizedBuildSelector("SELECTOR"),
                 "**",
                 "foobar.txt",
                 "targetdir",
@@ -1684,7 +1696,7 @@ public class CopyArtifactTest {
             CopyArtifact ca = caList.get(1);
             assertEquals(upstream2.getName(), ca.getProjectName());
             rule.assertEqualDataBoundBeans(new ParametersBuildFilter("param=value"), ca.getBuildFilter());
-            assertEquals(TriggeredBuildSelector.class, ca.getBuildSelector().getClass());
+            assertEquals(ParameterizedBuildSelector.class, ca.getBuildSelector().getClass());
             assertEquals("**", ca.getFilter());
             assertEquals("foobar.txt", ca.getExcludes());
             assertEquals("targetdir", ca.getTarget());
