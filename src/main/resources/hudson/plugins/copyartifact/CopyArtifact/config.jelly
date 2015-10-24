@@ -26,8 +26,6 @@ THE SOFTWARE.
   <f:entry title="${%Project name}" field="projectName">
     <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
   </f:entry>
-  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
-  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filter}" descriptors="${descriptor.buildFilterDescriptorList}" />
   <f:entry field="optional">
     <f:checkbox title="${%Optional}" />
   </f:entry>
@@ -39,5 +37,7 @@ THE SOFTWARE.
       <f:textbox/>
     </f:entry>
   </f:advanced>
+  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
+  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filter}" descriptors="${descriptor.buildFilterDescriptorList}" />
   <f:dropdownDescriptorSelector field="operation" title="${%Operation}" />
 </j:jelly>
