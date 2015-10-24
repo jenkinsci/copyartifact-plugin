@@ -128,7 +128,7 @@ public class ParametersBuildFilter extends BuildFilter {
     public static class DescriptorImpl extends BuildFilterDescriptor {
         @Override
         public String getDisplayName() {
-            return Messages.ParameterizedBuildSelector_DisplayName();
+            return Messages.ParametersBuildFilter_DisplayName();
         }
     }
 }
