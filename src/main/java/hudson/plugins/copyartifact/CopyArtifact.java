@@ -731,7 +731,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * @return
      * @since 2.0
      */
-    public static CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context)
+    public CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context)
             throws IOException, InterruptedException
     {
         Job<?, ?> job = context.getJenkins().getItem(
@@ -754,7 +754,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return CopyArtifactPickResult.found(src);
     }
     
-    private static boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
+    private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
         Job<?, ?> fromJob = job;
         Job<?, ?> toJob = build.getParent();
 
