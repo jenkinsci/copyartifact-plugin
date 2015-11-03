@@ -1673,7 +1673,7 @@ public class CopyArtifactTest extends HudsonTestCase {
         p1.getPublishersList().add(new ArtifactArchiver("**", "", false, false));
         buildAndAssertSuccess(p1);
         FreeStyleProject p2 = createFreeStyleProject("p2");
-        p2.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("p1", null, new StatusBuildSelector(true), null, "", false, false, true));
+        p2.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("p1", null, new StatusBuildSelector(true), null, "", false, false, false));
         FreeStyleBuild b = buildAndAssertSuccess(p2);
         FilePath ws = b.getWorkspace();
         assertEquals("text", ws.child("plain").readToString());
