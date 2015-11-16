@@ -33,6 +33,7 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
+import hudson.model.RunParameterValue;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
@@ -79,7 +80,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = copier.scheduleBuild2(0).get();
         j.assertBuildStatusSuccess(b);
@@ -147,7 +148,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -177,7 +178,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -208,7 +209,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -285,7 +286,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 false,  // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = j.assertBuildStatusSuccess((FreeStyleBuild)copier.scheduleBuild2(
                 0,
@@ -298,4 +299,40 @@ public class ParameterizedBuildSelectorTest {
         assertEquals("foobar", b.getWorkspace().child("artifact.txt").readToString());
     }
     
+    /**
+     * Should be able to accept a Run parameter.
+     *
+     * @throws Exception
+     */
+    @Issue("JENKINS-31569")
+    @Test
+    public void testRunParameter() throws Exception {
+        // Prepare an artifact to be copied.
+        FreeStyleProject copiee = j.createFreeStyleProject();
+        copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        FreeStyleProject copier = j.createFreeStyleProject();
+        ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("SELECTOR");
+        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                copiee.getFullName(),
+                null,   // parameters
+                pbs,
+                "**/*", // filter
+                "",     // excludes
+                false,  // flatten
+                false,  // optional
+                false   // fingerprintArtifacts
+        ));
+        FreeStyleBuild b = j.assertBuildStatusSuccess((FreeStyleBuild)copier.scheduleBuild2(
+                0,
+                new ParametersAction(new RunParameterValue(
+                        "SELECTOR",
+                        copiee.getLastBuild().getExternalizableId()
+                ))
+        ).get());
+
+        assertEquals("foobar", b.getWorkspace().child("artifact.txt").readToString());
+    }
 }
