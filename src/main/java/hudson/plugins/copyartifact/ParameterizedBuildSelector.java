@@ -28,9 +28,12 @@ import java.util.logging.Logger;
 
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.model.ParameterValue;
 import hudson.model.Descriptor;
 import hudson.model.Job;
+import hudson.model.ParametersAction;
 import hudson.model.Run;
+import hudson.model.RunParameterValue;
 
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -55,6 +58,11 @@ public class ParameterizedBuildSelector extends BuildSelector {
 
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+        Run<?,?> run = checkForRunParameter(parent);
+        if (run != null) {
+            return run;
+        }
+
         String xml = resolveParameter(env);
         if (xml == null) {
             return null;
@@ -100,6 +108,21 @@ public class ParameterizedBuildSelector extends BuildSelector {
             LOG.log(Level.WARNING, "{0} is not defined", getParameterName());
         }
         return xml;
+    }
+    
+    public Run<?,?> checkForRunParameter(Run<?,?> parent) {
+    	ParametersAction parameters = parent.getAction(ParametersAction.class);
+        if (parameters == null) {
+            return null;
+        }
+
+    	ParameterValue parameterValue = parameters.getParameter(parameterName);
+    	
+    	if (parameterValue instanceof RunParameterValue) {
+    		return ((RunParameterValue) parameterValue).getRun();
+    	} else {
+    		return null;
+    	}
     }
 
     @Extension(ordinal=-20)
