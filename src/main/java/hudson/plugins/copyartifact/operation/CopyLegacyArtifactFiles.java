@@ -1,7 +1,8 @@
 package hudson.plugins.copyartifact.operation;
 
-import hudson.Extension;
 import hudson.FilePath;
+import hudson.model.Descriptor;
+import hudson.plugins.copyartifact.CopyArtifactOperation;
 import hudson.plugins.copyartifact.CopyArtifactOperationDescriptor;
 
 import java.io.IOException;
@@ -11,18 +12,17 @@ import javax.annotation.Nonnull;
 
 import jenkins.model.StandardArtifactManager;
 
-import org.kohsuke.stapler.DataBoundConstructor;
-
 /**
  * copy artifact files stored in {@link StandardArtifactManager}.
+ * Not exposed to users, and used from {@link CopyArtifactFiles} internally.
  * 
  * @since 2.0
  */
-public class CopyLegacyArtifactFiles extends AbstractFilePathCopyOperation {
+/*package*/ class CopyLegacyArtifactFiles extends AbstractFilePathCopyOperation {
     /**
      * ctor
      */
-    @DataBoundConstructor
+    //@DataBoundConstructor
     public CopyLegacyArtifactFiles() {
     }
     
@@ -46,14 +46,21 @@ public class CopyLegacyArtifactFiles extends AbstractFilePathCopyOperation {
         }
     }
     
+    @Override
+    public Descriptor<CopyArtifactOperation> getDescriptor() {
+        return DESCRIPTOR;
+    }
+    
     /**
      * Descriptor for {@link CopyLegacyArtifactFiles}
      */
-    @Extension(ordinal=100)    // topmost
+    //@Extension(ordinal=100)    // topmost
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
         @Override
         public String getDisplayName() {
             return Messages.CopyLegacyArtifactFiles_DisplayName();
         }
     }
+    
+    public static DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 }

@@ -124,6 +124,20 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
+     * Copy configuration from another {@link AbstractCopyOperation}
+     * 
+     * @param from
+     */
+    public void copyConfiguration(AbstractCopyOperation from) {
+        setTargetDir(from.getTargetDir());
+        setSrcBaseDir(from.getSrcBaseDir());
+        setIncludes(from.getIncludes());
+        setExcludes(from.getExcludes());
+        setFingerprintArtifacts(from.isFingerprintArtifacts());
+        setFlatten(from.isFlatten());
+    }
+    
+    /**
      * @param targetDir {@link FilePath} to copy files to.
      */
     @DataBoundSetter

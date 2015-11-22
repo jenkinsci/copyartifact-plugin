@@ -41,7 +41,7 @@ import hudson.model.listeners.ItemListener;
 import hudson.plugins.copyartifact.filter.AndBuildFilter;
 import hudson.plugins.copyartifact.filter.NoBuildFilter;
 import hudson.plugins.copyartifact.operation.AbstractCopyOperation;
-import hudson.plugins.copyartifact.operation.CopyLegacyArtifactFiles;
+import hudson.plugins.copyartifact.operation.CopyArtifactFiles;
 import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
@@ -351,7 +351,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      */
     @DataBoundSetter
     public void setOperation(@CheckForNull CopyArtifactOperation operation) {
-        this.operation = (operation != null)?operation:new CopyLegacyArtifactFiles();
+        this.operation = (operation != null)?operation:new CopyArtifactFiles();
     }
 
     // Upgrade data from old format
@@ -465,12 +465,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 // copy configurations.
                 AbstractCopyOperation from = (AbstractCopyOperation)getOperation();
                 AbstractCopyOperation to = (AbstractCopyOperation)conf.copyArtifactOperation;
-                to.setTargetDir(from.getTargetDir());
-                to.setSrcBaseDir(from.getSrcBaseDir());
-                to.setIncludes(from.getIncludes());
-                to.setExcludes(from.getExcludes());
-                to.setFingerprintArtifacts(from.isFingerprintArtifacts());
-                to.setFlatten(from.isFlatten());
+                to.copyConfiguration(from);
             }
             setOperation(conf.copyArtifactOperation);
         }

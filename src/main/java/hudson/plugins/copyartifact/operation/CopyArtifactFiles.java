@@ -27,6 +27,8 @@ package hudson.plugins.copyartifact.operation;
 
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.model.Run;
+import hudson.plugins.copyartifact.CopyArtifactOperationContext;
 import hudson.plugins.copyartifact.CopyArtifactOperationDescriptor;
 import hudson.plugins.copyartifact.VirtualFileScanner;
 import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
@@ -44,6 +46,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 
 import jenkins.model.ArtifactManager;
+import jenkins.model.StandardArtifactManager;
 import jenkins.util.VirtualFile;
 
 /**
@@ -125,6 +128,19 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     public CopyArtifactFiles() {
     }
     
+    @Override
+    public Result perform(Run<?, ?> src, CopyArtifactOperationContext context) throws IOException, InterruptedException {
+        ArtifactManager manager = src.getArtifactManager();
+        
+        if (manager instanceof StandardArtifactManager) {
+            CopyLegacyArtifactFiles legacy = new CopyLegacyArtifactFiles();
+            legacy.copyConfiguration(this);
+            return legacy.perform(src, context);
+        }
+        
+        return super.perform(src, context);
+    }
+    
     /**
      * @param context
      * @return
@@ -139,6 +155,13 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         if (srcDir == null || !srcDir.exists()) {
             context.logDebug("No artifacts to copy");
             return false;
+        }
+        if (!StringUtils.isBlank(context.getExcludes())) {
+            context.logInfo(
+                    "WARNING: Doesn't support exclude filters with non-standard artifact managers."
+                    + "Exclude filters are ignored: {0}",
+                    context.getExcludes()
+            );
         }
         return super.init(context);
     }
@@ -183,7 +206,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     /**
      * Descriptor for {@link CopyArtifactFiles}
      */
-    @Extension
+    @Extension(ordinal=100)    // topmost
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
         @Override
         public String getDisplayName() {
