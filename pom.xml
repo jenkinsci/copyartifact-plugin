@@ -37,6 +37,14 @@
             <groupId>org.jenkins-ci</groupId>
             <artifactId>SECURITY-144-compat</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <!-- Used for UI test -->
