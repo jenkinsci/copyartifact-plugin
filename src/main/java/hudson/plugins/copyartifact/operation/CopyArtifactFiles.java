@@ -187,12 +187,16 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         ArtifactManager manager = context.getSrc().getArtifactManager();
         VirtualFile srcDir = manager.root();
         
-        if (StringUtils.isBlank(context.getSrcBaseDir())) {
-            srcDir = srcDir.child(context.getSrcBaseDir());
+        if (srcDir == null || !srcDir.exists()) {
+            context.logInfo(Messages.AbstractCopyOperation_MissingSrcArtifacts(srcDir));
+            return Collections.emptyList();
         }
         
-        if (srcDir == null || !srcDir.exists()) {
-            return Collections.emptyList();
+        if (StringUtils.isBlank(context.getSrcBaseDir())) {
+            srcDir = srcDir.child(context.getSrcBaseDir());
+            if (srcDir == null || !srcDir.exists()) {
+                return Collections.emptyList();
+            }
         }
         
         VirtualFileScanner scanner = new VirtualFileScanner(

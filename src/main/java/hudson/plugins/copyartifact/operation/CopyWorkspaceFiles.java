@@ -65,7 +65,12 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
             context.logInfo("Workspaces are available only for AbstractBuild.");
             return null;
         }
-        return ((AbstractBuild<?, ?>)src).getWorkspace();
+        FilePath srcDir = ((AbstractBuild<?, ?>)src).getWorkspace();
+        if (srcDir == null || !srcDir.exists()) {
+            context.logInfo(Messages.CopyWorkspaceFiles_MissingSrcWorkspace());
+            return null;
+        }
+        return srcDir;
     }
     
     /**

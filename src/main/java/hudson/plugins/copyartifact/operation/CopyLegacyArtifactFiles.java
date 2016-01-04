@@ -41,7 +41,7 @@ import jenkins.model.StandardArtifactManager;
         if (srcDir.exists()) {
             return srcDir;
         } else {
-            context.logInfo(hudson.plugins.copyartifact.Messages.CopyArtifact_MissingSrcArtifacts(srcDir));
+            context.logInfo(Messages.AbstractCopyOperation_MissingSrcArtifacts(srcDir));
             return null;
         }
     }

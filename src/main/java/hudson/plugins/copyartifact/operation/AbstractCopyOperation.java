@@ -51,7 +51,6 @@ import hudson.model.FingerprintMap;
 import hudson.model.Run;
 import hudson.plugins.copyartifact.CopyArtifactOperationContext;
 import hudson.plugins.copyartifact.CopyArtifactOperation;
-import hudson.plugins.copyartifact.Messages;
 import hudson.tasks.Fingerprinter.FingerprintAction;
 
 /**
@@ -326,7 +325,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
                 copyOne(file, path, context);
             }
             
-            context.logInfo(Messages.CopyArtifact_Copied(
+            context.logInfo(Messages.AbstractCopyOperation_Copied(
                     cnt,
                     HyperlinkNote.encodeTo('/' + context.getSrc().getParent().getUrl(), context.getSrc().getParent().getFullDisplayName()),
                     HyperlinkNote.encodeTo('/' + context.getSrc().getUrl(), Integer.toString(context.getSrc().getNumber()))
