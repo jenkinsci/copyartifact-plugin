@@ -23,7 +23,7 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-    <f:entry title="${%Build filter}" field="buildFilterList">
+    <f:entry title="${%Build filters}" field="buildFilterList">
       <f:hetero-list name="buildFilterList" hasHeader="true"
         descriptors="${descriptor.descriptorList}" items="${instance.buildFilterList}" />
     </f:entry>

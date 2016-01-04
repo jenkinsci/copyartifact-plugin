@@ -89,6 +89,13 @@ public abstract class Version1BuildSelector extends BuildSelector {
      */
     public abstract MigratedConfiguration migrateToVersion2();
     
+    /**
+     * @param job
+     * @param context
+     * @return
+     * @throws AbortException
+     * @see hudson.plugins.copyartifact.BuildSelector#pickBuildToCopyFrom(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public Run<?, ?> pickBuildToCopyFrom(Job<?, ?> job, CopyArtifactPickContext context)
             throws AbortException

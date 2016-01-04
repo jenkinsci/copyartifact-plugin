@@ -36,18 +36,34 @@ import hudson.plugins.copyartifact.CopyArtifactPickContext;
 
 /**
  * {@link BuildSelector} enumerates only one build.
+ * override {{@link #getBuild(Job, CopyArtifactPickContext)} instead.
  * @since 2.0
  */
 public abstract class AbstractSpecificBuildSelector extends BuildSelector {
+    /**
+     * @param job
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     @CheckForNull
-    public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) throws IOException, InterruptedException {
+    public final Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) throws IOException, InterruptedException {
         if (context.getLastMatchBuild() != null) {
             return null;
         }
         return getBuild(job, context);
     }
     
+    /**
+     * @param job
+     * @param context
+     * @return the build to select
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @CheckForNull
     public abstract Run<?, ?> getBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) throws IOException, InterruptedException;
 }

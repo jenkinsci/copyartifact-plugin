@@ -91,10 +91,16 @@ public class TriggeringBuildSelector extends BuildSelector {
             this.displayName = displayName;
         }
         
+        /**
+         * @return the display name for the setting
+         */
         public String getDisplayName() {
             return displayName.toString();
         }
         
+        /**
+         * @return configurable as a global setting
+         */
         public boolean isForGlobalSetting() {
             return forGlobalSetting;
         }
@@ -114,6 +120,10 @@ public class TriggeringBuildSelector extends BuildSelector {
     private final UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;
 
+    /**
+     * @param upstreamFilterStrategy
+     * @param allowUpstreamDependencies
+     */
     @DataBoundConstructor
     public TriggeringBuildSelector(UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
         this.upstreamFilterStrategy = upstreamFilterStrategy;
@@ -149,10 +159,19 @@ public class TriggeringBuildSelector extends BuildSelector {
         }
     }
     
+    /**
+     * @return includes upstream dependencies.
+     */
     public boolean isAllowUpstreamDependencies() {
         return allowUpstreamDependencies;
     }
     
+    /**
+     * @param job
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     @CheckForNull
     public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) {
@@ -188,6 +207,12 @@ public class TriggeringBuildSelector extends BuildSelector {
         return ext.nextBuild.next();
     }
     
+    /**
+     * @param job
+     * @param context
+     * @param parent
+     * @return
+     */
     @Nonnull
     private HashSet<Run<?, ?>> getAllUpstreamBuilds(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context, @Nonnull Run<?, ?> parent) {
         HashSet<Run<?, ?>> result = new HashSet<Run<?, ?>>();
@@ -234,10 +259,16 @@ public class TriggeringBuildSelector extends BuildSelector {
         return result;
     }
     
+    /**
+     * the descriptor for {@link TriggeringBuildSelector}
+     */
     @Extension
     public static class DescriptorImpl extends BuildSelectorDescriptor {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         
+        /**
+         * 
+         */
         @SuppressWarnings("deprecation")
         public DescriptorImpl() {
             globalUpstreamFilterStrategy = TriggeredBuildSelector.DESCRIPTOR
@@ -245,19 +276,38 @@ public class TriggeringBuildSelector extends BuildSelector {
             load();
         }
         
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.TriggeringBuildSelector_DisplayName();
         }
         
+        /**
+         * set the strategy in the system configuration
+         * 
+         * @param globalUpstreamFilterStrategy
+         */
         public void setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy globalUpstreamFilterStrategy) {
             this.globalUpstreamFilterStrategy = globalUpstreamFilterStrategy;
         }
         
+        /**
+         * @return the strategy in the system configuration
+         */
         public UpstreamFilterStrategy getGlobalUpstreamFilterStrategy() {
             return globalUpstreamFilterStrategy;
         }
         
+        /**
+         * @param req
+         * @param json
+         * @return
+         * @throws hudson.model.Descriptor.FormException
+         * @see hudson.model.Descriptor#configure(org.kohsuke.stapler.StaplerRequest, net.sf.json.JSONObject)
+         */
         @Override
         public boolean configure(StaplerRequest req, JSONObject json)
                 throws hudson.model.Descriptor.FormException {

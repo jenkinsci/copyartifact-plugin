@@ -56,16 +56,28 @@ public class ParameterizedBuildFilter extends BuildFilter {
     @Nonnull
     private final String parameter;
     
+    /**
+     * @param parameter
+     */
     @DataBoundConstructor
     public ParameterizedBuildFilter(@CheckForNull String parameter) {
         this.parameter = Util.fixNull(parameter);
     }
     
+    /**
+     * @return
+     */
     @Nonnull
     public String getParameter() {
         return parameter;
     }
     
+    /**
+     * @param candidate
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
         String xml = context.getEnvVars().expand(getParameter());
@@ -78,6 +90,10 @@ public class ParameterizedBuildFilter extends BuildFilter {
         return filter.isSelectable(candidate, context);
     }
     
+    /**
+     * @param xml
+     * @return
+     */
     @CheckForNull
     public static BuildFilter getFilterFromXml(@CheckForNull String xml) {
         if (StringUtils.isBlank(xml)) {
@@ -86,6 +102,10 @@ public class ParameterizedBuildFilter extends BuildFilter {
         return (BuildFilter)XSTREAM.fromXML(xml);
     }
     
+    /**
+     * @param filter
+     * @return
+     */
     @CheckForNull
     public static String encodeToXml(@CheckForNull BuildFilter filter) {
         if (filter == null) {
@@ -95,6 +115,9 @@ public class ParameterizedBuildFilter extends BuildFilter {
     }
     
     
+    /**
+     * 
+     */
     @Initializer(after=InitMilestone.PLUGINS_STARTED)
     public static void initAliases() {
         Jenkins jenkins = Jenkins.getInstance();
@@ -107,8 +130,15 @@ public class ParameterizedBuildFilter extends BuildFilter {
         }
     }
     
+    /**
+     * the descriptor for {@link ParameterizedBuildFilter}
+     */
     @Extension
     public static class DescriptorImpl extends BuildFilterDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.ParameterizedBuildFilter_DisplayName();

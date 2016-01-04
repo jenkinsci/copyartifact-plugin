@@ -23,9 +23,6 @@ THE SOFTWARE.
 -->
 <?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:f="/lib/form">
-  <f:entry field="fallbackToLastSuccessful">
-    <f:checkbox title="${%Use &quot;Last successful build&quot; as fallback}"/>
-  </f:entry>
   <f:advanced>
   <f:entry field="upstreamFilterStrategy" title="${%Which for multiple upstream}">
     <f:enum field="upstreamFilterStrategy">${it.displayName}</f:enum>

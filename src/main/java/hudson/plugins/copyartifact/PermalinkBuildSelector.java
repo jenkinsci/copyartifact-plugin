@@ -67,8 +67,8 @@ public class PermalinkBuildSelector extends AbstractSpecificBuildSelector {
             return Messages.PermalinkBuildSelector_DisplayName();
         }
 
-        public ComboBoxModel doFillIdItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
-            Job j = null;
+        public ComboBoxModel doFillIdItems(@AncestorInPath Job<?, ?> copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
+            Job<?, ?> j = null;
             Jenkins jenkins = Jenkins.getInstance();
             if (projectName != null && jenkins != null) {
                 j = jenkins.getItem(projectName, copyingJob, Job.class);

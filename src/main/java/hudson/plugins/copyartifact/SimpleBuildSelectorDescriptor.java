@@ -23,8 +23,6 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.model.Descriptor;
-
 import org.jvnet.localizer.Localizable;
 
 /**

@@ -73,6 +73,10 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
      */
     @Extension
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.CopyWorkspaceFiles_DisplayName();

@@ -359,7 +359,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public ConverterImpl(XStream2 xstream) { super(xstream); }
         @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
             if (obj.selector == null) {
-                obj.setSelector(new StatusBuildSelector((obj.stable != null)?obj.stable.booleanValue():true));
+                obj.setSelector(new StatusBuildSelector(
+                        (obj.stable == null || obj.stable.booleanValue())
+                        ?StatusBuildSelector.BuildStatus.Stable
+                        :StatusBuildSelector.BuildStatus.Successful
+                ));
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
             }
             if (obj.parameters != null) {
@@ -631,12 +635,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             throw new AbortException("Jenkins instance is unavailable.");
         }
         if (build instanceof AbstractBuild) {
-            upgradeIfNecessary(((AbstractBuild)build).getProject());
+            upgradeIfNecessary(((AbstractBuild<?, ?>)build).getProject());
         }
 
         EnvVars env = build.getEnvironment(listener);
         if (build instanceof AbstractBuild) {
-            env.putAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+            env.putAll(((AbstractBuild<?, ?>)build).getBuildVariables()); // Add in matrix axes..
         } else {
             // Abstract#getEnvironment(TaskListener) put build parameters to
             // environments, but Run#getEnvironment(TaskListener) doesn't.
@@ -709,8 +713,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         switch (getOperation().perform(pick.build, copyContext)) {
         case NothingToDo:
             if (!isOptional()) {
-                // TODO: filter is no longer available here.
-                throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName, ""));
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName));
             }
             // fall through
         case Succeess:
@@ -792,7 +795,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
-    private static ItemGroup getItemGroup(Run<?, ?> build) {
+    private static ItemGroup<?> getItemGroup(Run<?, ?> build) {
         return getRootProject(build.getParent()).getParent();
     }
 
@@ -883,7 +886,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return FormValidation.ok();
         }
 
-        public boolean isApplicable(Class<? extends AbstractProject> clazz) {
+        public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> clazz) {
             return true;
         }
 
@@ -927,7 +930,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                         projectName = projectName.substring(0, end);
                     }
 
-                    ItemGroup context = project.getParent();
+                    ItemGroup<?> context = project.getParent();
                     String newProjectName = Items.computeRelativeNamesAfterRenaming(oldFullName, newFullName, projectName, context);
                     if (!projectName.equals(newProjectName)) {
                         ca.project = newProjectName + suffix;

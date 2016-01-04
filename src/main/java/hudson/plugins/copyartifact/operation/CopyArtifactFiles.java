@@ -122,12 +122,20 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     }
     
     /**
-     * 
+     * ctor
      */
     @DataBoundConstructor
     public CopyArtifactFiles() {
     }
     
+    /**
+     * @param src
+     * @param context
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#perform(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactOperationContext)
+     */
     @Override
     public Result perform(Run<?, ?> src, CopyArtifactOperationContext context) throws IOException, InterruptedException {
         ArtifactManager manager = src.getArtifactManager();
@@ -208,6 +216,10 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
      */
     @Extension(ordinal=100)    // topmost
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.CopyArtifactFiles_DisplayName();

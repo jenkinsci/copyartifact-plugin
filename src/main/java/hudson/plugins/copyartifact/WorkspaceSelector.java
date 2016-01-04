@@ -39,6 +39,10 @@ public class WorkspaceSelector extends Version1BuildSelector {
             new SimpleBuildSelectorDescriptor(
                 WorkspaceSelector.class, Messages._WorkspaceSelector_DisplayName());
     
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     */
     @Override
     public MigratedConfiguration migrateToVersion2() {
         MigratedConfiguration conf = new MigratedConfiguration(

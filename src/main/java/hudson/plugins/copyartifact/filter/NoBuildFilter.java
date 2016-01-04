@@ -34,15 +34,25 @@ import hudson.plugins.copyartifact.BuildFilterDescriptor;
  * Used for "Not configured"
  */
 public class NoBuildFilter extends BuildFilter {
+    /**
+     * 
+     */
     @DataBoundConstructor
     public NoBuildFilter() {
     }
     
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.BuildFilter#getDescriptor()
+     */
     @Override
     public BuildFilterDescriptor getDescriptor() {
         return DESCRIPTOR;
     }
     
+    /**
+     *
+     */
     // @Extension(ordinal=100)  Should not be automatically listed.
     public static class DescriptorImpl extends BuildFilterDescriptor {
         @Override
@@ -51,5 +61,9 @@ public class NoBuildFilter extends BuildFilter {
         }
     }
     
+    /**
+     * the descriptor for {@link NoBuildFilter}.
+     * Not listed as an extension.
+     */
     public static DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 }

@@ -69,6 +69,12 @@ public abstract class CopyArtifactOperation extends AbstractDescribableImpl<Copy
             return Succeess;
         }
         
+        /**
+         * Returns the whole result consists of two results.
+         * 
+         * @param valueToMerge
+         * @return the merged result
+         */
         @Nonnull
         public Result merge(@Nonnull Result valueToMerge) {
             return Result.byNumber(Math.max(numeric, valueToMerge.numeric));

@@ -46,6 +46,10 @@ import jenkins.model.StandardArtifactManager;
         }
     }
     
+    /**
+     * @return
+     * @see hudson.model.AbstractDescribableImpl#getDescriptor()
+     */
     @Override
     public Descriptor<CopyArtifactOperation> getDescriptor() {
         return DESCRIPTOR;
@@ -54,13 +58,21 @@ import jenkins.model.StandardArtifactManager;
     /**
      * Descriptor for {@link CopyLegacyArtifactFiles}
      */
-    //@Extension(ordinal=100)    // topmost
+    //@Extension(ordinal=100)
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.CopyLegacyArtifactFiles_DisplayName();
         }
     }
     
+    /**
+     * the descriptor for {@link CopyLegacyArtifactFiles}.
+     * Not listed as extensions.
+     */
     public static DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 }

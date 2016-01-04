@@ -93,7 +93,7 @@ public class AndBuildFilter extends BuildFilter {
     }
     
     /**
-     *
+     * the descriptor for {@link AndBuildFilter}
      */
     @Extension(ordinal=-100)    // bottom most
     public static class DescriptorImpl extends BuildFilterDescriptor {

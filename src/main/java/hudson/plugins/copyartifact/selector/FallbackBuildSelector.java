@@ -103,15 +103,22 @@ public class FallbackBuildSelector extends BuildSelector {
         }
         
         /**
-         *
+         * the descriptor for {@link FallbackBuildSelector}
          */
         @Extension
         public static class DescriptorImpl extends Descriptor<Entry> {
+            /**
+             * @return
+             * @see hudson.model.Descriptor#getDisplayName()
+             */
             @Override
             public String getDisplayName() {
                 return Messages.FallbackBuildSelector_Entry_DisplayName();
             }
             
+            /**
+             * @return descriptors of all {@link BuildSelector} except {@link FallbackBuildSelector}
+             */
             public Iterable<? extends Descriptor<? extends BuildSelector>> getBuildSelectorDescriptorList() {
                 Jenkins jenkins = Jenkins.getInstance();
                 if (jenkins == null) {
@@ -129,6 +136,9 @@ public class FallbackBuildSelector extends BuildSelector {
                 );
             }
             
+            /**
+             * @return descriptors for all {@link BuildFilter}s.
+             */
             public List<BuildFilterDescriptor> getBuildFilterDescriptorList() {
                 return BuildFilter.allWithNoBuildFilter();
             }

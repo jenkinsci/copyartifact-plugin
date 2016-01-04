@@ -33,6 +33,10 @@ import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 @Deprecated
 public class LastCompletedBuildSelector extends Version1BuildSelector {
 
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     */
     @Override
     public MigratedConfiguration migrateToVersion2() {
         return new MigratedConfiguration(

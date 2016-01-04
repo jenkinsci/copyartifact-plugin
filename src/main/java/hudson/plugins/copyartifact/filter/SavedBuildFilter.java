@@ -40,13 +40,26 @@ public class SavedBuildFilter extends BuildFilter {
     @DataBoundConstructor
     public SavedBuildFilter() { }
 
+    /**
+     * @param run
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public boolean isSelectable(Run<?, ?> run, CopyArtifactPickContext context) {
         return run.isKeepLog();
     }
 
+    /**
+     * the descriptor for {@link SavedBuildFilter}
+     */
     @Extension
     public static class DescriptorImpl extends BuildFilterDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.SavedBuildFilter_DisplayName();

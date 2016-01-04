@@ -123,6 +123,12 @@ public class StatusBuildSelector extends BuildSelector {
         return BuildStatus.Stable.equals(getBuildStatus());
     }
 
+    /**
+     * @param job
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public Run<?, ?> getNextBuild(Job<?, ?> job, CopyArtifactPickContext context) {
         Run<?, ?> previousBuild = context.getLastMatchBuild();
@@ -186,6 +192,10 @@ public class StatusBuildSelector extends BuildSelector {
         return null;
     }
     
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.BuildSelector#getDisplayName()
+     */
     @Override
     public String getDisplayName() {
         return String.format(

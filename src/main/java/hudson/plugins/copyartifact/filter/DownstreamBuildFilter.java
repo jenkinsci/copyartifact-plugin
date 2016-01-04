@@ -84,6 +84,12 @@ public class DownstreamBuildFilter extends BuildFilter {
         return upstreamBuildNumber;
     }
     
+    /**
+     * @param run
+     * @param context
+     * @return
+     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     */
     @Override
     public boolean isSelectable(@Nonnull Run<?, ?> run, @Nonnull CopyArtifactPickContext context) {
         if (!(run instanceof AbstractBuild<?,?>)) {
@@ -170,8 +176,15 @@ public class DownstreamBuildFilter extends BuildFilter {
         return false;
     }
     
+    /**
+     * the descriptor for {@link DownstreamBuildFilter}
+     */
     @Extension
     public static final class DescriptorImpl extends BuildFilterDescriptor {
+        /**
+         * @return
+         * @see hudson.model.Descriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.DownstreamBuildFilter_DisplayName();

@@ -45,19 +45,31 @@ import hudson.plugins.copyartifact.filter.NoBuildFilter;
 import hudson.plugins.copyartifact.filter.ParameterizedBuildFilter;
 
 /**
- * Build Parameter used with {@link ParameterizedBuildFilter}
+ * Build parameter used with {@link ParameterizedBuildFilter}
  * @since 2.0
  */
 public class BuildFilterParameter extends SimpleParameterDefinition {
     @Nonnull
     private final BuildFilter defaultFilter;
     
+    /**
+     * @param name
+     * @param description
+     * @param defaultFilter
+     */
     @DataBoundConstructor
     public BuildFilterParameter(String name, String description, @CheckForNull BuildFilter defaultFilter) {
         super(name, description);
         this.defaultFilter = (defaultFilter != null)?defaultFilter:new NoBuildFilter();
     }
 
+    /**
+     * @return
+     */
+    public BuildFilter getDefaultFilter() {
+        return defaultFilter;
+    }
+    
     /**
      * @param value
      * @return
@@ -80,13 +92,25 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
         return createValue(ParameterizedBuildFilter.encodeToXml(filter));
     }
     
+    /**
+     * the descriptor for {@link BuildFilterParameter}
+     */
     @Extension
     public static class DescriptorImpl extends ParameterDescriptor {
+        /**
+         * @return
+         * @see hudson.model.ParameterDefinition.ParameterDescriptor#getDisplayName()
+         */
         @Override
         public String getDisplayName() {
             return Messages.BuildFilterParameter_DisplayName();
         }
         
+        /**
+         * @param fieldName
+         * @return
+         * @see hudson.model.Descriptor#getHelpFile(java.lang.String)
+         */
         @Override
         public String getHelpFile(String fieldName) {
             if ("defaultFilter".equals(fieldName) || "parameter".equals(fieldName)) {
@@ -103,6 +127,9 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
             return super.getHelpFile(fieldName);
         }
         
+        /**
+         * @return descriptors of all {@link BuildFilter}s except {@link BuildFilterParameter}
+         */
         public Iterable<BuildFilterDescriptor> getBuildFilterDescriptors() {
             return Iterables.filter(
                     BuildFilter.allWithNoBuildFilter(),

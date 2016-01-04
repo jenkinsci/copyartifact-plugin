@@ -63,6 +63,10 @@ public class DownstreamBuildSelector extends Version1BuildSelector {
         return upstreamBuildNumber;
     }
     
+    /**
+     * @return
+     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     */
     @Override
     public MigratedConfiguration migrateToVersion2() {
         return new MigratedConfiguration(

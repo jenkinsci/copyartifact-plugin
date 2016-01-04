@@ -30,8 +30,13 @@ import hudson.model.Descriptor;
 
 /**
  * Descriptor for {@link BuildFilter}
+ * 
+ * @since 2.0
  */
 public abstract class BuildFilterDescriptor extends Descriptor<BuildFilter> {
+    /**
+     * @return descriptors of all {@link BuildFilter}
+     */
     public List<BuildFilterDescriptor> getDescriptorList() {
         return BuildFilter.all();
     }
