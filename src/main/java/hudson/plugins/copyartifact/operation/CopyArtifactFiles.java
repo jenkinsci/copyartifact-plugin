@@ -30,12 +30,13 @@ import hudson.FilePath;
 import hudson.model.Run;
 import hudson.plugins.copyartifact.CopyArtifactOperationContext;
 import hudson.plugins.copyartifact.CopyArtifactOperationDescriptor;
-import hudson.plugins.copyartifact.VirtualFileScanner;
-import hudson.plugins.copyartifact.VirtualFileScanner.VirtualFileWithPathInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nonnull;
 
@@ -57,17 +58,44 @@ import jenkins.util.VirtualFile;
 public class CopyArtifactFiles extends AbstractCopyOperation {
     /**
      * {@link FileInfo} wrapping {@link VirtualFile}.
+     * This also contains information about the path.
      */
     protected class FileInfoImpl extends FileInfo {
-        private final VirtualFileWithPathInfo file;
+        private final VirtualFile file;
+        /**
+         * path fragments for the file.
+         * You can get the path by joining them with the path separator.
+         * Fragments themselves may contain path separators.
+         */
+        private final List<String> pathFragments;
         
         /**
          * @param file
          */
-        protected FileInfoImpl(@Nonnull VirtualFileWithPathInfo file) {
+        protected FileInfoImpl(@Nonnull VirtualFile file) {
             this.file = file;
+            this.pathFragments = Arrays.asList("");
         }
-
+        
+        /**
+         * @param parent
+         * @param file
+         * @param path
+         */
+        protected FileInfoImpl(@Nonnull FileInfoImpl parent, @Nonnull VirtualFile file, @Nonnull String path) {
+            this.file = file;
+            this.pathFragments = new ArrayList<String>(parent.pathFragments);
+            this.pathFragments.add(path);
+        }
+        
+        /**
+         * @param path
+         * @return
+         */
+        public FileInfoImpl child(@Nonnull String path) {
+            return new FileInfoImpl(this, file.child(path), path);
+        }
+        
         /**
          * @param path
          * @return
@@ -76,7 +104,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         @Override
         @Nonnull
         public FilePath getRelativeFrom(@Nonnull FilePath path) {
-            for (String fragment : file.pathFragments) {
+            for (String fragment : pathFragments) {
                 path = new FilePath(path, fragment);
             }
             return path;
@@ -89,7 +117,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         @Override
         @Nonnull
         public String getFilename() {
-            return file.file.getName();
+            return file.getName();
         }
 
         /**
@@ -100,7 +128,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         @Override
         @Nonnull
         public InputStream open() throws IOException {
-            return file.file.open();
+            return file.open();
         }
 
         /**
@@ -114,7 +142,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
             super.copyMetaInfoTo(dest, context);
             try {
-                dest.touch(file.file.lastModified());
+                dest.touch(file.lastModified());
             } catch (IOException x) {
                 context.logException("Failed to set last modification time", x);
             }
@@ -161,7 +189,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         ArtifactManager manager = context.getSrc().getArtifactManager();
         VirtualFile srcDir = manager.root();
         if (srcDir == null || !srcDir.exists()) {
-            context.logDebug("No artifacts to copy");
+            context.logInfo(Messages.AbstractCopyOperation_MissingSrcArtifacts(srcDir));
             return false;
         }
         if (!StringUtils.isBlank(context.getExcludes())) {
@@ -187,11 +215,6 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         ArtifactManager manager = context.getSrc().getArtifactManager();
         VirtualFile srcDir = manager.root();
         
-        if (srcDir == null || !srcDir.exists()) {
-            context.logInfo(Messages.AbstractCopyOperation_MissingSrcArtifacts(srcDir));
-            return Collections.emptyList();
-        }
-        
         if (StringUtils.isBlank(context.getSrcBaseDir())) {
             srcDir = srcDir.child(context.getSrcBaseDir());
             if (srcDir == null || !srcDir.exists()) {
@@ -199,17 +222,14 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
             }
         }
         
-        VirtualFileScanner scanner = new VirtualFileScanner(
-                context.getIncludes(),
-                context.getExcludes(),
-                false       // useDefaultExcludes
-        );
+        final FileInfoImpl root = new FileInfoImpl(srcDir);
+        
         return Lists.transform(
-                scanner.scanFile(srcDir),
-                new Function<VirtualFileWithPathInfo, FileInfoImpl>() {
+                Arrays.asList(srcDir.list(context.getIncludes())),
+                new Function<String, FileInfoImpl>() {
                     @Override
-                    public FileInfoImpl apply(VirtualFileWithPathInfo file) {
-                        return new FileInfoImpl(file);
+                    public FileInfoImpl apply(String file) {
+                        return root.child(file);
                     }
                 }
         );
