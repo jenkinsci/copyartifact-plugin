@@ -37,6 +37,10 @@
             <groupId>org.jenkins-ci</groupId>
             <artifactId>SECURITY-144-compat</artifactId>
           </exclusion>
+          <!--
+              To pick up http component classes from jenkins-test-harness dependencies
+              in test executions.
+          -->
           <exclusion>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
