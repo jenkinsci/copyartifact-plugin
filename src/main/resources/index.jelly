@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
   Adds a build step to copy artifacts from another project.
 </div>

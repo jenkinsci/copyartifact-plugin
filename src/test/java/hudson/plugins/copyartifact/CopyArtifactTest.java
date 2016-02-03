@@ -80,6 +80,7 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.ToolInstallations;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.jvnet.hudson.test.recipes.WithPlugin;
@@ -182,6 +183,27 @@ public class CopyArtifactTest extends HudsonTestCase {
     private FreeStyleProject createArtifactProject() throws IOException {
         return createArtifactProject(null);
     }
+
+    /**
+     * Creates an empty Maven project with an unique name.
+     *
+     * @return an empty Maven project with an unique name.
+     */
+    private MavenModuleSet createMavenProject() throws IOException {
+        MavenModuleSet mavenModuleSet = jenkins.createProject(MavenModuleSet.class, createUniqueProjectName());
+        mavenModuleSet.setRunHeadless(true);
+        return mavenModuleSet;
+    }
+
+    /**
+     * Creates an empty Matrix project with an unique name.
+     *
+     * @return an empty Matrix project with an unique name.
+     */
+    private MatrixProject createMatrixProject() throws IOException {
+        return jenkins.createProject(MatrixProject.class, createUniqueProjectName());
+    }
+
 
     private MatrixProject createMatrixArtifactProject() throws IOException {
         MatrixProject p = createMatrixProject();
@@ -377,7 +399,7 @@ public class CopyArtifactTest extends HudsonTestCase {
     }
 
     private MavenModuleSet setupMavenJob() throws Exception {
-        configureDefaultMaven();
+        ToolInstallations.configureDefaultMaven();
         MavenModuleSet mp = createMavenProject();
         mp.setGoals("clean package");
         mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));

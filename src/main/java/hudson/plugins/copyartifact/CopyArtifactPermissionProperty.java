@@ -169,10 +169,11 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
         }
         
         /**
-         * @param req
-         * @param formData
-         * @return
-         * @throws hudson.model.Descriptor.FormException
+         * Creates a new property.
+         * @param req Request.
+         * @param formData Form data.
+         * @return The created property.
+         * @throws hudson.model.Descriptor.FormException If an error occurs parsing the form data.
          * @see hudson.model.JobPropertyDescriptor#newInstance(org.kohsuke.stapler.StaplerRequest, net.sf.json.JSONObject)
          */
         @Override
@@ -222,8 +223,10 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
         }
         
         /**
-         * @param projectNames
-         * @return
+         * Checks the provided projects exist in the provided context.
+         * @param projectNames Projects to check.
+         * @param context Context.
+         * @return ok if all projects are found and a warning otherwise.
          */
         public FormValidation doCheckProjectNames(@QueryParameter String projectNames, @AncestorInPath ItemGroup<?> context) {
             List<String> notFound = checkNotFoundProjects(projectNames, context);
@@ -234,9 +237,10 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
         }
         
         /**
-         * @param value
-         * @param context
-         * @return
+         * Provides candidates for project name autocompletion.
+         * @param value Seed value.
+         * @param context Context.
+         * @return The proposed project candidates.
          */
         public AutoCompletionCandidates doAutoCompleteProjectNames(@QueryParameter String value, @AncestorInPath ItemGroup<?> context) {
             AutoCompletionCandidates candidates = new AutoCompletionCandidates();

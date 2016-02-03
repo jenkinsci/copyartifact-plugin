@@ -26,6 +26,7 @@ package hudson.plugins.copyartifact;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.io.File;
 import org.apache.commons.io.FileUtils;
@@ -46,11 +47,8 @@ import hudson.tasks.BuildTrigger;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.ExtractResourceSCM;
-import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.*;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
-import org.jvnet.hudson.test.SleepBuilder;
 
 /**
  * Tests for {@link TriggeredBuildSelector}.
@@ -888,8 +886,8 @@ public class TriggeredBuildSelectorTest {
     @Bug(14653)
     @Test
     public void testMavenModule() throws Exception {
-        j.configureDefaultMaven();
-        MavenModuleSet upstream = j.createMavenProject();
+        ToolInstallations.configureDefaultMaven();
+        MavenModuleSet upstream = createMavenProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.setGoals("clean package");
@@ -926,4 +924,16 @@ public class TriggeredBuildSelectorTest {
                 b.getWorkspace().child("org.jvnet.hudson.main.test.multimod/moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar").exists()
         );
     }
+
+    /**
+     * Creates an empty Maven project with an unique name.
+     *
+     * @return an empty Maven project with an unique name.
+     */
+    private MavenModuleSet createMavenProject() throws IOException {
+        MavenModuleSet mavenModuleSet = j.jenkins.createProject(MavenModuleSet.class, "test"+j.jenkins.getItems().size());
+        mavenModuleSet.setRunHeadless(true);
+        return mavenModuleSet;
+    }
+
 }

@@ -32,6 +32,7 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.model.FreeStyleProject;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -228,7 +229,7 @@ public class CopyArtifactPermissionPropertyTest {
                 = (CopyArtifactPermissionProperty.DescriptorImpl)j.jenkins.getDescriptor(CopyArtifactPermissionProperty.class);
         j.createFreeStyleProject("project1");
         j.createFreeStyleProject("project2");
-        MatrixProject matrix = j.createMatrixProject("matrix1");
+        MatrixProject matrix = createMatrixProject("matrix1");
         AxisList axes = new AxisList(new TextAxis("axis1", "value1"));
         matrix.setAxes(axes);
         MatrixConfiguration matrixConf = matrix.getItem(new Combination(axes, "value1"));
@@ -253,7 +254,7 @@ public class CopyArtifactPermissionPropertyTest {
         CopyArtifactPermissionProperty.DescriptorImpl d
                 = (CopyArtifactPermissionProperty.DescriptorImpl)j.jenkins.getDescriptor(CopyArtifactPermissionProperty.class);
         j.createFreeStyleProject("project1");
-        MatrixProject matrix = j.createMatrixProject("matrix1");
+        MatrixProject matrix = createMatrixProject("matrix1");
         AxisList axes = new AxisList(new TextAxis("axis1", "value1"));
         matrix.setAxes(axes);
         
@@ -269,4 +270,15 @@ public class CopyArtifactPermissionPropertyTest {
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", j.jenkins).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", j.jenkins).getValues());
     }
+
+    /**
+     * Creates an empty Matrix project with the provided name.
+     *
+     * @param name Project name.
+     * @return an empty Matrix project with the provided name.
+     */
+    private MatrixProject createMatrixProject(String name) throws IOException {
+        return j.jenkins.createProject(MatrixProject.class, name);
+    }
+
 }

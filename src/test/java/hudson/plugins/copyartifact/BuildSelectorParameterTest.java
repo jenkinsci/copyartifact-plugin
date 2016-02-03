@@ -24,15 +24,16 @@
 package hudson.plugins.copyartifact;
 
 import com.gargoylesoftware.htmlunit.HttpMethod;
-import com.gargoylesoftware.htmlunit.WebRequestSettings;
+import com.gargoylesoftware.htmlunit.WebClientOptions;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.util.NameValuePair;
 import hudson.cli.CLI;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import java.net.URL;
 import java.util.Arrays;
-import org.apache.commons.httpclient.NameValuePair;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.HudsonTestCase;
 
@@ -54,11 +55,13 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
 
         // Run via UI (HTML form)
         WebClient wc = new WebClient();
+        WebClientOptions wco = wc.getOptions();
         // Jenkins sends 405 response for GET of build page.. deal with that:
-        wc.setThrowExceptionOnFailingStatusCode(false);
-        wc.setPrintContentOnFailingStatusCode(false);
+        wco.setThrowExceptionOnFailingStatusCode(false);
+        wco.setPrintContentOnFailingStatusCode(false);
         HtmlForm form = wc.getPage(job, "build").getFormByName("parameters");
         form.getSelectByName("").getOptionByText("Specific build").setSelected(true);
+        wc.waitForBackgroundJavaScript(10000);
         form.getInputByName("_.buildNumber").setValueAttribute("6");
         submit(form);
         Queue.Item q = hudson.getQueue().getItem(job);
@@ -69,7 +72,7 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via HTTP POST (buildWithParameters)
-        WebRequestSettings post = new WebRequestSettings(
+        WebRequest post = new WebRequest(
                 new URL(getURL(), job.getUrl()+"/buildWithParameters"), HttpMethod.POST);
         wc.addCrumb(post);
         String xml = "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>";

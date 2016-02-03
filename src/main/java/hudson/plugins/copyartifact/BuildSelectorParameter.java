@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 
+import com.thoughtworks.xstream.XStreamException;
 import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
@@ -84,7 +85,10 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     /**
      * Convert xml fragment into a BuildSelector object.
-     * @throws XStreamException or ClassCastException if input is invalid
+     * @param xml XML fragment to parse.
+     * @return the BuildSelector represented by the input XML.
+     * @throws XStreamException if the object cannot be deserialized
+     * @throws ClassCastException if input is invalid
      */
     public static BuildSelector getSelectorFromXml(String xml) {
         return (BuildSelector)XSTREAM.fromXML(xml);
