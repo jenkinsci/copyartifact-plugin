@@ -188,6 +188,11 @@ public class DownstreamBuildSelector extends BuildSelector {
             if (containsVariable(upstreamProjectName)) {
                 return FormValidation.ok();
             }
+
+            if (project == null) {
+                // Context is unknown and validation is useless.
+                return FormValidation.ok();
+            }
             
             Jenkins jenkins = Jenkins.getInstance();
             if (jenkins == null) {
@@ -239,7 +244,7 @@ public class DownstreamBuildSelector extends BuildSelector {
             }
             
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project.getRootProject(), AbstractProject.class
+                    upstreamProjectName, project == null ? null : project.getRootProject(), AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
@@ -292,7 +297,9 @@ public class DownstreamBuildSelector extends BuildSelector {
                 @AncestorInPath AbstractProject<?,?> project
         ) {
             // Specified Item to allow to autocomplete folders (maybe confusing...).
-            return AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
+            return project == null
+                    ? AutoCompletionCandidates.ofJobNames(Item.class, value, null)
+                    : AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
         }
     }
 }
