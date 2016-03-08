@@ -736,7 +736,7 @@ public class TriggeredBuildSelectorTest {
         assertEquals("upstreamValue1,upstreamValue1", getDownstreamAfterOverlappingFlow(true));
     }
 
-    @Bug(18804)
+    @Issue("JENKINS-18804")
     @Test
     public void testUpstreamWasRemoved() throws Exception {
         // upstream -> downstream
@@ -883,7 +883,7 @@ public class TriggeredBuildSelectorTest {
         }
     }
     
-    @Bug(14653)
+    @Issue("JENKINS-14653")
     @Test
     public void testMavenModule() throws Exception {
         ToolInstallations.configureDefaultMaven();

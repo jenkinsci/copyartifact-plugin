@@ -40,7 +40,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.IOException;
@@ -74,7 +74,7 @@ public class CopyArtifactWorkflowTest {
     /**
      * Test filtering on parameters works to copy from workflow jobs.
      */
-    @Bug(26694)
+    @Issue("JENKINS-26694")
     @Test
     public void testFilterByParametersForWorkflow() throws Exception {
         WorkflowJob copiee = createWorkflow("copiee",
