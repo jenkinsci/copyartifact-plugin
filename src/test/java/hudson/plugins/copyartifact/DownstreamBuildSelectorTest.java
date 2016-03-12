@@ -30,8 +30,19 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Cause;
+import hudson.model.FreeStyleProject;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Item;
+import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.StringParameterDefinition;
+import hudson.model.StringParameterValue;
+import hudson.model.User;
+import hudson.model.Result;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import jenkins.model.Jenkins;
 import hudson.FilePath;
@@ -48,7 +59,6 @@ import org.acegisecurity.Authentication;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockFolder;
 
@@ -681,8 +691,10 @@ public class DownstreamBuildSelectorTest {
             AbstractProject project,
             DownstreamBuildSelector.DescriptorImpl d) {
 
-        assertArrayEquals(expectedValues, d.doAutoCompleteUpstreamProjectName(value, project).getValues().toArray());
+        Set<String> actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
+        assertArrayEquals(expectedValues, actualValues.toArray(new String [actualValues.size()]));
         //JENKINS-32526
-        assertArrayEquals(expectedValues, d.doAutoCompleteUpstreamProjectName(value, null).getValues().toArray());
+        actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
+        assertArrayEquals(expectedValues, actualValues.toArray(new String [actualValues.size()]));
     }
 }
