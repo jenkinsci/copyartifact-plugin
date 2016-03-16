@@ -554,15 +554,13 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "").kind);
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "  ").kind);
 
-        //Ancestor null returns OK
-        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "nosuchproject").kind);
+        //Ancestor null
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "nosuchproject").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "$VAR").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "FOO${VAR}").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "Project\\$").kind);    // limitation
+        //Only relative path from Root works
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "folder1/project2").kind);
-        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "../project1").kind);
-        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "project3").kind);
-        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "/folder1/project3").kind);
         
         // permission check
         Authentication a = Jenkins.getAuthentication();
@@ -570,8 +568,8 @@ public class DownstreamBuildSelectorTest {
             SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate());
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "../project1").kind);
             assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(project2, "project3").kind);
-            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "../project1").kind);
-            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "project3").kind);
+            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "/project1").kind);
+            assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "project3").kind);
         } finally {
             SecurityContextHolder.getContext().setAuthentication(a);
         }

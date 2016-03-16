@@ -177,7 +177,7 @@ public class DownstreamBuildSelector extends BuildSelector {
          * @return
          */
         public FormValidation doCheckUpstreamProjectName(
-                @AncestorInPath AbstractProject<?,?> project,
+                @AncestorInPath Job<?,?> project,
                 @QueryParameter String upstreamProjectName
         ) {
             upstreamProjectName = StringUtils.trim(upstreamProjectName);
@@ -188,20 +188,22 @@ public class DownstreamBuildSelector extends BuildSelector {
             if (containsVariable(upstreamProjectName)) {
                 return FormValidation.ok();
             }
-
-            if (project == null) {
-                // Context is unknown and validation is useless.
-                return FormValidation.ok();
-            }
             
             Jenkins jenkins = Jenkins.getInstance();
             if (jenkins == null) {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
+
+            AbstractProject<?,?> upstreamRoot;
+            if(project != null && project instanceof AbstractProject) {
+                upstreamRoot = ((AbstractProject) project).getRootProject();
+            } else {
+                upstreamRoot = null;
+            }
             
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project.getRootProject(), AbstractProject.class
+                    upstreamProjectName, upstreamRoot, AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
@@ -215,7 +217,7 @@ public class DownstreamBuildSelector extends BuildSelector {
          * @return
          */
         public FormValidation doCheckUpstreamBuildNumber(
-                @AncestorInPath AbstractProject<?,?> project,
+                @AncestorInPath Job<?,?> project,
                 @QueryParameter String upstreamProjectName,
                 @QueryParameter String upstreamBuildNumber
         ) {
@@ -242,9 +244,16 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
+
+            AbstractProject<?,?> rootProject;
+            if(project != null && project instanceof AbstractProject) {
+                rootProject = ((AbstractProject) project).getRootProject();
+            } else {
+                rootProject = null;
+            }
             
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project == null ? null : project.getRootProject(), AbstractProject.class
+                    upstreamProjectName, rootProject, AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
