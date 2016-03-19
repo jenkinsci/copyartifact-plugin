@@ -194,16 +194,9 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-
-            AbstractProject<?,?> upstreamRoot;
-            if(project != null && project instanceof AbstractProject) {
-                upstreamRoot = ((AbstractProject) project).getRootProject();
-            } else {
-                upstreamRoot = null;
-            }
             
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, upstreamRoot, AbstractProject.class
+                    upstreamProjectName, project, AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
@@ -244,16 +237,9 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-
-            AbstractProject<?,?> rootProject;
-            if(project != null && project instanceof AbstractProject) {
-                rootProject = ((AbstractProject) project).getRootProject();
-            } else {
-                rootProject = null;
-            }
             
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, rootProject, AbstractProject.class
+                    upstreamProjectName, project, AbstractProject.class
             );
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
@@ -303,11 +289,11 @@ public class DownstreamBuildSelector extends BuildSelector {
          */
         public AutoCompletionCandidates doAutoCompleteUpstreamProjectName(
                 @QueryParameter String value,
-                @AncestorInPath AbstractProject<?,?> project
+                @AncestorInPath Job<?,?> project
         ) {
             // Specified Item to allow to autocomplete folders (maybe confusing...).
             return project == null
-                    ? AutoCompletionCandidates.ofJobNames(Item.class, value, null)
+                    ? new AutoCompletionCandidates()
                     : AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
         }
     }
