@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import javax.annotation.CheckForNull;
+
 import hudson.model.Job;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -55,7 +57,7 @@ import hudson.util.FormValidation;
 /**
  *　Job Property to define projects that can copy artifacts of this project.
  */
-public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<?,?>> {
+public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
     public static final String PROPERTY_NAME = "copy-artifact-permission-property";
     
     private final List<String> projectNameList;
@@ -196,7 +198,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
          * @param context
          * @return
          */
-        /*package*/ List<String> checkNotFoundProjects(String projectNames, ItemGroup<?> context) {
+        /*package*/ List<String> checkNotFoundProjects(String projectNames, @CheckForNull ItemGroup<?> context) {
             if (StringUtils.isBlank(projectNames)) {
                 return Collections.emptyList();
             }
@@ -211,8 +213,12 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
                     continue;
                 }
                 Jenkins jenkins = Jenkins.getInstance();
-                AbstractProject<?,?> proj = (jenkins == null)?null:jenkins.getItem(projectName, context, AbstractProject.class);
-                if (proj == null || proj.getRootProject() != proj || !proj.hasPermission(Item.READ)) {
+                Job<?,?> proj = (jenkins == null)?null:jenkins.getItem(projectName, (context != null) ? context : jenkins, Job.class);
+                if (
+                        proj == null
+                        || ((proj instanceof AbstractProject) && ((AbstractProject<?, ?>)proj).getRootProject() != proj)
+                        || !proj.hasPermission(Item.READ)
+                ) {
                     // permission check is done only for root project.
                     notFound.add(projectName);
                     continue;
@@ -225,8 +231,8 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
          * @param projectNames
          * @return
          */
-        public FormValidation doCheckProjectNames(@QueryParameter String projectNames, @AncestorInPath ItemGroup<?> context) {
-            List<String> notFound = checkNotFoundProjects(projectNames, context);
+        public FormValidation doCheckProjectNames(@QueryParameter String projectNames, @CheckForNull @AncestorInPath Job<?, ?> job) {
+            List<String> notFound = checkNotFoundProjects(projectNames, (job != null) ? job.getParent() : null);
             if (!notFound.isEmpty()) {
                 return FormValidation.warning(Messages.CopyArtifactPermissionProperty_MissingProject(StringUtils.join(notFound, ",")));
             }
@@ -238,7 +244,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
          * @param context
          * @return
          */
-        public AutoCompletionCandidates doAutoCompleteProjectNames(@QueryParameter String value, @AncestorInPath ItemGroup<?> context) {
+        public AutoCompletionCandidates doAutoCompleteProjectNames(@QueryParameter String value, @CheckForNull @AncestorInPath Job<?, ?> currentJob) {
             AutoCompletionCandidates candidates = new AutoCompletionCandidates();
             if (StringUtils.isBlank(value)) {
                 return candidates;
@@ -248,8 +254,11 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
             if (jenkins == null) {
                 return candidates;
             }
-            for (AbstractProject<?,?> project: jenkins.getAllItems(AbstractProject.class)) {
-                if (project.getRootProject() != project) {
+            for (Job<?,?> project: jenkins.getAllItems(Job.class)) {
+                if (
+                        (project instanceof AbstractProject)
+                        && ((AbstractProject<?, ?>)project).getRootProject() != project
+                ) {
                     // permission check is done only for root project.
                     continue;
                 }
@@ -257,9 +266,18 @@ public class CopyArtifactPermissionProperty extends JobProperty<AbstractProject<
                     continue;
                 }
                 
-                String relativeName = project.getRelativeNameFrom(context);
-                if (relativeName.startsWith(value)) {
-                    candidates.add(relativeName);
+                if (currentJob != null) {
+                    // `job` gets `null` for Templates plugin
+                    String relativeName = project.getRelativeNameFrom(currentJob.getParent());
+                    if (relativeName.startsWith(value)) {
+                        candidates.add(relativeName);
+                    }
+                }
+                if (value.startsWith("/")) {
+                    String absoluteName = String.format("/%s", project.getFullName());
+                    if (absoluteName.startsWith(value)) {
+                        candidates.add(absoluteName);
+                    }
                 }
             }
             return candidates;
