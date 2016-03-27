@@ -555,7 +555,7 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "  ").kind);
 
         //Ancestor null
-        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "nosuchproject").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "nosuchproject").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "$VAR").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "FOO${VAR}").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "Project\\$").kind);    // limitation
@@ -569,7 +569,7 @@ public class DownstreamBuildSelectorTest {
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "../project1").kind);
             assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(project2, "project3").kind);
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "/project1").kind);
-            assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "project3").kind);
+            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "project3").kind);
         } finally {
             SecurityContextHolder.getContext().setAuthentication(a);
         }
@@ -638,8 +638,8 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", build1.getId()).kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", build1.getDisplayName()).kind);
 
-        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(null, "project2", "9999").kind);
-        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(null, "project2", "NosuchBuild").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "9999").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "NosuchBuild").kind);
 
         // permission check
         Authentication a = Jenkins.getAuthentication();

@@ -194,10 +194,20 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-            
-            AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project, AbstractProject.class
+
+            if (project == null) {
+                // Context is unknown and validation is useless.
+                return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            }
+
+            Job<?,?> upstreamRoot = (project instanceof AbstractProject)
+                    ? ((AbstractProject<?,?>) project).getRootProject()
+                    : project;
+
+            Job<?,?> upstreamProject = jenkins.getItem(
+                    upstreamProjectName, upstreamRoot, Job.class
             );
+
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
             }
@@ -237,10 +247,20 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-            
+
+            if (project == null) {
+                // Context is unknown and validation is useless.
+                return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            }
+
+            Job<?,?> upstreamRoot = (project instanceof AbstractProject)
+                    ? ((AbstractProject<?,?>) project).getRootProject()
+                    : project;
+
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project, AbstractProject.class
+                    upstreamProjectName, upstreamRoot, AbstractProject.class
             );
+
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
             }
