@@ -47,8 +47,12 @@ import hudson.tasks.BuildTrigger;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.*;
+import org.jvnet.hudson.test.ExtractResourceSCM;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
+import org.jvnet.hudson.test.SleepBuilder;
+import org.jvnet.hudson.test.ToolInstallations;
 
 /**
  * Tests for {@link TriggeredBuildSelector}.
