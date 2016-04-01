@@ -30,10 +30,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
-import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
-import jenkins.model.Jenkins;
-import hudson.FilePath;
+import hudson.model.AbstractProject;
 import hudson.model.Cause;
 import hudson.model.FreeStyleProject;
 import hudson.model.FreeStyleBuild;
@@ -44,6 +43,9 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.User;
 import hudson.model.Result;
+import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
+import jenkins.model.Jenkins;
+import hudson.FilePath;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.security.Permission;
 import hudson.security.AuthorizationMatrixProperty;
@@ -546,6 +548,19 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "../project1").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "project3").kind);
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "/folder1/project3").kind);
+
+        //JENKINS-32526: Check that it behaves gracefully for an unknown context
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, null).kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "").kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(null, "  ").kind);
+
+        //Ancestor null
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "nosuchproject").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "$VAR").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "FOO${VAR}").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "Project\\$").kind);    // limitation
+        //Only relative path from Root works
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "folder1/project2").kind);
         
         // permission check
         Authentication a = Jenkins.getAuthentication();
@@ -553,6 +568,8 @@ public class DownstreamBuildSelectorTest {
             SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate());
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "../project1").kind);
             assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(project2, "project3").kind);
+            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "/project1").kind);
+            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "project3").kind);
         } finally {
             SecurityContextHolder.getContext().setAuthentication(a);
         }
@@ -605,14 +622,77 @@ public class DownstreamBuildSelectorTest {
         
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(project1, "project2", "9999").kind);
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(project1, "project2", "NosuchBuild").kind);
-        
+
+        //JENKINS-32526: Check that it behaves gracefully for an unknown context
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "", Integer.toString(build1.getNumber())).kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "$VAR", Integer.toString(build1.getNumber())).kind);
+
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(null, "project2", null).kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(null, "project2", "").kind);
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamBuildNumber(null, "project2", "  ").kind);
+
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "FOO${VAR}").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "\\${VAR}").kind);  // limitation
+
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", Integer.toString(build1.getNumber())).kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", build1.getId()).kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", build1.getDisplayName()).kind);
+
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "9999").kind);
+        assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "NosuchBuild").kind);
+
         // permission check
         Authentication a = Jenkins.getAuthentication();
         try {
             SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate());
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(project1, "project3", "nosuchbuild").kind);  // limitation
+            assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project3", "nosuchbuild").kind);
         } finally {
             SecurityContextHolder.getContext().setAuthentication(a);
         }
+    }
+
+    @Test
+    public void testAutoCompleteUpstreamProjectName() throws Exception {
+        DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl) j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
+
+        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
+        pmas.add(Jenkins.READ, "devel");
+
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        j.jenkins.setAuthorizationStrategy(pmas);
+
+        // project1
+        // project2  cannot read from devel
+        FreeStyleProject project1 = j.createFreeStyleProject("project1");
+        {
+            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            map.put(Item.READ, Sets.newHashSet("devel"));
+            project1.addProperty(new AuthorizationMatrixProperty(map));
+        }
+
+        FreeStyleProject project2 = j.createFreeStyleProject("project2");
+
+        //Check Empty strings
+        testAutoCompleteUpstreamProjectName(new String [] {project1.getName(), project2.getName()}, "", project1, d);
+        //Check simple matching string
+        testAutoCompleteUpstreamProjectName(new String [] {project1.getName(), project2.getName()}, "proj", project1, d);
+        //Check non matching string
+        testAutoCompleteUpstreamProjectName(new String [] {}, "FOO", project1, d);
+        //Check matching string
+        testAutoCompleteUpstreamProjectName(new String [] {project1.getName()}, "project1", project2, d);
+    }
+
+    private void testAutoCompleteUpstreamProjectName(
+            String [] expectedValues,
+            String value,
+            AbstractProject project,
+            DownstreamBuildSelector.DescriptorImpl d) {
+
+        Set<String> actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
+        assertArrayEquals(expectedValues, actualValues.toArray(new String [actualValues.size()]));
+        //JENKINS-32526: Auto-completion disabled if no context
+        actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
+        assertArrayEquals(new String[] {}, actualValues.toArray(new String [actualValues.size()]));
     }
 }

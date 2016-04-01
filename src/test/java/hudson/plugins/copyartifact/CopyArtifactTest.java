@@ -1155,10 +1155,16 @@ public class CopyArtifactTest extends HudsonTestCase {
         assertSame(FormValidation.Kind.ERROR, descriptor.doCheckProjectName(p, "").kind);
         // Parameterized value
         assertSame(FormValidation.Kind.WARNING, descriptor.doCheckProjectName(p, "$FOO").kind);
+        //JENKINS-32526: Check that it behaves gracefully for an unknown context.
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, p.getFullName()).kind);
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, "").kind);
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, "$FOO").kind);
+
         // Just returns OK if no permission
         hudson.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
         SecurityContextHolder.clearContext();
         assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, "").kind);
+        assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, "").kind);
         // Other descriptor methods
         assertTrue(descriptor.isApplicable(null));
         assertTrue(descriptor.getDisplayName().length() > 0);

@@ -578,6 +578,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
         public FormValidation doCheckProjectName(
                 @AncestorInPath Job<?,?> anc, @QueryParameter String value) {
+            // JENKINS-32526: Check that it behaves gracefully for an unknown context
+            if (anc == null) return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             
