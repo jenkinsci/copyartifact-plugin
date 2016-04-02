@@ -203,7 +203,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     /**
      * Set the suffix for variables to store copying results.
      * 
-     * @param resultVariableSuffix
+     * @param resultVariableSuffix Variable suffix to use.
      */
     @DataBoundSetter
     public void setResultVariableSuffix(String resultVariableSuffix) {

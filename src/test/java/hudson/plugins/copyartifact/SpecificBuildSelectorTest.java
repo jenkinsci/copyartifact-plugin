@@ -2,17 +2,24 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
-import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.junit.Rule;
+import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 
-public class SpecificBuildSelectorTest extends HudsonTestCase {
+import static org.junit.Assert.*;
 
-    @Bug(14266)
+public class SpecificBuildSelectorTest {
+    @Rule
+    public final JenkinsRule rule = new JenkinsRule();
+
+    @Issue("JENKINS-14266")
+    @Test
     public void testUnsetVar() throws Exception {
-        FreeStyleProject p = createFreeStyleProject();
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FreeStyleProject p = rule.createFreeStyleProject();
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         assertEquals(3, p.getLastBuild().number);
         BuildSelector s = new SpecificBuildSelector("$NUM");
         BuildFilter f = new BuildFilter();
@@ -20,12 +27,13 @@ public class SpecificBuildSelectorTest extends HudsonTestCase {
         assertEquals(null, s.getBuild(p, new EnvVars("HUM", "two"), f, null));
     }
 
-    @Bug(19693)
+    @Issue("JENKINS-19693")
+    @Test
     public void testDisplayName() throws Exception {
-        FreeStyleProject p = createFreeStyleProject();
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FreeStyleProject p = rule.createFreeStyleProject();
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         assertEquals(3, p.getLastBuild().number);
         p.getBuildByNumber(2).setDisplayName("RC1");
         BuildSelector s = new SpecificBuildSelector("$NUM");
@@ -34,11 +42,12 @@ public class SpecificBuildSelectorTest extends HudsonTestCase {
         assertEquals(null, s.getBuild(p, new EnvVars("NUM", "RC2"), f, null));
     }
 
+    @Test
     public void testPermalink() throws Exception {
-        FreeStyleProject p = createFreeStyleProject();
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FreeStyleProject p = rule.createFreeStyleProject();
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         assertEquals(3, p.getLastBuild().number);
         BuildSelector s = new SpecificBuildSelector("$NUM");
         BuildFilter f = new BuildFilter();

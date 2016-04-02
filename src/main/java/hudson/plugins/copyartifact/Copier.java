@@ -37,6 +37,8 @@ public abstract class Copier implements ExtensionPoint {
      * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
      *   build step may later specify a deeper target dir)
      *
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * @since TODO ?
      */
     public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
@@ -50,6 +52,18 @@ public abstract class Copier implements ExtensionPoint {
     }
 
     /**
+     * Called before copy-artifact operation.
+     *
+     * @param src
+     *      The build record from which we are copying artifacts.
+     * @param dst
+     *      The built into which we are copying artifacts.
+     * @param srcDir Source for upcoming file copy
+     * @param baseTargetDir Base target dir for upcoming file copy (the copy-artifact
+     *   build step may later specify a deeper target dir)
+     *
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * @deprecated Please use {@link #initialize(hudson.model.Run, hudson.model.Run, hudson.FilePath, hudson.FilePath)}
      */
     @Deprecated
@@ -66,15 +80,33 @@ public abstract class Copier implements ExtensionPoint {
     }
 
     /**
-     * @deprecated 
+     * Copy files matching the given file mask to the specified target.
+     *
+     * @param srcDir Source directory
+     * @param filter Ant GLOB pattern
+     * @param targetDir Target directory
+     * @return Number of files that were copied
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     * @deprecated
      *      call/override {@link #copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)} instead.
      */
+    @Deprecated
     public int copyAll(FilePath srcDir, String filter, FilePath targetDir) throws IOException, InterruptedException {
         return copyAll(srcDir, filter, null, targetDir, true);
     }
 
     /**
-     * @deprecated 
+     * Copy files matching the given file mask to the specified target.
+     *
+     * @param srcDir Source directory
+     * @param filter Ant GLOB pattern
+     * @param targetDir Target directory
+     * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
+     * @return Number of files that were copied
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     * @deprecated
      *      call/override {@link #copyAll(FilePath, String, String, FilePath, boolean)} instead.
      */
     @Deprecated
@@ -92,6 +124,8 @@ public abstract class Copier implements ExtensionPoint {
      * @param excludes Ant GLOB pattern. Can be null.
      * @param targetDir Target directory
      * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * @return Number of files that were copied
      * @see FilePath#copyRecursiveTo(String,FilePath)
      */
@@ -112,9 +146,16 @@ public abstract class Copier implements ExtensionPoint {
     }
     
     /**
-     * @deprecated 
+     * Copy a single file.
+     * @param source Source file
+     * @param target Target file (includes filename; this is not the target directory).
+     *   Directory for target should already exist (copy-artifact build step calls mkdirs).
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     * @deprecated
      *      call/override {@link #copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts)} instead.
      */
+    @Deprecated
     public void copyOne(FilePath source, FilePath target) throws IOException, InterruptedException {
         copyOne(source, target, true);
     }
@@ -125,12 +166,15 @@ public abstract class Copier implements ExtensionPoint {
      * @param target Target file (includes filename; this is not the target directory).
      *   Directory for target should already exist (copy-artifact build step calls mkdirs).
      * @param fingerprintArtifacts boolean controlling if the copy should also fingerprint the artifacts
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * @see FilePath#copyTo(FilePath)
      */
     public abstract void copyOne(FilePath source, FilePath target, boolean fingerprintArtifacts) throws IOException, InterruptedException;
 
     /**
      * Ends what's started by the {@link #init(Run, AbstractBuild, FilePath, FilePath)} method.
+     * @throws IOException if an error occurs while performing the operation.
      */
     public void end() throws IOException, InternalError {}
 

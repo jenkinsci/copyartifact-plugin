@@ -55,8 +55,9 @@ public class DownstreamBuildSelector extends BuildSelector {
     private final String upstreamBuildNumber;
     
     /**
-     * @param upstreamProjectName
-     * @param upstreamBuildNumber
+     * Constructor.
+     * @param upstreamProjectName Upstream project name.
+     * @param upstreamBuildNumber Upstream build number.
      */
     @DataBoundConstructor
     public DownstreamBuildSelector(String upstreamProjectName, String upstreamBuildNumber) {
@@ -164,7 +165,7 @@ public class DownstreamBuildSelector extends BuildSelector {
         }
         
         /**
-         * @param str
+         * @param str Value to check.
          * @return whether a value contains variable expressions.
          */
         protected boolean containsVariable(String str) {
@@ -173,8 +174,10 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         /**
          * Validates a form input to "Upstream Project Name"
-         * 
-         * @return
+         *
+         * @param project Ancestor project.
+         * @param upstreamProjectName Upstream project name.
+         * @return the form validation result.
          */
         public FormValidation doCheckUpstreamProjectName(
                 @AncestorInPath Job<?,?> project,
@@ -216,8 +219,11 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         /**
          * Validates a form input to "Upstream Build Number"
-         * 
-         * @return
+         *
+         * @param project Ancestor project.
+         * @param upstreamProjectName Upstream project name.
+         * @param upstreamBuildNumber Upstream build number.
+         * @return the form validation result.
          */
         public FormValidation doCheckUpstreamBuildNumber(
                 @AncestorInPath Job<?,?> project,
@@ -303,9 +309,9 @@ public class DownstreamBuildSelector extends BuildSelector {
         /**
          * Fill the project name automatically.
          * 
-         * @param value
-         * @param project
-         * @return
+         * @param value Seed value.
+         * @param project Ancestor project.
+         * @return the autocompletion candidates.
          */
         public AutoCompletionCandidates doAutoCompleteUpstreamProjectName(
                 @QueryParameter String value,

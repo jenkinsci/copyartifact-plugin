@@ -67,7 +67,11 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
     }
 
     /**
-     * Older version of API.
+     * Find a build to copy artifacts from. Older and deprecated version of API.
+     * @param job Source project
+     * @param env Environment for build that is copying artifacts
+     * @param filter Additional filter; returned result should return true (return null otherwise)
+     * @return Build to use, or null if no appropriate build was found
      */
     @Deprecated
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
@@ -91,9 +95,10 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * Returns <code>false</code> if <code>run</code> is <code>null</code>
      * or <code>run</code> is still running.
      * 
-     * @param run
-     * @param resultToTest
-     * @return
+     * @param run Build to test.
+     * @param resultToTest Result to test.
+     * @return <code>false</code> if <code>run</code> is <code>null</code>
+     * or <code>run</code> is still running.
      * @see Result#isBetterOrEqualTo(Result)
      */
     protected static boolean isBuildResultBetterOrEqualTo(Run<?,?> run, Result resultToTest) {
