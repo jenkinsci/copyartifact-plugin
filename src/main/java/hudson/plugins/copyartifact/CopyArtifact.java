@@ -546,7 +546,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * Package scope for testing purpose.
      * 
      * @param variableName
-     * @return
+     * @return true if <code>variableName</code> is valid as a variable name.
      */
     static boolean isValidVariableName(final String variableName) {
         if(StringUtils.isBlank(variableName)) {
