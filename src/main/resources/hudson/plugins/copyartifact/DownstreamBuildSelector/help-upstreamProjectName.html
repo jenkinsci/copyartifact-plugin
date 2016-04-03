@@ -8,4 +8,15 @@ Downstream builds are found using fingerprints of files.
 That is, a build that is triggerd from a build isn't always considered downstream,
 but you need to fingerprint files used in builds to let Jenkins track them.
 </p>
+<p>
+Note: "Downsteram build of" is applicable only to AbstractProject based projects (both upstream and downstream projects).
+  <dl>
+    <dt>AbstractProject based projects:</dt>
+      <dd>Freestyle projects</dd>
+      <dd>Multi-configuration projects</dd>
+      <dd>Maven projects</dd>
+    <dt>Non AbstractProject based projects:</dt>
+      <dd>Pipeline jobs (aka. Workflow jobs)</dd>
+  </dl>
+</p>
 </div>

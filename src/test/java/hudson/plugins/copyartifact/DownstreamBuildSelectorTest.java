@@ -57,6 +57,7 @@ import hudson.util.FormValidation;
 
 import org.acegisecurity.Authentication;
 import org.acegisecurity.context.SecurityContextHolder;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -694,5 +695,25 @@ public class DownstreamBuildSelectorTest {
         //JENKINS-32526: Auto-completion disabled if no context
         actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
         assertArrayEquals(new String[] {}, actualValues.toArray(new String [actualValues.size()]));
+    }
+
+    @Test
+    public void testCheckUpstreamProjectNameForWorkflow() throws Exception {
+        FreeStyleProject context = j.createFreeStyleProject();
+        WorkflowJob target = j.jenkins.createProject(WorkflowJob.class, "workflow-test");
+        
+        DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
+        // DownstreamBuildSelector is not applicable to workflow.
+        assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(context, target.getFullName()).kind);
+    }
+
+    @Test
+    public void testAutoCompleteUpstreamProjectNameForWorkflow() throws Exception {
+        FreeStyleProject context = j.createFreeStyleProject();
+        WorkflowJob target = j.jenkins.createProject(WorkflowJob.class, "workflow-test");
+        
+        DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
+        // DownstreamBuildSelector is not applicable to workflow.
+        assertFalse(d.doAutoCompleteUpstreamProjectName(target.getFullDisplayName(), context).getValues().contains(target.getFullDisplayName()));
     }
 }
