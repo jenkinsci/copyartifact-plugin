@@ -706,14 +706,4 @@ public class DownstreamBuildSelectorTest {
         // DownstreamBuildSelector is not applicable to workflow.
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(context, target.getFullName()).kind);
     }
-
-    @Test
-    public void testAutoCompleteUpstreamProjectNameForWorkflow() throws Exception {
-        FreeStyleProject context = j.createFreeStyleProject();
-        WorkflowJob target = j.jenkins.createProject(WorkflowJob.class, "workflow-test");
-        
-        DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
-        // DownstreamBuildSelector is not applicable to workflow.
-        assertFalse(d.doAutoCompleteUpstreamProjectName(target.getFullDisplayName(), context).getValues().contains(target.getFullDisplayName()));
-    }
 }
