@@ -197,7 +197,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
          * 
          * @param projectNames
          * @param context
-         * @return
+         * @return list of not-found projects.
          */
         /*package*/ List<String> checkNotFoundProjects(String projectNames, @CheckForNull ItemGroup<?> context) {
             if (StringUtils.isBlank(projectNames)) {
@@ -231,7 +231,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
         /**
          * Checks the provided projects exist in the provided context.
          * @param projectNames Projects to check.
-         * @param context Context.
+         * @param job the configuring job.
          * @return ok if all projects are found and a warning otherwise.
          */
         public FormValidation doCheckProjectNames(@QueryParameter String projectNames, @CheckForNull @AncestorInPath Job<?, ?> job) {
@@ -245,7 +245,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
         /**
          * Provides candidates for project name autocompletion.
          * @param value Seed value.
-         * @param context Context.
+         * @param currentJob job the configuring job.
          * @return The proposed project candidates.
          */
         public AutoCompletionCandidates doAutoCompleteProjectNames(@QueryParameter String value, @CheckForNull @AncestorInPath Job<?, ?> currentJob) {
