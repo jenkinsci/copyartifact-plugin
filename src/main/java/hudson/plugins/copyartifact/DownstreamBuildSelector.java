@@ -91,7 +91,14 @@ public class DownstreamBuildSelector extends BuildSelector {
     protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
         if (!(run instanceof AbstractBuild<?,?>)) {
             // As this feature depends on `AbstractBuild#getUpstreamRelationshipBuild(AbstractProject<?,?>)`
-            LOGGER.warning(String.format("Only applicable to AbstractBuild: but is %s.", run.getClass().getName()));
+            LOGGER.log(
+                Level.WARNING,
+                "Only applicable to AbstractBuild: but {0} is {1}.",
+                new Object[] {
+                    run.getFullDisplayName(),
+                    run.getClass().getName()
+                }
+            );
             return false;
         }
         Jenkins jenkins = Jenkins.getInstance();

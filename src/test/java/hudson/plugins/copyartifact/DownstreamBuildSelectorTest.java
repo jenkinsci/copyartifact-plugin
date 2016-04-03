@@ -57,7 +57,9 @@ import hudson.util.FormValidation;
 
 import org.acegisecurity.Authentication;
 import org.acegisecurity.context.SecurityContextHolder;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -705,5 +707,98 @@ public class DownstreamBuildSelectorTest {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
         // DownstreamBuildSelector is not applicable to workflow.
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(context, target.getFullName()).kind);
+    }
+    
+    @Test
+    public void testUpstreamIsWorkflow() throws Exception {
+        WorkflowJob upstream = j.jenkins.createProject(WorkflowJob.class, "upstream");
+        upstream.setDefinition(new CpsFlowDefinition(
+                "node {"
+                + "writeFile text: \"${env.BUILD_TAG}\", file: 'upstream_artifact.txt'; "
+                + "step([$class: 'ArtifactArchiver', artifacts: 'upstream_artifact.txt'])"
+                + "}",
+                true
+        ));
+        
+        WorkflowRun upstreamBuild = j.assertBuildStatusSuccess(upstream.scheduleBuild2(0));
+        
+        FreeStyleProject downstream = j.createFreeStyleProject();
+        CopyArtifact ca = new CopyArtifact(upstream.getFullName());
+        ca.setFingerprintArtifacts(true);
+        ca.setFilter("upstream_artifact.txt");
+        downstream.getBuildersList().add(ca);
+        downstream.getBuildersList().add(new FileWriteBuilder("downstream_artifact.txt", "${BUILD_TAG}"));
+        ArtifactArchiver aa = new ArtifactArchiver("downstream_artifact.txt");
+        aa.setAllowEmptyArchive(false);
+        aa.setFingerprint(true);
+        downstream.getPublishersList().add(aa);
+        
+        FreeStyleBuild downstreamBuild = j.assertBuildStatusSuccess(downstream.scheduleBuild2(0));
+        
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                downstream.getFullName(),
+                "",
+                new DownstreamBuildSelector(
+                        upstream.getFullName(),
+                        Integer.toString(upstreamBuild.getNumber())
+                ),
+                "**/*",
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // fail as DownstreamBuildSelector doesn't support workflow upstream.
+        FreeStyleBuild b = j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        // to see expected log is recorded.
+        //System.out.println(b.getLog());
+    }
+    
+    @Test
+    public void testDownstreamIsWorkflow() throws Exception {
+        FreeStyleProject upstream = j.createFreeStyleProject();
+        upstream.getBuildersList().add(new FileWriteBuilder("upstream_artifact.txt", "${BUILD_TAG}"));
+        ArtifactArchiver aa = new ArtifactArchiver("upstream_artifact.txt");
+        aa.setAllowEmptyArchive(false);
+        aa.setFingerprint(true);
+        upstream.getPublishersList().add(aa);
+        
+        FreeStyleBuild upstreamBuild = j.assertBuildStatusSuccess(upstream.scheduleBuild2(0));
+        
+        WorkflowJob downstream = j.jenkins.createProject(WorkflowJob.class, "downstream");
+        downstream.setDefinition(new CpsFlowDefinition(
+                "node {"
+                + "step([$class: 'CopyArtifact', projectName: '" + upstream.getFullName() + "', filter: 'upstream_artifact.txt', fingerprintAritfacts: true]);"
+                + "writeFile text: \"${env.BUILD_TAG}\", file: 'downstream_artifact.txt'; "
+                + "step([$class: 'ArtifactArchiver', artifacts: 'downstream_artifact.txt'])"
+                + "}",
+                true
+        ));
+        
+        WorkflowRun downstreamBuild = j.assertBuildStatusSuccess(downstream.scheduleBuild2(0));
+        
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                downstream.getFullName(),
+                "",
+                new DownstreamBuildSelector(
+                        upstream.getFullName(),
+                        Integer.toString(upstreamBuild.getNumber())
+                ),
+                "**/*",
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // fail as DownstreamBuildSelector doesn't support workflow downstream.
+        FreeStyleBuild b = j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        // to see expected log is recorded.
+        //System.out.println(b.getLog());
     }
 }
