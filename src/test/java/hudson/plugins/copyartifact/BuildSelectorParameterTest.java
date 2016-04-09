@@ -24,44 +24,56 @@
 package hudson.plugins.copyartifact;
 
 import com.gargoylesoftware.htmlunit.HttpMethod;
-import com.gargoylesoftware.htmlunit.WebRequestSettings;
+import com.gargoylesoftware.htmlunit.WebClientOptions;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.util.NameValuePair;
 import hudson.cli.CLI;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import java.net.URL;
 import java.util.Arrays;
-import org.apache.commons.httpclient.NameValuePair;
+
+import org.junit.Rule;
+import org.junit.Test;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
-import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.JenkinsRule.WebClient;
+
+import static org.junit.Assert.*;
 
 /**
  * Test interaction of BuildSelectorParameter with Jenkins core.
  * @author Alan Harder
  */
-public class BuildSelectorParameterTest extends HudsonTestCase {
+public class BuildSelectorParameterTest {
+    @Rule
+    public final JenkinsRule rule = new JenkinsRule();
 
     /**
      * Verify BuildSelectorParameter works via HTML form, http POST and CLI.
      */
+    @Test
     public void testParameter() throws Exception {
-        FreeStyleProject job = createFreeStyleProject();
+        FreeStyleProject job = rule.createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(
                 new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(false), "foo")));
         CaptureEnvironmentBuilder ceb = new CaptureEnvironmentBuilder();
         job.getBuildersList().add(ceb);
 
         // Run via UI (HTML form)
-        WebClient wc = new WebClient();
+        WebClient wc = rule.createWebClient();
+        WebClientOptions wco = wc.getOptions();
         // Jenkins sends 405 response for GET of build page.. deal with that:
-        wc.setThrowExceptionOnFailingStatusCode(false);
-        wc.setPrintContentOnFailingStatusCode(false);
+        wco.setThrowExceptionOnFailingStatusCode(false);
+        wco.setPrintContentOnFailingStatusCode(false);
         HtmlForm form = wc.getPage(job, "build").getFormByName("parameters");
         form.getSelectByName("").getOptionByText("Specific build").setSelected(true);
+        wc.waitForBackgroundJavaScript(10000);
         form.getInputByName("_.buildNumber").setValueAttribute("6");
-        submit(form);
-        Queue.Item q = hudson.getQueue().getItem(job);
+        rule.submit(form);
+        Queue.Item q = rule.jenkins.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
         assertEquals("<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
@@ -69,37 +81,38 @@ public class BuildSelectorParameterTest extends HudsonTestCase {
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via HTTP POST (buildWithParameters)
-        WebRequestSettings post = new WebRequestSettings(
-                new URL(getURL(), job.getUrl()+"/buildWithParameters"), HttpMethod.POST);
+        WebRequest post = new WebRequest(
+                new URL(rule.getURL(), job.getUrl()+"/buildWithParameters"), HttpMethod.POST);
         wc.addCrumb(post);
         String xml = "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>";
         post.setRequestParameters(Arrays.asList(new NameValuePair("SELECTOR", xml),
                                                 post.getRequestParameters().get(0)));
         wc.getPage(post);
-        q = hudson.getQueue().getItem(job);
+        q = rule.jenkins.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
         assertEquals(xml, ceb.getEnvVars().get("SELECTOR"));
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via CLI
-        CLI cli = new CLI(getURL());
+        CLI cli = new CLI(rule.getURL());
         assertEquals(0, cli.execute(
                 "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"));
-        q = hudson.getQueue().getItem(job);
+        q = rule.jenkins.getQueue().getItem(job);
         if (q != null) q.getFuture().get();
         while (job.getLastBuild().isBuilding()) Thread.sleep(100);
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
     
+    @Test
     public void testConfiguration() throws Exception {
         BuildSelectorParameter expected = new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(true), "foo");
-        FreeStyleProject job = createFreeStyleProject();
+        FreeStyleProject job = rule.createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(expected));
         job.save();
         
-        job = configRoundtrip(job);
+        job = rule.configRoundtrip(job);
         BuildSelectorParameter actual = (BuildSelectorParameter)job.getProperty(ParametersDefinitionProperty.class).getParameterDefinition("SELECTOR");
-        assertEqualDataBoundBeans(expected, actual);
+        rule.assertEqualDataBoundBeans(expected, actual);
     }
 }

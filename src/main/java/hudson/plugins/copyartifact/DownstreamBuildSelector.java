@@ -55,8 +55,9 @@ public class DownstreamBuildSelector extends BuildSelector {
     private final String upstreamBuildNumber;
     
     /**
-     * @param upstreamProjectName
-     * @param upstreamBuildNumber
+     * Constructor.
+     * @param upstreamProjectName Upstream project name.
+     * @param upstreamBuildNumber Upstream build number.
      */
     @DataBoundConstructor
     public DownstreamBuildSelector(String upstreamProjectName, String upstreamBuildNumber) {
@@ -164,7 +165,7 @@ public class DownstreamBuildSelector extends BuildSelector {
         }
         
         /**
-         * @param str
+         * @param str Value to check.
          * @return whether a value contains variable expressions.
          */
         protected boolean containsVariable(String str) {
@@ -173,11 +174,13 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         /**
          * Validates a form input to "Upstream Project Name"
-         * 
-         * @return
+         *
+         * @param project Ancestor project.
+         * @param upstreamProjectName Upstream project name.
+         * @return the form validation result.
          */
         public FormValidation doCheckUpstreamProjectName(
-                @AncestorInPath AbstractProject<?,?> project,
+                @AncestorInPath Job<?,?> project,
                 @QueryParameter String upstreamProjectName
         ) {
             upstreamProjectName = StringUtils.trim(upstreamProjectName);
@@ -194,10 +197,20 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-            
-            AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project.getRootProject(), AbstractProject.class
+
+            if (project == null) {
+                // Context is unknown and validation is useless.
+                return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            }
+
+            Job<?,?> upstreamRoot = (project instanceof AbstractProject)
+                    ? ((AbstractProject<?,?>) project).getRootProject()
+                    : project;
+
+            Job<?,?> upstreamProject = jenkins.getItem(
+                    upstreamProjectName, upstreamRoot, Job.class
             );
+
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
             }
@@ -206,11 +219,14 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         /**
          * Validates a form input to "Upstream Build Number"
-         * 
-         * @return
+         *
+         * @param project Ancestor project.
+         * @param upstreamProjectName Upstream project name.
+         * @param upstreamBuildNumber Upstream build number.
+         * @return the form validation result.
          */
         public FormValidation doCheckUpstreamBuildNumber(
-                @AncestorInPath AbstractProject<?,?> project,
+                @AncestorInPath Job<?,?> project,
                 @QueryParameter String upstreamProjectName,
                 @QueryParameter String upstreamBuildNumber
         ) {
@@ -237,10 +253,20 @@ public class DownstreamBuildSelector extends BuildSelector {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
             }
-            
+
+            if (project == null) {
+                // Context is unknown and validation is useless.
+                return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            }
+
+            Job<?,?> upstreamRoot = (project instanceof AbstractProject)
+                    ? ((AbstractProject<?,?>) project).getRootProject()
+                    : project;
+
             AbstractProject<?,?> upstreamProject = jenkins.getItem(
-                    upstreamProjectName, project.getRootProject(), AbstractProject.class
+                    upstreamProjectName, upstreamRoot, AbstractProject.class
             );
+
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.ok();
             }
@@ -283,16 +309,18 @@ public class DownstreamBuildSelector extends BuildSelector {
         /**
          * Fill the project name automatically.
          * 
-         * @param value
-         * @param project
-         * @return
+         * @param value Seed value.
+         * @param project Ancestor project.
+         * @return the autocompletion candidates.
          */
         public AutoCompletionCandidates doAutoCompleteUpstreamProjectName(
                 @QueryParameter String value,
-                @AncestorInPath AbstractProject<?,?> project
+                @AncestorInPath Job<?,?> project
         ) {
             // Specified Item to allow to autocomplete folders (maybe confusing...).
-            return AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
+            return project == null
+                    ? new AutoCompletionCandidates()
+                    : AutoCompletionCandidates.ofJobNames(Item.class, value, project, project.getParent());
         }
     }
 }

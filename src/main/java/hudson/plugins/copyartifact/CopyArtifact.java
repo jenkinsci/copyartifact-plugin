@@ -203,7 +203,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     /**
      * Set the suffix for variables to store copying results.
      * 
-     * @param resultVariableSuffix
+     * @param resultVariableSuffix Variable suffix to use.
      */
     @DataBoundSetter
     public void setResultVariableSuffix(String resultVariableSuffix) {
@@ -546,7 +546,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * Package scope for testing purpose.
      * 
      * @param variableName
-     * @return
+     * @return true if <code>variableName</code> is valid as a variable name.
      */
     static boolean isValidVariableName(final String variableName) {
         if(StringUtils.isBlank(variableName)) {
@@ -578,6 +578,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
         public FormValidation doCheckProjectName(
                 @AncestorInPath Job<?,?> anc, @QueryParameter String value) {
+            // JENKINS-32526: Check that it behaves gracefully for an unknown context
+            if (anc == null) return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
             

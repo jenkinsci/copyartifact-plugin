@@ -32,6 +32,7 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.model.FreeStyleProject;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -228,7 +229,7 @@ public class CopyArtifactPermissionPropertyTest {
                 = (CopyArtifactPermissionProperty.DescriptorImpl)j.jenkins.getDescriptor(CopyArtifactPermissionProperty.class);
         j.createFreeStyleProject("project1");
         j.createFreeStyleProject("project2");
-        MatrixProject matrix = j.createMatrixProject("matrix1");
+        MatrixProject matrix = createMatrixProject("matrix1");
         AxisList axes = new AxisList(new TextAxis("axis1", "value1"));
         matrix.setAxes(axes);
         MatrixConfiguration matrixConf = matrix.getItem(new Combination(axes, "value1"));
@@ -252,21 +253,32 @@ public class CopyArtifactPermissionPropertyTest {
     public void testDescriptorDoAutoCompleteProjectNames() throws Exception {
         CopyArtifactPermissionProperty.DescriptorImpl d
                 = (CopyArtifactPermissionProperty.DescriptorImpl)j.jenkins.getDescriptor(CopyArtifactPermissionProperty.class);
-        j.createFreeStyleProject("project1");
-        MatrixProject matrix = j.createMatrixProject("matrix1");
+        FreeStyleProject freestyle = j.createFreeStyleProject("project1");
+        MatrixProject matrix = createMatrixProject("matrix1");
         AxisList axes = new AxisList(new TextAxis("axis1", "value1"));
         matrix.setAxes(axes);
         
         MockFolder folder = j.jenkins.createProject(MockFolder.class, "folder");
-        folder.createProject(FreeStyleProject.class, "child1");
+        FreeStyleProject child = folder.createProject(FreeStyleProject.class, "child1");
         
-        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames("p", j.jenkins).getValues());
-        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames(" p", j.jenkins).getValues());
-        assertEquals(Arrays.asList("matrix1"), d.doAutoCompleteProjectNames("m", j.jenkins).getValues());
-        assertEquals(Arrays.asList("folder/child1"), d.doAutoCompleteProjectNames("f", j.jenkins).getValues());
-        assertEquals(Arrays.asList("child1"), d.doAutoCompleteProjectNames("c", folder).getValues());
-        assertEquals(Arrays.asList("../project1"), d.doAutoCompleteProjectNames("../p", folder).getValues());
-        assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", j.jenkins).getValues());
-        assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", j.jenkins).getValues());
+        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames("p", freestyle).getValues());
+        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames(" p", freestyle).getValues());
+        assertEquals(Arrays.asList("matrix1"), d.doAutoCompleteProjectNames("m", freestyle).getValues());
+        assertEquals(Arrays.asList("folder/child1"), d.doAutoCompleteProjectNames("f", freestyle).getValues());
+        assertEquals(Arrays.asList("child1"), d.doAutoCompleteProjectNames("c", child).getValues());
+        assertEquals(Arrays.asList("../project1"), d.doAutoCompleteProjectNames("../p", child).getValues());
+        assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", freestyle).getValues());
+        assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", freestyle).getValues());
     }
+
+    /**
+     * Creates an empty Matrix project with the provided name.
+     *
+     * @param name Project name.
+     * @return an empty Matrix project with the provided name.
+     */
+    private MatrixProject createMatrixProject(String name) throws IOException {
+        return j.jenkins.createProject(MatrixProject.class, name);
+    }
+
 }

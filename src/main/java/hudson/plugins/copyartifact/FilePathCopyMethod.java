@@ -39,7 +39,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  */
 @Extension(ordinal=-200)
 public class FilePathCopyMethod extends Copier {
-    /** @see FilePath#recursiveCopyTo(String,FilePath) */
+    /** @see FilePath#copyRecursiveTo(String,FilePath) */
     @Override
     public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)
             throws IOException, InterruptedException {
