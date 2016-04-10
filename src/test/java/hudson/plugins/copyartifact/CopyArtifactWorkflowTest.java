@@ -45,6 +45,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.IOException;
 import java.util.List;
+import org.jvnet.hudson.test.Issue;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
@@ -121,6 +122,17 @@ public class CopyArtifactWorkflowTest {
         jenkinsRule.assertBuildStatusSuccess(build);
         
         assertEquals("foo", build.getWorkspace().child("artifact.txt").readToString());
+    }
+
+    /**
+     * Demonstrate that we can run a downstream build and then copy artifacts from it.
+     */
+    @Issue("JENKINS-33577")
+    @Test
+    public void copyFromDownstreamBuild() throws Exception {
+        WorkflowJob us = createWorkflow("us", "step([$class: 'CopyArtifact', projectName: 'ds', selector: [$class: 'SpecificBuildSelector', buildNumber: \"${build('ds').number}\"]]); echo readFile('art')");
+        WorkflowJob ds = createWorkflow("ds", "writeFile file: 'art', text: env.BUILD_TAG; archive includes: 'art'");
+        jenkinsRule.assertLogContains("jenkins-ds-1", jenkinsRule.assertBuildStatusSuccess(us.scheduleBuild2(0)));
     }
 
     private void assertArtifactInArchive(Run b) {
