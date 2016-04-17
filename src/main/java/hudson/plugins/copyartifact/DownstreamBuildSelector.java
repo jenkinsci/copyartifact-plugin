@@ -90,7 +90,15 @@ public class DownstreamBuildSelector extends BuildSelector {
     @Override
     protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
         if (!(run instanceof AbstractBuild<?,?>)) {
-            LOGGER.warning(String.format("Only applicable to AbstractBuild: but is %s.", run.getClass().getName()));
+            // As this feature depends on `AbstractBuild#getUpstreamRelationshipBuild(AbstractProject<?,?>)`
+            LOGGER.log(
+                Level.WARNING,
+                "Only applicable to AbstractBuild: but {0} is {1}.",
+                new Object[] {
+                    run.getFullDisplayName(),
+                    run.getClass().getName()
+                }
+            );
             return false;
         }
         Jenkins jenkins = Jenkins.getInstance();
@@ -123,18 +131,31 @@ public class DownstreamBuildSelector extends BuildSelector {
             return false;
         }
         
-        AbstractProject<?,?> upstreamProject = jenkins.getItem(
+        Job<?,?> upstreamJob = jenkins.getItem(
                 projectName,
                 copier,
-                AbstractProject.class
+                Job.class
         );
-        if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
+        if (upstreamJob == null || !upstreamJob.hasPermission(Item.READ)) {
             LOGGER.warning(String.format("Upstream project '%s' is not found.", projectName));
             return false;
         }
-        AbstractBuild<?,?> upstreamBuild = ((AbstractBuild<?,?>)run).getUpstreamRelationshipBuild(upstreamProject);
+        if (!(upstreamJob instanceof AbstractProject)) {
+            // As this feature depends on `AbstractBuild#getUpstreamRelationshipBuild(AbstractProject<?,?>)`
+            LOGGER.log(
+                    Level.WARNING,
+                    "Only applicable to AbstractProject: but {0} is a {1}.",
+                    new Object[] {
+                        upstreamJob.getFullName(),
+                        upstreamJob.getClass().getName(),
+                    }
+            );
+            return false;
+        }
+        
+        AbstractBuild<?,?> upstreamBuild = ((AbstractBuild<?,?>)run).getUpstreamRelationshipBuild((AbstractProject<?, ?>)upstreamJob);
         if (upstreamBuild == null || !upstreamBuild.hasPermission(Item.READ)) {
-            LOGGER.fine(String.format("No upstream build of project '%s' is found for build %s-%s.", upstreamProject.getFullName(), run.getParent().getFullName(), run.getDisplayName()));
+            LOGGER.fine(String.format("No upstream build of project '%s' is found for build %s-%s.", upstreamJob.getFullName(), run.getParent().getFullName(), run.getDisplayName()));
             return false;
         }
         
@@ -214,6 +235,15 @@ public class DownstreamBuildSelector extends BuildSelector {
             if (upstreamProject == null || !upstreamProject.hasPermission(Item.READ)) {
                 return FormValidation.error(Messages.DownstreamBuildSelector_UpstreamProjectName_NotFound());
             }
+
+            if (!(upstreamProject instanceof AbstractProject)) {
+                return FormValidation.error(
+                    Messages.DownstreamBuildSelector_UpstreamProjectName_NotAbstractProject(
+                        upstreamProject.getClass().getName()
+                    )
+                );
+            }
+
             return FormValidation.ok();
         }
         
