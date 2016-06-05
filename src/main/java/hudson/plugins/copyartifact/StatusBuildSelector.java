@@ -35,6 +35,8 @@ import hudson.model.Run;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Copy artifacts from the specific status build.
  * @author Alan Harder
@@ -103,6 +105,7 @@ public class StatusBuildSelector extends BuildSelector {
     }
 
     @SuppressWarnings("unused")
+    @SuppressFBWarnings(value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification="checks null to ensure it is @Nonnull")
     private StatusBuildSelector readResolve() {
         if (buildStatus == null) {
             return new StatusBuildSelector(stable != null ? stable.booleanValue() : true);

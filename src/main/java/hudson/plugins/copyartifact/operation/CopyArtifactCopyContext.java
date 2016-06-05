@@ -226,29 +226,11 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * ctor to copy.
-     * 
-     * @param src
-     */
-    protected CopyArtifactCopyContext(CopyArtifactCopyContext src) {
-        super(src);
-        this.targetBaseDir = src.targetBaseDir;
-        this.targetDirPath = src.targetDirPath;
-        this.includes = src.includes;
-        this.excludes = src.excludes;
-        this.flatten = src.flatten;
-        this.fingerprintArtifacts = src.fingerprintArtifacts;
-        this.src = src.src;
-        this.md5 = src.md5;
-        this.fingerprints = src.fingerprints;
-    }
-
-    /**
      * @return
      * @see hudson.plugins.copyartifact.CopyArtifactOperationContext#clone()
      */
     @Override
     public CopyArtifactCopyContext clone() {
-        return new CopyArtifactCopyContext(this);
+        return (CopyArtifactCopyContext)super.clone();
     }
 }

@@ -72,6 +72,6 @@ public class CopyArtifactOperationContext extends CopyArtifactCommonContext {
      */
     @Override
     public CopyArtifactOperationContext clone() {
-        return new CopyArtifactOperationContext(this);
+        return (CopyArtifactOperationContext)super.clone();
     }
 }

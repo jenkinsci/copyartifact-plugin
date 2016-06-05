@@ -36,6 +36,7 @@ import org.kohsuke.stapler.StaplerRequest;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.ParameterValue;
@@ -49,6 +50,7 @@ import hudson.plugins.copyartifact.filter.ParameterizedBuildFilter;
  * @since 2.0
  */
 public class BuildFilterParameter extends SimpleParameterDefinition {
+    @SuppressFBWarnings(value="SE_BAD_FIELD", justification="Serialized with XStream and doesn't require Serializable")
     @Nonnull
     private final BuildFilter defaultFilter;
     

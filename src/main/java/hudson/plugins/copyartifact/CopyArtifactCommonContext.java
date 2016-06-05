@@ -282,6 +282,10 @@ public class CopyArtifactCommonContext implements Cloneable {
         this.listener = src.listener;
         this.envVars = new EnvVars(src.envVars);
         this.verbose = src.verbose;
+        copyExtensionListFrom(src);
+    }
+
+    private void copyExtensionListFrom(CopyArtifactCommonContext src) {
         this.extensionList = new ArrayList<Object>();
         for (Object ext : src.extensionList) {
             if (ext instanceof Cloneable) {
@@ -315,6 +319,15 @@ public class CopyArtifactCommonContext implements Cloneable {
      */
     @Override
     protected CopyArtifactCommonContext clone() {
-        return new CopyArtifactCommonContext(this);
+        CopyArtifactCommonContext c = null;
+        try {
+            c = (CopyArtifactCommonContext)super.clone();
+        } catch(CloneNotSupportedException e) {
+            throw new IllegalStateException(e);
+        }
+        c.envVars = new EnvVars(this.envVars);
+        c.copyExtensionListFrom(this);
+        
+        return c;
     }
 }

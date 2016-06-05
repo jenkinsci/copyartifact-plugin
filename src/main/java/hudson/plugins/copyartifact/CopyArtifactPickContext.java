@@ -100,23 +100,11 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * Creates a new instance copying src data.
-     * 
-     * @param src
-     */
-    protected CopyArtifactPickContext(CopyArtifactPickContext src) {
-        super(src);
-        this.projectName = src.projectName;
-        this.buildFilter = src.buildFilter;
-        this.lastMatchBuild = src.lastMatchBuild;
-    }
-
-    /**
      * @return
      * @see hudson.plugins.copyartifact.CopyArtifactCommonContext#clone()
      */
     @Override
     public CopyArtifactPickContext clone() {
-        return new CopyArtifactPickContext(this);
+        return (CopyArtifactPickContext)super.clone();
     }
 }

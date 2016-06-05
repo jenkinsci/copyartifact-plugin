@@ -65,5 +65,5 @@ public class NoBuildFilter extends BuildFilter {
      * the descriptor for {@link NoBuildFilter}.
      * Not listed as an extension.
      */
-    public static DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+    public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 }

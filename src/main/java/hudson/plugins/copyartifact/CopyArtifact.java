@@ -25,6 +25,7 @@ package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -107,11 +108,30 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         @Nonnull
         public final Result result;
         
-        @CheckForNull
-        public final Job<?, ?> job;
+        private final Job<?, ?> job;
         
-        @CheckForNull
-        public final Run<?, ?> build;
+        @Nonnull
+        public Job<?, ?> getJob() {
+            switch(result) {
+            case Found:
+            case BuildNotFound:
+                return job;
+            default:
+                throw new IllegalStateException("Job is provided only when a project is found.");
+            }
+        }
+        
+        private final Run<?, ?> build;
+        
+        @Nonnull
+        public Run<?, ?> getBuild() {
+            switch(result) {
+            case Found:
+                return build;
+            default:
+                throw new IllegalStateException("Build is provided only when a build is found.");
+            }
+        }
         
         private CopyArtifactPickResult(Result result, Job<?, ?> job, Run<?, ?> build) {
             this.result = result;
@@ -119,7 +139,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             this.build = build;
         }
         
-        private static CopyArtifactPickResult found(Run<?, ?> run) {
+        private static CopyArtifactPickResult found(@Nonnull Run<?, ?> run) {
             return new CopyArtifactPickResult(
                     Result.Found,
                     run.getParent(),
@@ -135,7 +155,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             );
         }
         
-        private static CopyArtifactPickResult buildNotFound(Job<?, ?> job) {
+        private static CopyArtifactPickResult buildNotFound(@Nonnull Job<?, ?> job) {
             return new CopyArtifactPickResult(
                     Result.BuildNotFound,
                     job,
@@ -442,6 +462,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @SuppressWarnings("deprecation")
+    @SuppressFBWarnings(value="BC_VACUOUS_INSTANCEOF", justification="conf.copyArtifactOperation might be a CopyOperation except AbstractCopyOperation with a selector from a external plugin.")
     public boolean upgradeFromCopyartifact10() {
         if (!(getSelector() instanceof Version1BuildSelector)) {
             return false;
@@ -699,7 +720,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             envData = new EnvAction();
             build.addAction(envData);
         }
-        envData.add(build, pick.build, jobName, getResultVariableSuffix());
+        envData.add(build, pick.getBuild(), jobName, getResultVariableSuffix());
         
         CopyArtifactOperationContext copyContext = new CopyArtifactOperationContext();
         copyContext.setJenkins(jenkins);
@@ -709,7 +730,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         copyContext.setVerbose(isVerbose());
         copyContext.setWorkspace(workspace);
 
-        switch (getOperation().perform(pick.build, copyContext)) {
+        switch (getOperation().perform(pick.getBuild(), copyContext)) {
         case NothingToDo:
             if (!isOptional()) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName));
