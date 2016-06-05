@@ -74,7 +74,6 @@ import org.kohsuke.stapler.QueryParameter;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Build step to copy artifacts from another project.
@@ -959,7 +958,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         // Decided not to record this data in build.xml, so marked transient:
         private transient Map<String,String> data = new HashMap<String,String>();
 
-        @Nullable
+        @CheckForNull
         private String calculateDefaultSuffix(@Nonnull Run<?,?> build, @Nonnull Run<?,?> src, @Nonnull String projectName) {
             ItemGroup<?> ctx = getItemGroup(build);
             Job<?,?> item = src.getParent();
@@ -987,7 +986,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 @Nonnull Run<?,?> build,
                 @Nonnull Run<?,?> src,
                 @Nonnull String projectName,
-                @Nullable String resultVariableSuffix
+                @CheckForNull String resultVariableSuffix
         ) {
             if (data==null) return;
             
