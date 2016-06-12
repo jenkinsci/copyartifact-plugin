@@ -47,9 +47,9 @@ import hudson.plugins.copyartifact.filter.NoBuildFilter;
 public class BuildFilter extends AbstractDescribableImpl<BuildFilter> {
 
     /**
-     * @param run
-     * @param env
-     * @return
+     * @param run a build to test
+     * @param env environment variables
+     * @return whether this build is acceptable
      * @deprecated implement {@link #isSelectable(Run, CopyArtifactPickContext)} instead.
      */
     @Deprecated
@@ -70,8 +70,7 @@ public class BuildFilter extends AbstractDescribableImpl<BuildFilter> {
     }
     
     /**
-     * @return
-     * @see hudson.model.AbstractDescribableImpl#getDescriptor()
+     * {@inheritDoc}
      */
     @Override
     public BuildFilterDescriptor getDescriptor() {

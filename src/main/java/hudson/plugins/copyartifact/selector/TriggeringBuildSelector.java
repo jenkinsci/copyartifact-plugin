@@ -121,8 +121,8 @@ public class TriggeringBuildSelector extends BuildSelector {
     private boolean allowUpstreamDependencies;
 
     /**
-     * @param upstreamFilterStrategy
-     * @param allowUpstreamDependencies
+     * @param upstreamFilterStrategy which build should be used if triggered by multiple upstream builds.
+     * @param allowUpstreamDependencies whether to include upstream dependencies.
      */
     @DataBoundConstructor
     public TriggeringBuildSelector(UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
@@ -167,10 +167,7 @@ public class TriggeringBuildSelector extends BuildSelector {
     }
     
     /**
-     * @param job
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     @CheckForNull
@@ -207,12 +204,6 @@ public class TriggeringBuildSelector extends BuildSelector {
         return ext.nextBuild.next();
     }
     
-    /**
-     * @param job
-     * @param context
-     * @param parent
-     * @return
-     */
     @Nonnull
     private HashSet<Run<?, ?>> getAllUpstreamBuilds(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context, @Nonnull Run<?, ?> parent) {
         HashSet<Run<?, ?>> result = new HashSet<Run<?, ?>>();
@@ -267,7 +258,7 @@ public class TriggeringBuildSelector extends BuildSelector {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         
         /**
-         * 
+         * ctor
          */
         @SuppressWarnings("deprecation")
         public DescriptorImpl() {
@@ -277,8 +268,7 @@ public class TriggeringBuildSelector extends BuildSelector {
         }
         
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {
@@ -288,7 +278,7 @@ public class TriggeringBuildSelector extends BuildSelector {
         /**
          * set the strategy in the system configuration
          * 
-         * @param globalUpstreamFilterStrategy
+         * @param globalUpstreamFilterStrategy the strategy in the system configuration
          */
         public void setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy globalUpstreamFilterStrategy) {
             this.globalUpstreamFilterStrategy = globalUpstreamFilterStrategy;
@@ -302,11 +292,7 @@ public class TriggeringBuildSelector extends BuildSelector {
         }
         
         /**
-         * @param req
-         * @param json
-         * @return
-         * @throws hudson.model.Descriptor.FormException
-         * @see hudson.model.Descriptor#configure(org.kohsuke.stapler.StaplerRequest, net.sf.json.JSONObject)
+         * {@inheritDoc}
          */
         @Override
         public boolean configure(StaplerRequest req, JSONObject json)

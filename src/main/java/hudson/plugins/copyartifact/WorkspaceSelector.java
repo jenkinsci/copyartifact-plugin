@@ -40,8 +40,7 @@ public class WorkspaceSelector extends Version1BuildSelector {
                 WorkspaceSelector.class, Messages._WorkspaceSelector_DisplayName());
     
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     * {@inheritDoc}
      */
     @Override
     public MigratedConfiguration migrateToVersion2() {

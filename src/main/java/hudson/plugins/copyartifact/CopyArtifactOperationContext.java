@@ -39,12 +39,15 @@ public class CopyArtifactOperationContext extends CopyArtifactCommonContext {
     private FilePath workspace;
     
     /**
-     * @param workspace
+     * @param workspace workspace of the current build
      */
     public void setWorkspace(@Nonnull FilePath workspace) {
         this.workspace = workspace;
     }
     
+    /**
+     * @return workspace of the current build
+     */
     @Nonnull
     public FilePath getWorkspace() {
         return workspace;
@@ -57,9 +60,9 @@ public class CopyArtifactOperationContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * Creates a new instance copying src data.
+     * Creates a new instance copying source data.
      * 
-     * @param src
+     * @param src existing {@link CopyArtifactOperationContext}
      */
     protected CopyArtifactOperationContext(@Nonnull CopyArtifactOperationContext src) {
         super(src);
@@ -67,8 +70,7 @@ public class CopyArtifactOperationContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.CopyArtifactCommonContext#clone()
+     * {@inheritDoc}
      */
     @Override
     public CopyArtifactOperationContext clone() {

@@ -55,7 +55,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     private Map<String,String> fingerprints;
 
     /**
-     * @param targetBaseDir
+     * @param targetBaseDir bese directory to copy files to
      */
     public void setTargetBaseDir(@Nonnull FilePath targetBaseDir) {
         this.targetBaseDir = targetBaseDir;
@@ -76,7 +76,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * @param targetDirPath
+     * @param targetDirPath path from {@link #getTargetBaseDir()} to copy files to
      */
     public void setTargetDirPath(@Nonnull String targetDirPath) {
         this.targetDirPath = targetDirPath;
@@ -114,7 +114,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * @param includes
+     * @param includes comma separated apache-ant file patterns for files to include
      */
     public void setIncludes(@CheckForNull String includes) {
         this.includes = includes;
@@ -129,7 +129,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * @param excludes
+     * @param excludes comma separated apache-ant file patterns for files to exclude
      */
     public void setExcludes(@CheckForNull String excludes) {
         this.excludes = excludes;
@@ -144,7 +144,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * @param flatten
+     * @param flatten whether copy files ignoring directory trees
      */
     public void setFlatten(boolean flatten) {
         this.flatten = flatten;
@@ -158,7 +158,7 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     }
 
     /**
-     * @param fingerprintArtifacts
+     * @param fingerprintArtifacts whether to fingerprint copied artifacts
      */
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
         this.fingerprintArtifacts = fingerprintArtifacts;
@@ -219,15 +219,14 @@ public class CopyArtifactCopyContext extends CopyArtifactOperationContext {
     /**
      * Creates a new context extending existing {@link CopyArtifactOperationContext}.
      * 
-     * @param src
+     * @param src exisiting {@link CopyArtifactOperationContext}
      */
     public CopyArtifactCopyContext(CopyArtifactOperationContext src) {
         super(src);
     }
 
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.CopyArtifactOperationContext#clone()
+     * {@inheritDoc}
      */
     @Override
     public CopyArtifactCopyContext clone() {

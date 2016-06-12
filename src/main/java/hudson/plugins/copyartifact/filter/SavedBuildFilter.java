@@ -41,10 +41,7 @@ public class SavedBuildFilter extends BuildFilter {
     public SavedBuildFilter() { }
 
     /**
-     * @param run
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     public boolean isSelectable(Run<?, ?> run, CopyArtifactPickContext context) {
@@ -57,8 +54,7 @@ public class SavedBuildFilter extends BuildFilter {
     @Extension
     public static class DescriptorImpl extends BuildFilterDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

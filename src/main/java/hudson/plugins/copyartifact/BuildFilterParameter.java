@@ -55,9 +55,9 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
     private final BuildFilter defaultFilter;
     
     /**
-     * @param name
-     * @param description
-     * @param defaultFilter
+     * @param name name of the build parameter
+     * @param description description of this parameter
+     * @param defaultFilter build filter used as default
      */
     @DataBoundConstructor
     public BuildFilterParameter(String name, String description, @CheckForNull BuildFilter defaultFilter) {
@@ -66,16 +66,14 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
     }
 
     /**
-     * @return
+     * @return build filter used as default
      */
     public BuildFilter getDefaultFilter() {
         return defaultFilter;
     }
     
     /**
-     * @param value
-     * @return
-     * @see hudson.model.SimpleParameterDefinition#createValue(java.lang.String)
+     * {@inheritDoc}
      */
     @Override
     public ParameterValue createValue(String value) {
@@ -83,10 +81,7 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
     }
 
     /**
-     * @param req
-     * @param jo
-     * @return
-     * @see hudson.model.ParameterDefinition#createValue(org.kohsuke.stapler.StaplerRequest, net.sf.json.JSONObject)
+     * {@inheritDoc}
      */
     @Override
     public ParameterValue createValue(StaplerRequest req, JSONObject jo) {
@@ -100,8 +95,7 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
     @Extension
     public static class DescriptorImpl extends ParameterDescriptor {
         /**
-         * @return
-         * @see hudson.model.ParameterDefinition.ParameterDescriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {
@@ -109,9 +103,7 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
         }
         
         /**
-         * @param fieldName
-         * @return
-         * @see hudson.model.Descriptor#getHelpFile(java.lang.String)
+         * {@inheritDoc}
          */
         @Override
         public String getHelpFile(String fieldName) {

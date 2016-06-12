@@ -70,7 +70,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         private final List<String> pathFragments;
         
         /**
-         * @param file
+         * @param file file to wrap.
          */
         protected FileInfoImpl(@Nonnull VirtualFile file) {
             this.file = file;
@@ -78,9 +78,9 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
         
         /**
-         * @param parent
-         * @param file
-         * @param path
+         * @param parent parent directory
+         * @param file file to wrap
+         * @param path the relative path of the file from the parent
          */
         protected FileInfoImpl(@Nonnull FileInfoImpl parent, @Nonnull VirtualFile file, @Nonnull String path) {
             this.file = file;
@@ -89,17 +89,15 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
         
         /**
-         * @param path
-         * @return
+         * @param path the relative path to the file to get
+         * @return new {@link FileInfoImpl} object of the child file.
          */
         public FileInfoImpl child(@Nonnull String path) {
             return new FileInfoImpl(this, file.child(path), path);
         }
         
         /**
-         * @param path
-         * @return
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getRelativeFrom(hudson.FilePath)
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -111,8 +109,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
 
         /**
-         * @return
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getFilename()
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -121,9 +118,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
 
         /**
-         * @return
-         * @throws IOException
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#open()
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -132,11 +127,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
         }
 
         /**
-         * @param dest
-         * @param context
-         * @throws IOException
-         * @throws InterruptedException
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#copyMetaInfoTo(hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+         * {@inheritDoc}
          */
         @Override
         public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
@@ -157,12 +148,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     }
     
     /**
-     * @param src
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#perform(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactOperationContext)
+     * {@inheritDoc}
      */
     @Override
     public Result perform(Run<?, ?> src, CopyArtifactOperationContext context) throws IOException, InterruptedException {
@@ -178,11 +164,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     }
     
     /**
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#init(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     * {@inheritDoc}
      */
     @Override
     public boolean init(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
@@ -203,11 +185,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     }
     
     /**
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#scanFilesToCopy(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     * {@inheritDoc}
      */
     @Override
     @Nonnull
@@ -241,8 +219,7 @@ public class CopyArtifactFiles extends AbstractCopyOperation {
     @Extension(ordinal=100)    // topmost
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

@@ -56,8 +56,8 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         /**
          * ctor
          * 
-         * @param src
-         * @param baseDir
+         * @param src source directory
+         * @param baseDir base directory to calculate directory structures. should be parent of <code>src</code>.
          */
         public FileInfoImpl(@Nonnull FilePath src, @Nonnull FilePath baseDir) {
             this.src = src;
@@ -69,9 +69,7 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         }
 
         /**
-         * @param path
-         * @return
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getRelativeFrom(hudson.FilePath)
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -80,8 +78,7 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         }
 
         /**
-         * @return
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#getFilename()
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -90,10 +87,7 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         }
 
         /**
-         * @return
-         * @throws IOException
-         * @throws InterruptedException
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#open()
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -102,11 +96,7 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
         }
 
         /**
-         * @param dest
-         * @param context
-         * @throws IOException
-         * @throws InterruptedException
-         * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo#copyMetaInfoTo(hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+         * {@inheritDoc}
          */
         @Override
         @Nonnull
@@ -130,13 +120,13 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
     
     
     /**
-     * Additional to original behavior, handles symbolic links.
+     * Addition to original behavior, handles symbolic links.
      * 
-     * @param file
-     * @param path
-     * @param context
-     * @throws IOException
-     * @throws InterruptedException
+     * @param file      the file to copy
+     * @param path      the destination path
+     * @param context   context of the operation.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#copyOne(hudson.plugins.copyartifact.operation.AbstractCopyOperation.FileInfo, hudson.FilePath, hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
      */
     @Override
@@ -154,11 +144,7 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
     }
     
     /**
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.operation.AbstractCopyOperation#scanFilesToCopy(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     * {@inheritDoc}
      */
     @Override
     @Nonnull
@@ -193,12 +179,14 @@ public abstract class AbstractFilePathCopyOperation extends AbstractCopyOperatio
     
     /**
      * Returns the source directory to copy files from.
-     * You do not need to handle {@link CopyArtifactCopyContext#getSrcBaseDir()
+     * You do not need to handle {@link CopyArtifactCopyContext#getSrcBaseDir()}
      * 
      * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
+     *      parameters to copying operations.
+     *      You can save execution state with {@link CopyArtifactCopyContext#addExtension(Object)}
+     * @return source directory to copy files from.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     @CheckForNull
     protected abstract FilePath getSrcDir(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException ;

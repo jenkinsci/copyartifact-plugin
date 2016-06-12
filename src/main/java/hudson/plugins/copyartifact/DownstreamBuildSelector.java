@@ -40,8 +40,8 @@ public class DownstreamBuildSelector extends Version1BuildSelector {
     private final String upstreamBuildNumber;
     
     /**
-     * @param upstreamProjectName
-     * @param upstreamBuildNumber
+     * @param upstreamProjectName upstream project name. May include variable expression
+     * @param upstreamBuildNumber upstream build number. May include variable expression
      */
     @DataBoundConstructor
     public DownstreamBuildSelector(String upstreamProjectName, String upstreamBuildNumber) {
@@ -64,8 +64,7 @@ public class DownstreamBuildSelector extends Version1BuildSelector {
     }
     
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     * {@inheritDoc}
      */
     @Override
     public MigratedConfiguration migrateToVersion2() {

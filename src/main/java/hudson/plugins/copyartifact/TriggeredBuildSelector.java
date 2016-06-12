@@ -84,7 +84,7 @@ public class TriggeredBuildSelector extends Version1BuildSelector {
         }
         
         /**
-         * @return
+         * @return the value of {@link TriggeringBuildSelector.UpstreamFilterStrategy} to this instance.
          * @since 2.0
          */
         @Nonnull

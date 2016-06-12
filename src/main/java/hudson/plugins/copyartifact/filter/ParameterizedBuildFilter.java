@@ -57,7 +57,7 @@ public class ParameterizedBuildFilter extends BuildFilter {
     private final String parameter;
     
     /**
-     * @param parameter
+     * @param parameter XML expression of the filter, usually including variable expression.
      */
     @DataBoundConstructor
     public ParameterizedBuildFilter(@CheckForNull String parameter) {
@@ -65,7 +65,7 @@ public class ParameterizedBuildFilter extends BuildFilter {
     }
     
     /**
-     * @return
+     * @return XML expression of the filter, usually including variable expression.
      */
     @Nonnull
     public String getParameter() {
@@ -73,10 +73,7 @@ public class ParameterizedBuildFilter extends BuildFilter {
     }
     
     /**
-     * @param candidate
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
@@ -91,8 +88,8 @@ public class ParameterizedBuildFilter extends BuildFilter {
     }
     
     /**
-     * @param xml
-     * @return
+     * @param xml XML expression of the filter
+     * @return filter
      */
     @CheckForNull
     public static BuildFilter getFilterFromXml(@CheckForNull String xml) {
@@ -103,8 +100,8 @@ public class ParameterizedBuildFilter extends BuildFilter {
     }
     
     /**
-     * @param filter
-     * @return
+     * @param filter filter
+     * @return XML expression of the filter
      */
     @CheckForNull
     public static String encodeToXml(@CheckForNull BuildFilter filter) {
@@ -136,8 +133,7 @@ public class ParameterizedBuildFilter extends BuildFilter {
     @Extension
     public static class DescriptorImpl extends BuildFilterDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

@@ -34,8 +34,7 @@ import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 public class LastCompletedBuildSelector extends Version1BuildSelector {
 
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.selector.Version1BuildSelector#migrateToVersion2()
+     * {@inheritDoc}
      */
     @Override
     public MigratedConfiguration migrateToVersion2() {

@@ -43,7 +43,7 @@ public class NotBuildFilter extends BuildFilter {
     private final BuildFilter buildFilter;
     
     /**
-     * @param buildFilter
+     * @param buildFilter build filter to invert
      */
     @DataBoundConstructor
     public NotBuildFilter(@Nonnull BuildFilter buildFilter) {
@@ -51,7 +51,7 @@ public class NotBuildFilter extends BuildFilter {
     }
     
     /**
-     * @return
+     * @return build filter to invert
      */
     @Nonnull
     public BuildFilter getBuildFilter() {
@@ -59,10 +59,7 @@ public class NotBuildFilter extends BuildFilter {
     }
     
     /**
-     * @param candidate
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
@@ -83,8 +80,7 @@ public class NotBuildFilter extends BuildFilter {
     @Extension(ordinal=-102)    // bottom most
     public static class DescriptorImpl extends BuildFilterDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

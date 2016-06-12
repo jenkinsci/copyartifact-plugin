@@ -80,8 +80,8 @@ public class StatusBuildSelector extends BuildSelector {
     private transient Boolean stable;
 
     /**
-     * @param stable
-     * @deprecated use {@link #StatusBuildSelector(Result)} instead.
+     * @param stable true to select only stable builds, false to select stable and unstable builds.
+     * @deprecated use {@link #StatusBuildSelector(BuildStatus)} instead.
      */
     @Deprecated
     public StatusBuildSelector(boolean stable) {
@@ -96,7 +96,7 @@ public class StatusBuildSelector extends BuildSelector {
     }
 
     /**
-     * @param buildStatus
+     * @param buildStatus build status of the build to select
      * @since 2.0
      */
     @DataBoundConstructor
@@ -114,7 +114,7 @@ public class StatusBuildSelector extends BuildSelector {
     }
 
     /**
-     * @return
+     * @return build status to select
      * @since 2.0
      */
     public BuildStatus getBuildStatus() {
@@ -127,10 +127,7 @@ public class StatusBuildSelector extends BuildSelector {
     }
 
     /**
-     * @param job
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     public Run<?, ?> getNextBuild(Job<?, ?> job, CopyArtifactPickContext context) {
@@ -196,8 +193,7 @@ public class StatusBuildSelector extends BuildSelector {
     }
     
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.BuildSelector#getDisplayName()
+     * {@inheritDoc}
      */
     @Override
     public String getDisplayName() {

@@ -42,7 +42,7 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     private Run<?,?> lastMatchBuild;
 
     /**
-     * @param projectName
+     * @param projectName the project name to copy from.
      */
     public void setProjectName(String projectName) {
         this.projectName = projectName;
@@ -61,14 +61,14 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * @param buildFilter
+     * @param buildFilter filter for builds
      */
     public void setBuildFilter(@Nonnull BuildFilter buildFilter) {
         this.buildFilter = buildFilter;
     }
 
     /**
-     * @return a filter to builds
+     * @return a filter for builds
      */
     @Nonnull
     public BuildFilter getBuildFilter() {
@@ -76,7 +76,7 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * @param lastMatchBuild
+     * @param lastMatchBuild build picked at the last time
      */
     public void setLastMatchBuild(Run<?, ?> lastMatchBuild) {
         this.lastMatchBuild = lastMatchBuild;
@@ -86,7 +86,7 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
      * The build picked at the last time (but not matched with the filter).
      * {@link BuildSelector}s should continue the enumeration from this.
      * 
-     * @return 
+     * @return build picked at the last time
      */
     @CheckForNull
     public Run<?, ?> getLastMatchBuild() {
@@ -100,8 +100,7 @@ public class CopyArtifactPickContext extends CopyArtifactCommonContext {
     }
 
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.CopyArtifactCommonContext#clone()
+     * {@inheritDoc}
      */
     @Override
     public CopyArtifactPickContext clone() {

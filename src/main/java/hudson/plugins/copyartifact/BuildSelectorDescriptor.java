@@ -41,7 +41,8 @@ public abstract class BuildSelectorDescriptor extends Descriptor<BuildSelector> 
     }
     
     /**
-     * @param clazz
+     * @param clazz class to describe
+     * @see Descriptor#Descriptor(Class)
      */
     public BuildSelectorDescriptor(Class<? extends BuildSelector> clazz) {
         super(clazz);

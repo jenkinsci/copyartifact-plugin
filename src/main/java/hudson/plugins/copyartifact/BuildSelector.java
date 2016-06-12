@@ -47,6 +47,8 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @param job       the job to pick a build from.
      * @param context   context for the current execution of copyartifact.
      * @return  the build matches this selector and conditions stored in the context.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * 
      * @since 2.0
      */
@@ -114,6 +116,8 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @param job       the job to pick a build from.
      * @param context   context for the current execution of copyartifact.
      * @return  the build matches this selector.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * 
      * @since 2.0
      */

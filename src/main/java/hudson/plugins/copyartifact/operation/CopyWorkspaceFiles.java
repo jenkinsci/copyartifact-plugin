@@ -51,11 +51,7 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
     }
     
     /**
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.operation.AbstractFilePathCopyOperation#getSrcDir(hudson.plugins.copyartifact.operation.CopyArtifactCopyContext)
+     * {@inheritDoc}
      */
     @Override
     @CheckForNull
@@ -79,8 +75,7 @@ public class CopyWorkspaceFiles extends AbstractFilePathCopyOperation {
     @Extension
     public static class DescriptorImpl extends CopyArtifactOperationDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

@@ -77,7 +77,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         /**
          * Returns the path where this file copied to.
          * 
-         * @param basePath
+         * @param basePath path to calculate the path from.
          * @return the path relative from <code>basePath</code>.
          */
         @Nonnull
@@ -91,8 +91,8 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         
         /**
          * @return the stream to read contents of this file.
-         * @throws IOException
-         * @throws InterruptedException
+         * @throws IOException if an error occurs while performing the operation.
+         * @throws InterruptedException if any thread interrupts the current thread.
          */
         @Nonnull
         public abstract InputStream open() throws IOException, InterruptedException;
@@ -100,10 +100,10 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
         /**
          * Performs additional copy operation, such as setting the permission of the file.
          * 
-         * @param dest
-         * @param context
-         * @throws IOException
-         * @throws InterruptedException
+         * @param dest destination path
+         * @param context context of the copy operation
+         * @throws IOException if an error occurs while performing the operation.
+         * @throws InterruptedException if any thread interrupts the current thread.
          */
         public void copyMetaInfoTo(@Nonnull FilePath dest, @Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException {
             // nothing to do.
@@ -125,7 +125,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     /**
      * Copy configuration from another {@link AbstractCopyOperation}
      * 
-     * @param from
+     * @param from to copy configuration
      */
     public void copyConfiguration(AbstractCopyOperation from) {
         setTargetDir(from.getTargetDir());
@@ -137,7 +137,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param targetDir {@link FilePath} to copy files to.
+     * @param targetDir directory to copy files to.
      */
     @DataBoundSetter
     public void setTargetDir(@CheckForNull String targetDir) {
@@ -145,7 +145,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @return {@link FilePath} to copy files to.
+     * @return directory to copy files to.
      */
     @Nonnull
     public String getTargetDir() {
@@ -169,7 +169,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param includes
+     * @param includes comma separated apache-ant file patterns for files to include.
      */
     @DataBoundSetter
     public void setIncludes(@CheckForNull String includes) {
@@ -185,7 +185,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param excludes
+     * @param excludes comma separated apache-ant file patterns for files to exclude.
      */
     @DataBoundSetter
     public void setExcludes(@CheckForNull String excludes) {
@@ -201,7 +201,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param flatten
+     * @param flatten whether copy files ignoring directory trees.
      */
     @DataBoundSetter
     public void setFlatten(boolean flatten) {
@@ -216,7 +216,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param fingerprintArtifacts
+     * @param fingerprintArtifacts whether to fingerprint copied artifacts.
      */
     @DataBoundSetter
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
@@ -231,12 +231,7 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
     }
     
     /**
-     * @param src
-     * @param _context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.CopyArtifactOperation#perform(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactOperationContext)
+     * {@inheritDoc}
      */
     @Override
     @Nonnull
@@ -345,8 +340,8 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
      * @param file      the file to copy
      * @param path      the destination path
      * @param context   context of the operation.
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     protected void copyOne(@Nonnull FileInfo file, @Nonnull FilePath path, @Nonnull CopyArtifactCopyContext context)
             throws IOException, InterruptedException {
@@ -394,6 +389,8 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
      *      parameters to copying operations.
      *      You can save execution state with {@link CopyArtifactCopyContext#addExtension(Object)}
      * @return true to start the copy operation.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * 
      * @see #end(CopyArtifactCopyContext)
      */
@@ -408,8 +405,10 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
      * Be aware that this may be called even you returned <code>false</code> in {@link #init(CopyArtifactCopyContext)}
      *
      * @param context
-     * @throws IOException
-     * @throws InterruptedException
+     *      parameters to copying operations.
+     *      You can save execution state with {@link CopyArtifactCopyContext#addExtension(Object)}
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      * 
      * @see #init(CopyArtifactCopyContext)
      */
@@ -433,9 +432,11 @@ public abstract class AbstractCopyOperation extends CopyArtifactOperation {
      * Don't forget to handle {@link CopyArtifactCopyContext#getSrcBaseDir()}.
      * 
      * @param context
+     *      parameters to copying operations.
+     *      You can save execution state with {@link CopyArtifactCopyContext#addExtension(Object)}
      * @return the list of files to copy.
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     @Nonnull
     protected abstract Iterable<? extends FileInfo> scanFilesToCopy(@Nonnull CopyArtifactCopyContext context) throws IOException, InterruptedException;

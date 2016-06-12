@@ -220,7 +220,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param parameters
+     * @param parameters comma-separated list of pairs of parameters and values to match
      * @deprecated use {@link #setBuildFilter(BuildFilter)} and {@link ParametersBuildFilter} instead.
      */
     @Deprecated
@@ -231,7 +231,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param filter
+     * @param filter comma separated apache-ant file patterns for files to include.
      * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
      */
     @Deprecated
@@ -250,7 +250,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param target
+     * @param target directory to copy files to.
      * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
      */
     @Deprecated
@@ -269,7 +269,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param excludes
+     * @param excludes comma separated apache-ant file patterns for files to exclude.
      * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
      */
     @Deprecated
@@ -293,7 +293,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param flatten
+     * @param flatten whether copy files ignoring directory trees.
      * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
      */
     @Deprecated
@@ -317,7 +317,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param fingerprintArtifacts
+     * @param fingerprintArtifacts whether to fingerprint copied artifacts.
      * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
      */
     @Deprecated
@@ -346,7 +346,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param verbose
+     * @param verbose whether output logs for diagnostics
      * @since 2.0
      */
     @DataBoundSetter
@@ -355,7 +355,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param buildFilter
+     * @param buildFilter filter for builds
      * @since 2.0
      */
     @DataBoundSetter
@@ -364,7 +364,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param operation
+     * @param operation operation performed against the target build.
      * 
      * @since 2.0
      */
@@ -501,7 +501,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
     
     /**
-     * @return
+     * @return comma-separated list of pairs of parameters and values to match
      * @deprecated use {@link #getBuildFilter()} instead.
      */
     @Deprecated
@@ -519,7 +519,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @return
+     * @return comma separated apache-ant file patterns for files to include.
      * @deprecated use {@link #getOperation()} instead.
      */
     @Deprecated
@@ -532,7 +532,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @return
+     * @return comma separated apache-ant file patterns for files to exclude.
      * @deprecated use {@link #getOperation()} instead.
      */
     @Deprecated
@@ -545,7 +545,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @return
+     * @return directory to copy files to.
      * @deprecated use {@link #getOperation()} instead.
      */
     @Deprecated
@@ -558,7 +558,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @return
+     * @return whether copy files ignoring directory trees.
      * @deprecated use {@link #getOperation()} instead.
      */
     @Deprecated
@@ -636,7 +636,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @return
+     * @return whether to fingerprint copied artifacts.
      * @deprecated use {@link #getOperation()} instead.
      */
     @Deprecated
@@ -744,10 +744,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     /**
-     * @param selector
-     * @param context
-     * @return
+     * Pick a build to copy from.
+     * 
+     * @param selector build selector
+     * @param context context of picking process
+     * @return result of the picking process. It may contain picked build.
      * @since 2.0
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     public CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context)
             throws IOException, InterruptedException

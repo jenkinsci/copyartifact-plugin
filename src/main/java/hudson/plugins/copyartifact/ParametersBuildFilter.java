@@ -50,20 +50,23 @@ public class ParametersBuildFilter extends BuildFilter {
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
+    /**
+     * @param paramsToMatch comma-separated list of pairs of parameters and values to match
+     */
     @DataBoundConstructor
     public ParametersBuildFilter(String paramsToMatch) {
         this.paramsToMatch = paramsToMatch;
     }
     
     /**
-     * @return
+     * @return comma-separated list of pairs of parameters and values to match
      * @since 2.0
      */
     public String getParamsToMatch() {
         return paramsToMatch;
     }
 
-    private List<StringParameterValue> getFilerParameters(@Nonnull CopyArtifactPickContext context) {
+    private List<StringParameterValue> getFilterParameters(@Nonnull CopyArtifactPickContext context) {
         // Initialize.. parse out the given parameters/values.
         List<StringParameterValue> filters = new ArrayList<StringParameterValue>(5);
         Matcher m = PARAMVAL_PATTERN.matcher(context.getEnvVars().expand(getParamsToMatch()));
@@ -99,7 +102,7 @@ public class ParametersBuildFilter extends BuildFilter {
                 }
             }
         }
-        List<StringParameterValue> filters = getFilerParameters(context);
+        List<StringParameterValue> filters = getFilterParameters(context);
         for (StringParameterValue spv : filters) {
             if (!spv.value.equals(otherEnv.get(spv.getName()))) {
                 context.logDebug(

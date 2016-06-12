@@ -72,8 +72,8 @@ public class FallbackBuildSelector extends BuildSelector {
         private final BuildFilter buildFilter;
         
         /**
-         * @param buildSelector
-         * @param buildFilter
+         * @param buildSelector build selector
+         * @param buildFilter   build filter used with the build selector
          */
         @DataBoundConstructor
         public Entry(@Nonnull BuildSelector buildSelector, @Nonnull BuildFilter buildFilter) {
@@ -82,21 +82,21 @@ public class FallbackBuildSelector extends BuildSelector {
         }
         
         /**
-         * @param buildSelector
+         * @param buildSelector build selector
          */
         public Entry(@Nonnull BuildSelector buildSelector) {
             this(buildSelector, new NoBuildFilter());
         }
         
         /**
-         * @return
+         * @return build selector
          */
         public BuildSelector getBuildSelector() {
             return buildSelector;
         }
         
         /**
-         * @return
+         * @return build filter
          */
         public BuildFilter getBuildFilter() {
             return buildFilter;
@@ -108,8 +108,7 @@ public class FallbackBuildSelector extends BuildSelector {
         @Extension
         public static class DescriptorImpl extends Descriptor<Entry> {
             /**
-             * @return
-             * @see hudson.model.Descriptor#getDisplayName()
+             * {@inheritDoc}
              */
             @Override
             public String getDisplayName() {
@@ -150,7 +149,7 @@ public class FallbackBuildSelector extends BuildSelector {
     private final List<Entry> entryList;
     
     /**
-     * @param entryList
+     * @param entryList build selectors to try
      */
     @DataBoundConstructor
     public FallbackBuildSelector(@Nonnull List<Entry> entryList) {
@@ -160,7 +159,7 @@ public class FallbackBuildSelector extends BuildSelector {
     /**
      * Convenient constructor.
      * 
-     * @param buildSelectors
+     * @param buildSelectors build selectors to try
      */
     public FallbackBuildSelector(@Nonnull BuildSelector... buildSelectors) {
         this(Lists.transform(
@@ -174,15 +173,15 @@ public class FallbackBuildSelector extends BuildSelector {
         ));
     }
 
+    /**
+     * @return build selectors to try
+     */
     public List<Entry> getEntryList() {
         return entryList;
     }
 
     /**
-     * @param job
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildSelector#pickBuildToCopyFrom(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     @CheckForNull

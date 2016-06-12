@@ -42,8 +42,7 @@ public class NoBuildFilter extends BuildFilter {
     }
     
     /**
-     * @return
-     * @see hudson.plugins.copyartifact.BuildFilter#getDescriptor()
+     * {@inheritDoc}
      */
     @Override
     public BuildFilterDescriptor getDescriptor() {

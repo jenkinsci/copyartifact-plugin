@@ -72,7 +72,7 @@ public abstract class CopyArtifactOperation extends AbstractDescribableImpl<Copy
         /**
          * Returns the whole result consists of two results.
          * 
-         * @param valueToMerge
+         * @param valueToMerge result to merge with
          * @return the merged result
          */
         @Nonnull
@@ -87,8 +87,8 @@ public abstract class CopyArtifactOperation extends AbstractDescribableImpl<Copy
      * @param src       the target build
      * @param context   context of the operation
      * @return  the result of the process
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     @Nonnull
     public abstract Result perform(@Nonnull Run<?, ?> src, @Nonnull CopyArtifactOperationContext context) throws IOException, InterruptedException;

@@ -46,7 +46,7 @@ public class AndBuildFilter extends BuildFilter {
     private final List<BuildFilter> buildFilterList;
     
     /**
-     * @param buildFilterList
+     * @param buildFilterList build filters to conjunct
      */
     @DataBoundConstructor
     public AndBuildFilter(@Nonnull List<BuildFilter> buildFilterList) {
@@ -56,14 +56,14 @@ public class AndBuildFilter extends BuildFilter {
     /**
      * Convenient constructor.
      * 
-     * @param buildFilters
+     * @param buildFilters build filters to conjunct
      */
     public AndBuildFilter(@Nonnull BuildFilter... buildFilters) {
         this(Arrays.asList(buildFilters));
     }
     
     /**
-     * @return
+     * @return build filters to conjunct
      */
     @Nonnull
     public List<BuildFilter> getBuildFilterList() {
@@ -71,10 +71,7 @@ public class AndBuildFilter extends BuildFilter {
     }
     
     /**
-     * @param candidate
-     * @param context
-     * @return
-     * @see hudson.plugins.copyartifact.BuildFilter#isSelectable(hudson.model.Run, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     public boolean isSelectable(Run<?, ?> candidate, CopyArtifactPickContext context) {
@@ -98,8 +95,7 @@ public class AndBuildFilter extends BuildFilter {
     @Extension(ordinal=-100)    // bottom most
     public static class DescriptorImpl extends BuildFilterDescriptor {
         /**
-         * @return
-         * @see hudson.model.Descriptor#getDisplayName()
+         * {@inheritDoc}
          */
         @Override
         public String getDisplayName() {

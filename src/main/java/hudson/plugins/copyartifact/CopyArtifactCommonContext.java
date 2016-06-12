@@ -93,7 +93,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     }
 
     /**
-     * @param listener
+     * @param listener listener for the build running copyartifact.
      */
     public void setListener(TaskListener listener) {
         this.listener = listener;
@@ -109,7 +109,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Shortcut for <code>getListener().getLogger()</code>
      * 
-     * @return
+     * @return stream to output logs
      */
     @Nonnull
     protected PrintStream getConsole() {
@@ -117,14 +117,14 @@ public class CopyArtifactCommonContext implements Cloneable {
     }
 
     /**
-     * @param envVars
+     * @param envVars variables for the current build
      */
     public void setEnvVars(@Nonnull EnvVars envVars) {
         this.envVars = envVars;
     }
 
     /**
-     * @return Variables for the current build.
+     * @return variables for the current build.
      */
     @Nonnull
     public EnvVars getEnvVars() {
@@ -132,7 +132,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     }
 
     /**
-     * @param verbose
+     * @param verbose whether output verbose (for diagnostics) logs.
      */
     public void setVerbose(boolean verbose) {
         this.verbose = verbose;
@@ -156,15 +156,15 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Add an object to hold plugin specific information.
      * 
-     * @param extension
+     * @param extension extension object
      */
     public void addExtension(@Nonnull Object extension) {
         getExtensionList().add(extension);
     }
 
     /**
-     * @param extension
-     * @return
+     * @param extension extension object to remove
+     * @return true if the extension is contained.
      */
     public boolean removeExtension(@Nonnull Object extension) {
         return getExtensionList().remove(extension);
@@ -173,8 +173,8 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Removes extensions with the same class type before adding.
      * 
-     * @param extension
-     * @return
+     * @param extension extension object to replace with
+     * @return true if an extension object of the same class class is contained.
      */
     public boolean replaceExtension(@Nonnull Object extension) {
         boolean removed = false;
@@ -191,8 +191,11 @@ public class CopyArtifactCommonContext implements Cloneable {
     }
 
     /**
-     * @param klass
-     * @return
+     * Extract an extension object of the specified class.
+     * 
+     * @param <T> specified with <code>klass</code>
+     * @param klass class of the extension to extract
+     * @return extension of the class
      */
     @CheckForNull
     public <T> T getExtension(@Nonnull Class<T> klass) {
@@ -214,7 +217,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Outputs a log message
      * 
-     * @param message
+     * @param message message to log
      */
     public void logInfo(@Nonnull String message) {
         log(message);
@@ -223,8 +226,8 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Outputs a log message in {@link MessageFormat} formats.
      * 
-     * @param pattern
-     * @param arguments
+     * @param pattern pattern for {@link MessageFormat}
+     * @param arguments values to format
      */
     public void logInfo(@Nonnull String pattern, Object... arguments) {
         log(MessageFormat.format(pattern, arguments));
@@ -233,7 +236,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Outputs a log message if {@link #isVerbose()} is <code>true</code>.
      * 
-     * @param message
+     * @param message message to log
      */
     public void logDebug(@Nonnull String message) {
         if (isVerbose()) {
@@ -245,8 +248,8 @@ public class CopyArtifactCommonContext implements Cloneable {
      * Outputs a log message in {@link MessageFormat} formats
      * if {@link #isVerbose()} is <code>true</code>.
      * 
-     * @param pattern
-     * @param arguments
+     * @param pattern pattern for {@link MessageFormat}
+     * @param arguments values to format
      */
     public void logDebug(@Nonnull String pattern, Object... arguments) {
         if (isVerbose()) {
@@ -257,8 +260,8 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Outputs a log message with an exception
      * 
-     * @param string
-     * @param t
+     * @param string message to log.
+     * @param t exception to log.
      */
     public void logException(@Nonnull String string, @Nonnull Throwable t) {
         log(string, t);
@@ -274,7 +277,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     /**
      * Creates a new instance copying src data.
      * 
-     * @param src
+     * @param src {@link CopyArtifactCommonContext} to copy from.
      */
     protected CopyArtifactCommonContext(@Nonnull CopyArtifactCommonContext src) {
         this.jenkins = src.jenkins;
@@ -314,8 +317,7 @@ public class CopyArtifactCommonContext implements Cloneable {
     }
 
     /**
-     * @return
-     * @see java.lang.Object#clone()
+     * {@inheritDoc}
      */
     @Override
     protected CopyArtifactCommonContext clone() {

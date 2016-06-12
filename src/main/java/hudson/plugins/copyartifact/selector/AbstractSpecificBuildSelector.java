@@ -41,12 +41,7 @@ import hudson.plugins.copyartifact.CopyArtifactPickContext;
  */
 public abstract class AbstractSpecificBuildSelector extends BuildSelector {
     /**
-     * @param job
-     * @param context
-     * @return
-     * @throws IOException
-     * @throws InterruptedException
-     * @see hudson.plugins.copyartifact.BuildSelector#getNextBuild(hudson.model.Job, hudson.plugins.copyartifact.CopyArtifactPickContext)
+     * {@inheritDoc}
      */
     @Override
     @CheckForNull
@@ -58,11 +53,13 @@ public abstract class AbstractSpecificBuildSelector extends BuildSelector {
     }
     
     /**
-     * @param job
-     * @param context
+     * Override this method to implement {@link AbstractSpecificBuildSelector}.
+     * 
+     * @param job       the job to pick a build from.
+     * @param context   context for the current execution of copyartifact.
      * @return the build to select
-     * @throws IOException
-     * @throws InterruptedException
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
      */
     @CheckForNull
     public abstract Run<?, ?> getBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) throws IOException, InterruptedException;
