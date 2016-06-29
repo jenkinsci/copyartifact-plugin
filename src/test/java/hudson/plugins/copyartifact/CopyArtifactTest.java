@@ -346,8 +346,15 @@ public class CopyArtifactTest {
     @Test
     public void testParameters() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject("$PROJSRC", null, "$BASE/*.txt", "$TARGET/bar",
+                         p = createProject("${PROJSRC}", null, "${BASE}/*.txt", "${TARGET}/bar",
                                            false, false, false, true);
+        ParameterDefinition paramDef = new StringParameterDefinition("PROJSRC",other.getName(), "");
+        ParameterDefinition paramDef2 = new StringParameterDefinition("BASE","","");
+        ParameterDefinition paramDef3 = new StringParameterDefinition("TARGET","foo","");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef, paramDef2,paramDef3);
+        p.addProperty(paramsDef);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("PROJSRC", other.getName()),
@@ -601,6 +608,11 @@ public class CopyArtifactTest {
     public void testSavedBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        other.addProperty(paramsDef);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new SavedBuildSelector(), "*.txt", "", false, false, true));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
@@ -619,6 +631,11 @@ public class CopyArtifactTest {
     public void testSpecificBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        other.addProperty(paramsDef);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         SpecificBuildSelector sbs = new SpecificBuildSelector("1");
         assertEquals("1", sbs.getBuildNumber());
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, sbs, "*.txt", "", false, false, true));
@@ -636,6 +653,14 @@ public class CopyArtifactTest {
     public void testSpecificBuildSelectorParameter() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef2 = new StringParameterDefinition("BAR","1");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        other.addProperty(paramsDef);
+        ParametersDefinitionProperty paramsDef2 = new ParametersDefinitionProperty(paramDef2);
+        p.addProperty(paramsDef2);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new SpecificBuildSelector("$BAR"), "*.txt", "", false, false, true));
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
@@ -653,6 +678,14 @@ public class CopyArtifactTest {
     public void testParameterizedBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
+        ParameterDefinition pParamDef = new StringParameterDefinition("PBS","foo");
+        ParametersDefinitionProperty pParamsDef = new ParametersDefinitionProperty(pParamDef);
+        p.addProperty(pParamsDef);
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        other.addProperty(paramsDef);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("PBS");
         assertEquals("PBS", pbs.getParameterName());
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, pbs, "*.txt", "", false, false, true));
@@ -673,6 +706,11 @@ public class CopyArtifactTest {
     public void testPermalinkBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        other.addProperty(paramsDef);
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+p.getName());
+        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new PermalinkBuildSelector("lastStableBuild"), "*.txt", "", false, false, true));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
@@ -939,6 +977,9 @@ public class CopyArtifactTest {
         FreeStyleProject p = createProject("test$JOB", null, "", "", false, false, false, true);
         // Build step should succeed when this parameter expands to a job accessible
         // to authenticated users (even if triggered by anonymous, as in this case):
+        ParameterDefinition paramDef = new StringParameterDefinition("JOB","job1");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        p.addProperty(paramsDef);
         SecurityContextHolder.clearContext();
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("JOB", "Job2"))).get();
@@ -965,6 +1006,9 @@ public class CopyArtifactTest {
         if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
 
         FreeStyleProject p = createProject("testMatrix/FOO=$FOO", null, "", "", false, false, false, true);
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","FOO");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        p.addProperty(paramsDef);
         // Build step should succeed when this parameter expands to a job accessible to
         // authenticated users, even when selecting a single matrix config, not the parent job:
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
@@ -985,6 +1029,9 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$FOO",
                                            null, "", "", false, false, false, true);
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        p.addProperty(paramsDef);
         // Build step should succeed when this parameter expands to a job accessible to
         // authenticated users, even when selecting a single maven module, not the parent job:
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
