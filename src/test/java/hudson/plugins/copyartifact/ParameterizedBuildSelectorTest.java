@@ -27,12 +27,11 @@ package hudson.plugins.copyartifact;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Random;
 
+import hudson.model.*;
+import hudson.security.Permission;
 import jenkins.util.VirtualFile;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParametersAction;
-import hudson.model.StringParameterValue;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
@@ -58,7 +57,7 @@ public class ParameterizedBuildSelectorTest {
     private WorkflowJob createWorkflowJob() throws IOException {
         return j.jenkins.createProject(WorkflowJob.class, "test"+j.jenkins.getItems().size());
     }
-    
+
     /**
      * Should not cause a fatal error even for an undefined variable.
      * 
@@ -94,12 +93,18 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testWorkflow() throws Exception {
         // Prepare an artifact to be copied.
+        WorkflowJob copier = createWorkflowJob();
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        // Allow next project to copy from this
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+copier.getName());
+        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
-        
-        WorkflowJob copier = createWorkflowJob();
+
+        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        copier.addProperty(paramsDef);
         copier.setDefinition(new CpsFlowDefinition(
             String.format(
                 "node {"
@@ -227,12 +232,18 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testImmediateValue() throws Exception {
         // Prepare an artifact to be copied.
+        WorkflowJob copier = createWorkflowJob();
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        // Allow next project to copy from this
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/"+copier.getName());
+        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
-        
-        WorkflowJob copier = createWorkflowJob();
+
+        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        copier.addProperty(paramsDef);
         copier.setDefinition(new CpsFlowDefinition(
             String.format(
                 "node {"
@@ -273,9 +284,15 @@ public class ParameterizedBuildSelectorTest {
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        // Allow next project to copy from this
+        CopyArtifactPermissionProperty cpp=new CopyArtifactPermissionProperty("/copier");
+        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
-        FreeStyleProject copier = j.createFreeStyleProject();
+        FreeStyleProject copier = j.createFreeStyleProject("copier");
+        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        copier.addProperty(paramsDef);
         ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("${SELECTOR}");
         copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 copiee.getFullName(),
