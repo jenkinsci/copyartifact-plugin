@@ -353,8 +353,6 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef3 = new StringParameterDefinition("TARGET","foo","");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef, paramDef2,paramDef3);
         p.addProperty(paramsDef);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("PROJSRC", other.getName()),
@@ -611,8 +609,6 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new SavedBuildSelector(), "*.txt", "", false, false, true));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
@@ -634,8 +630,6 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         SpecificBuildSelector sbs = new SpecificBuildSelector("1");
         assertEquals("1", sbs.getBuildNumber());
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, sbs, "*.txt", "", false, false, true));
@@ -659,8 +653,6 @@ public class CopyArtifactTest {
         other.addProperty(paramsDef);
         ParametersDefinitionProperty paramsDef2 = new ParametersDefinitionProperty(paramDef2);
         p.addProperty(paramsDef2);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new SpecificBuildSelector("$BAR"), "*.txt", "", false, false, true));
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause(),
@@ -684,8 +676,6 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("PBS");
         assertEquals("PBS", pbs.getParameterName());
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, pbs, "*.txt", "", false, false, true));
@@ -709,8 +699,6 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(p.getFullName());
-        other.addProperty(cpp);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new PermalinkBuildSelector("lastStableBuild"), "*.txt", "", false, false, true));
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),

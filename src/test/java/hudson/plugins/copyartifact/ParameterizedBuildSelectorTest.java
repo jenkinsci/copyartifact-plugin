@@ -103,8 +103,6 @@ public class ParameterizedBuildSelectorTest {
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         // Allow next project to copy from this
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(copier.getFullName());
-        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
         ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
@@ -242,8 +240,6 @@ public class ParameterizedBuildSelectorTest {
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         // Allow next project to copy from this
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(copier.getFullName());
-        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
         ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
@@ -290,8 +286,6 @@ public class ParameterizedBuildSelectorTest {
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         // Allow next project to copy from this
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty("/copier");
-        copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
         FreeStyleProject copier = j.createFreeStyleProject("copier");
