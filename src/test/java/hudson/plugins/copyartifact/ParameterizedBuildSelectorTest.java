@@ -103,7 +103,7 @@ public class ParameterizedBuildSelectorTest {
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         // Allow next project to copy from this
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty("/"+copier.getName());
+        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(copier.getFullName());
         copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
@@ -242,7 +242,7 @@ public class ParameterizedBuildSelectorTest {
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         // Allow next project to copy from this
-        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty("/"+copier.getName());
+        CopyArtifactPermissionProperty cpp = new CopyArtifactPermissionProperty(copier.getFullName());
         copiee.addProperty(cpp);
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
