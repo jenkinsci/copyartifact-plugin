@@ -28,6 +28,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
+import jenkins.util.VirtualFile;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParameterDefinition;
@@ -35,7 +36,6 @@ import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
-import jenkins.util.VirtualFile;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
@@ -48,7 +48,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
-
 
 /**
  * Tests for {@link ParameterizedBuildSelector}
