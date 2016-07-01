@@ -189,7 +189,7 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseOldest() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -241,7 +241,7 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -291,7 +291,7 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseNewest() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -343,7 +343,7 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -393,7 +393,7 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseOldestNested() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject intermediate1 = j.createFreeStyleProject();
@@ -483,7 +483,7 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseNewestNested() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject intermediate1 = j.createFreeStyleProject();
@@ -576,7 +576,7 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -671,7 +671,7 @@ public class TriggeredBuildSelectorTest {
         //
 
         FreeStyleProject upstream = j.createFreeStyleProject("upstream");
-        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
         FreeStyleProject intermediate = j.createFreeStyleProject("intermediate");

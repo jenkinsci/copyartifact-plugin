@@ -103,8 +103,8 @@ public class ParameterizedBuildSelectorTest {
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
         WorkflowJob copier = createWorkflowJob();
-        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
-        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        ParameterDefinition paramDef = new StringParameterDefinition("SELECTOR", "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         copier.addProperty(paramsDef);
         copier.setDefinition(new CpsFlowDefinition(
             String.format(
@@ -239,8 +239,8 @@ public class ParameterizedBuildSelectorTest {
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
         WorkflowJob copier = createWorkflowJob();
-        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
-        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        ParameterDefinition paramDef = new StringParameterDefinition("SELECTOR", "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         copier.addProperty(paramsDef);
         copier.setDefinition(new CpsFlowDefinition(
             String.format(
@@ -285,8 +285,8 @@ public class ParameterizedBuildSelectorTest {
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
         FreeStyleProject copier = j.createFreeStyleProject();
-        ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
-        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
+        ParameterDefinition paramDef = new StringParameterDefinition("SELECTOR", "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         copier.addProperty(paramsDef);
         ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("${SELECTOR}");
         copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(

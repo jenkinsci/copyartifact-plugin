@@ -348,10 +348,10 @@ public class CopyArtifactTest {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject("$PROJSRC", null, "$BASE/*.txt", "$TARGET/bar",
                                            false, false, false, true);
-        ParameterDefinition paramDef = new StringParameterDefinition("PROJSRC",other.getName(), "");
-        ParameterDefinition paramDef2 = new StringParameterDefinition("BASE","","");
-        ParameterDefinition paramDef3 = new StringParameterDefinition("TARGET","foo","");
-        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef, paramDef2,paramDef3);
+        ParameterDefinition paramDef = new StringParameterDefinition("PROJSRC", other.getName(), "");
+        ParameterDefinition paramDef2 = new StringParameterDefinition("BASE", "", "");
+        ParameterDefinition paramDef3 = new StringParameterDefinition("TARGET", "foo", "");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef, paramDef2, paramDef3);
         p.addProperty(paramsDef);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
@@ -606,7 +606,7 @@ public class CopyArtifactTest {
     public void testSavedBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
@@ -627,7 +627,7 @@ public class CopyArtifactTest {
     public void testSpecificBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
         SpecificBuildSelector sbs = new SpecificBuildSelector("1");
@@ -647,8 +647,8 @@ public class CopyArtifactTest {
     public void testSpecificBuildSelectorParameter() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
-        ParameterDefinition paramDef2 = new StringParameterDefinition("BAR","1");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
+        ParameterDefinition paramDef2 = new StringParameterDefinition("BAR", "1");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
         ParametersDefinitionProperty paramsDef2 = new ParametersDefinitionProperty(paramDef2);
@@ -670,10 +670,10 @@ public class CopyArtifactTest {
     public void testParameterizedBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        ParameterDefinition pParamDef = new StringParameterDefinition("PBS","foo");
+        ParameterDefinition pParamDef = new StringParameterDefinition("PBS", "foo");
         ParametersDefinitionProperty pParamsDef = new ParametersDefinitionProperty(pParamDef);
         p.addProperty(pParamsDef);
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
         ParameterizedBuildSelector pbs = new ParameterizedBuildSelector("PBS");
@@ -696,7 +696,7 @@ public class CopyArtifactTest {
     public void testPermalinkBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
@@ -963,7 +963,7 @@ public class CopyArtifactTest {
     @Test
     public void testPermissionWhenParameterized() throws Exception {
         FreeStyleProject p = createProject("test$JOB", null, "", "", false, false, false, true);
-        ParameterDefinition paramDef = new StringParameterDefinition("JOB","job1");
+        ParameterDefinition paramDef = new StringParameterDefinition("JOB", "job1");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         p.addProperty(paramsDef);
         // Build step should succeed when this parameter expands to a job accessible
@@ -994,7 +994,7 @@ public class CopyArtifactTest {
         if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
 
         FreeStyleProject p = createProject("testMatrix/FOO=$FOO", null, "", "", false, false, false, true);
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","FOO");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "FOO");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         p.addProperty(paramsDef);
         // Build step should succeed when this parameter expands to a job accessible to
@@ -1017,7 +1017,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$FOO",
                                            null, "", "", false, false, false, true);
-        ParameterDefinition paramDef = new StringParameterDefinition("FOO","foo");
+        ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         p.addProperty(paramsDef);
         // Build step should succeed when this parameter expands to a job accessible to
