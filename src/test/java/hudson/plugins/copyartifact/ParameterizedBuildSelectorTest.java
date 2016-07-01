@@ -97,13 +97,12 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testWorkflow() throws Exception {
         // Prepare an artifact to be copied.
-        WorkflowJob copier = createWorkflowJob();
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
-        // Allow next project to copy from this
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
+        WorkflowJob copier = createWorkflowJob();
         ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
         copier.addProperty(paramsDef);
@@ -234,13 +233,12 @@ public class ParameterizedBuildSelectorTest {
     @Test
     public void testImmediateValue() throws Exception {
         // Prepare an artifact to be copied.
-        WorkflowJob copier = createWorkflowJob();
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
-        // Allow next project to copy from this
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
+        WorkflowJob copier = createWorkflowJob();
         ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
         copier.addProperty(paramsDef);
@@ -284,10 +282,9 @@ public class ParameterizedBuildSelectorTest {
         FreeStyleProject copiee = j.createFreeStyleProject();
         copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
         copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
-        // Allow next project to copy from this
         j.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
         
-        FreeStyleProject copier = j.createFreeStyleProject("copier");
+        FreeStyleProject copier = j.createFreeStyleProject();
         ParameterDefinition pwParamDef = new StringParameterDefinition("SELECTOR","<StatusBuildSelector><stable>true</stable></StatusBuildSelector>");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(pwParamDef);
         copier.addProperty(paramsDef);

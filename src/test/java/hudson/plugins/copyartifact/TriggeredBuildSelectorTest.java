@@ -46,8 +46,6 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
-
-
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.RemoveUpstreamBuilder;
@@ -398,7 +396,6 @@ public class TriggeredBuildSelectorTest {
         ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
-
         FreeStyleProject intermediate1 = j.createFreeStyleProject();
         FreeStyleProject intermediate2 = j.createFreeStyleProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -677,7 +674,6 @@ public class TriggeredBuildSelectorTest {
         ParameterDefinition paramDef = new StringParameterDefinition("CONTENT","foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         upstream.addProperty(paramsDef);
-
         FreeStyleProject intermediate = j.createFreeStyleProject("intermediate");
         FreeStyleProject downstream = j.createFreeStyleProject("downstream");
 

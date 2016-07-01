@@ -346,7 +346,7 @@ public class CopyArtifactTest {
     @Test
     public void testParameters() throws Exception {
         FreeStyleProject other = createArtifactProject(),
-                         p = createProject("${PROJSRC}", null, "${BASE}/*.txt", "${TARGET}/bar",
+                         p = createProject("$PROJSRC", null, "$BASE/*.txt", "$TARGET/bar",
                                            false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("PROJSRC",other.getName(), "");
         ParameterDefinition paramDef2 = new StringParameterDefinition("BASE","","");
@@ -963,11 +963,11 @@ public class CopyArtifactTest {
     @Test
     public void testPermissionWhenParameterized() throws Exception {
         FreeStyleProject p = createProject("test$JOB", null, "", "", false, false, false, true);
-        // Build step should succeed when this parameter expands to a job accessible
-        // to authenticated users (even if triggered by anonymous, as in this case):
         ParameterDefinition paramDef = new StringParameterDefinition("JOB","job1");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         p.addProperty(paramsDef);
+        // Build step should succeed when this parameter expands to a job accessible
+        // to authenticated users (even if triggered by anonymous, as in this case):
         SecurityContextHolder.clearContext();
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("JOB", "Job2"))).get();
