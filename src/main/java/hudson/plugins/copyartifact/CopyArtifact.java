@@ -461,7 +461,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("deprecation") // Version1BuildSelector
     @SuppressFBWarnings(value="BC_VACUOUS_INSTANCEOF", justification="conf.copyArtifactOperation might be a CopyOperation except AbstractCopyOperation with a selector from a external plugin.")
     public boolean upgradeFromCopyartifact10() {
         if (!(getSelector() instanceof Version1BuildSelector)) {

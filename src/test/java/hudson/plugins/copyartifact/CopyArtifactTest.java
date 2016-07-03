@@ -110,46 +110,6 @@ public class CopyArtifactTest {
     @Rule
     public TestName name = new TestName();
 
-    // Tests using slaves fails with Jenkins < 1.520 on Windows.
-    // See https://wiki.jenkins-ci.org/display/JENKINS/Unit+Test+on+Windows
-    private void purgeSlaves() {
-        List<Computer> disconnectingComputers = new ArrayList<Computer>();
-        List<VirtualChannel> closingChannels = new ArrayList<VirtualChannel>();
-        for (Computer computer: rule.jenkins.getComputers()) {
-            if (!(computer instanceof SlaveComputer)) {
-                continue;
-            }
-            // disconnect slaves.
-            // retrieve the channel before disconnecting.
-            // even a computer gets offline, channel delays to close.
-            if (!computer.isOffline()) {
-                VirtualChannel ch = computer.getChannel();
-                computer.disconnect(null);
-                disconnectingComputers.add(computer);
-                closingChannels.add(ch);
-            }
-        }
-        
-        try {
-            // Wait for all computers disconnected and all channels closed.
-            for (Computer computer: disconnectingComputers) {
-                computer.waitUntilOffline();
-            }
-            for (VirtualChannel ch: closingChannels) {
-                ch.join();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    @After
-    public void tearDown() throws Exception {
-        if(Functions.isWindows()) {
-            purgeSlaves();
-        }
-    }
-
     private FreeStyleProject createProject(String otherProject, String parameters, String filter,
             String target, boolean stable, boolean flatten, boolean optional, boolean fingerprintArtifacts)
             throws IOException {
