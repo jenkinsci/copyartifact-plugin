@@ -24,7 +24,11 @@
 
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,10 +39,13 @@ import hudson.Util;
 import hudson.maven.MavenModuleSet;
 import hudson.model.Cause;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParameterDefinition;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.model.FreeStyleBuild;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.RemoveUpstreamBuilder;
@@ -182,6 +189,9 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseOldest() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
@@ -231,6 +241,9 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
@@ -278,6 +291,9 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseNewest() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
@@ -327,6 +343,9 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
@@ -374,6 +393,9 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseOldestNested() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject intermediate1 = j.createFreeStyleProject();
         FreeStyleProject intermediate2 = j.createFreeStyleProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -461,6 +483,9 @@ public class TriggeredBuildSelectorTest {
     @Test
     public void testUseNewestNested() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject intermediate1 = j.createFreeStyleProject();
         FreeStyleProject intermediate2 = j.createFreeStyleProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
@@ -551,6 +576,9 @@ public class TriggeredBuildSelectorTest {
         d.setGlobalUpstreamFilterStrategy(TriggeredBuildSelector.UpstreamFilterStrategy.UseOldest);
         
         FreeStyleProject upstream = j.createFreeStyleProject();
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.getBuildersList().add(new FileWriteBuilder("artifact.txt", "${CONTENT}"));
@@ -643,6 +671,9 @@ public class TriggeredBuildSelectorTest {
         //
 
         FreeStyleProject upstream = j.createFreeStyleProject("upstream");
+        ParameterDefinition paramDef = new StringParameterDefinition("CONTENT", "foo");
+        ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
+        upstream.addProperty(paramsDef);
         FreeStyleProject intermediate = j.createFreeStyleProject("intermediate");
         FreeStyleProject downstream = j.createFreeStyleProject("downstream");
 
