@@ -71,7 +71,15 @@ public class BuildFilterParameter extends SimpleParameterDefinition {
     public BuildFilter getDefaultFilter() {
         return defaultFilter;
     }
-    
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public ParameterValue getDefaultParameterValue() {
+        return createValue(ParameterizedBuildFilter.encodeToXml(getDefaultFilter()));
+    }
+
     /**
      * {@inheritDoc}
      */
