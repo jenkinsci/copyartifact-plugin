@@ -73,6 +73,7 @@ public class FingerprintingCopyMethod extends Copier {
     public void copyOne(FilePath s, FilePath d, boolean fingerprintArtifacts) throws IOException, InterruptedException {
         String link = s.readLink();
         if (link != null) {
+            d.getParent().mkdirs();
             d.symlinkTo(link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */TaskListener.NULL);
             return;
         }
