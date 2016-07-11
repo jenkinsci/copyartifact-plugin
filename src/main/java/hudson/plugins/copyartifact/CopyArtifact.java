@@ -367,7 +367,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
         EnvVars env = build.getEnvironment(listener);
         if (build instanceof AbstractBuild) {
-            env.overrideAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+            env.putAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
         } else {
             // Abstract#getEnvironment(TaskListener) put build parameters to
             // environments, but Run#getEnvironment(TaskListener) doesn't.
