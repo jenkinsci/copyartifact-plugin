@@ -55,6 +55,7 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -72,6 +73,7 @@ import jenkins.security.QueueItemAuthenticatorConfiguration;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -1820,6 +1822,34 @@ public class CopyArtifactTest {
         assertEquals("text", ws.child("plain").readToString());
         assertEquals("plain", ws.child("link1").readLink());
         assertEquals("nonexistent", ws.child("link2").readLink());
+    }
+    
+    @Issue("JENKINS-32832")
+    @Test
+    public void testSymlinksInDirectory() throws Exception {
+        FreeStyleProject p1 = rule.createFreeStyleProject("p1");
+        p1.getBuildersList().add(new TestBuilder() {
+            @Override public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+                build.getWorkspace().child("plain").write("text", null);
+                build.getWorkspace().child("dir").mkdirs();
+                build.getWorkspace().child("dir/link1").symlinkTo("../plain", listener);
+                return true;
+            }
+        });
+        p1.getPublishersList().add(new ArtifactArchiver("**"));
+        rule.buildAndAssertSuccess(p1);
+        FreeStyleProject p2 = rule.createFreeStyleProject("p2");
+        p2.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("p1", null, new StatusBuildSelector(true), null, "", false, false, true));
+        FreeStyleBuild b = rule.buildAndAssertSuccess(p2);
+        FilePath ws = b.getWorkspace();
+        assertEquals("text", ws.child("plain").readToString());
+        assertEquals(
+            StringUtils.join(
+                new String[]{"..", "plain"},
+                File.separator
+            ),
+            ws.child("dir/link1").readLink()
+        );
     }
     
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
