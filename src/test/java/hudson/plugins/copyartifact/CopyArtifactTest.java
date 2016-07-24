@@ -365,6 +365,20 @@ public class CopyArtifactTest {
         assertFile(true, "foo/bar/subdir/subfoo.txt", b);
     }
 
+    @Issue("JENKINS-36554")
+    @Test
+    public void testEmptyParameter() throws Exception {
+        FreeStyleProject copiee = createArtifactProject();
+        FreeStyleProject copier = rule.createFreeStyleProject();
+        copier.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("EMPTY", "")
+        ));
+        CopyArtifact ca = new CopyArtifact(String.format("%s${EMPTY}", copiee.getFullDisplayName()));
+        copier.getBuildersList().add(ca);
+        rule.buildAndAssertSuccess(copiee);
+        rule.buildAndAssertSuccess(copier);
+    }
+
     /** Test copying artifacts from a particular configuration of a matrix job */
     @Test
     public void testMatrixJob() throws Exception {
