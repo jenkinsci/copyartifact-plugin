@@ -23,29 +23,23 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.model.Result;
-import hudson.model.Run;
-import org.kohsuke.stapler.DataBoundConstructor;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 
 /**
  * Copy artifacts from the latest build (ignoring the build status)
  * @author Helmut Schaa
+ * @deprecated Use {@link StatusBuildSelector} instead.
  */
-public class LastCompletedBuildSelector extends BuildSelector {
+@Deprecated
+public class LastCompletedBuildSelector extends Version1BuildSelector {
 
-    @DataBoundConstructor
-    public LastCompletedBuildSelector() { }
-
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return true;
+    public MigratedConfiguration migrateToVersion2() {
+        return new MigratedConfiguration(
+                new StatusBuildSelector(StatusBuildSelector.BuildStatus.Completed)
+        );
     }
-
-    @Extension
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                LastCompletedBuildSelector.class, Messages._LastCompletedBuildSelector_DisplayName());
 }

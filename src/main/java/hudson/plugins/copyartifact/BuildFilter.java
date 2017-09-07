@@ -23,22 +23,106 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import javax.annotation.Nonnull;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+
+import jenkins.model.Jenkins;
 import hudson.EnvVars;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.Descriptor;
 import hudson.model.Run;
+import hudson.plugins.copyartifact.filter.NoBuildFilter;
 
 /**
  * Additional filter used by BuildSelector.
+ * Use {@link BuildFilterDescriptor} for its descriptor.
  * @author Alan Harder
  */
-public class BuildFilter {
+public class BuildFilter extends AbstractDescribableImpl<BuildFilter> {
 
     /**
-     * Can this build be selected?
-     * @param run Build to check
-     * @param env Environment for build that is copying artifacts
-     * @return True if this build may be selected; default implementation always returns true.
+     * @param run a build to test
+     * @param env environment variables
+     * @return whether this build is acceptable
+     * @deprecated implement {@link #isSelectable(Run, CopyArtifactPickContext)} instead.
      */
+    @Deprecated
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return true;
+    }
+
+    /**
+     * @param candidate the build to check
+     * @param context the context of current copyartifact execution.
+     * @return whether this build can be selected.
+     * 
+     * @since 2.0
+     */
+    public boolean isSelectable(@Nonnull Run<?, ?> candidate, @Nonnull CopyArtifactPickContext context) {
+        // for backward compatibility.
+        return isSelectable(candidate, context.getEnvVars());
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public BuildFilterDescriptor getDescriptor() {
+        return (BuildFilterDescriptor)super.getDescriptor();
+    }
+    
+    /**
+     * @return all descriptors of {@link BuildFilter} without {@link NoBuildFilter}
+     */
+    public static List<BuildFilterDescriptor> all() {
+        Jenkins j = Jenkins.getInstance();
+        if (j == null) {
+            return Collections.emptyList();
+        }
+        return Lists.transform(
+                j.getDescriptorList(BuildFilter.class),
+                new Function<Descriptor<?>, BuildFilterDescriptor>() {
+                    @Override
+                    public BuildFilterDescriptor apply(Descriptor<?> arg0) {
+                        return (BuildFilterDescriptor)arg0;
+                    }
+                }
+        );
+    }
+    
+    /**
+     * @return all descriptors of {@link BuildFilter} including {@link NoBuildFilter}
+     */
+    public static List<BuildFilterDescriptor> allWithNoBuildFilter() {
+        List<BuildFilterDescriptor> allFilters = new ArrayList<BuildFilterDescriptor>(all());
+        allFilters.add(0, NoBuildFilter.DESCRIPTOR);
+        
+        return allFilters;
+    }
+    
+    /**
+     * Returns the display name for this filter.
+     * You can override this to output configurations of this filter
+     * in verbose logs.
+     * 
+     * @return the display name for this filter.
+     * 
+     * @since 2.0
+     */
+    public String getDisplayName() {
+        try {
+            return getDescriptor().getDisplayName();
+        } catch (AssertionError e) {
+            // getDescriptor throws AssertionException
+            // if there's no descriptor available
+            // (e.g. selectors in unit tests)
+            return getClass().getName();
+        }
     }
 }

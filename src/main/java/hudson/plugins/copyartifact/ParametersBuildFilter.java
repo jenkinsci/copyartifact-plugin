@@ -24,61 +24,62 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
+import hudson.Extension;
 import hudson.model.ParameterValue;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
-import hudson.model.Job;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.annotation.Nonnull;
+
+import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Filter to find builds matching particular parameters.
  * @author Alan Harder
  */
 public class ParametersBuildFilter extends BuildFilter {
-    private List<StringParameterValue> filters;
+    private final String paramsToMatch;
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
 
+    /**
+     * @param paramsToMatch comma-separated list of pairs of parameters and values to match
+     */
+    @DataBoundConstructor
     public ParametersBuildFilter(String paramsToMatch) {
+        this.paramsToMatch = paramsToMatch;
+    }
+    
+    /**
+     * @return comma-separated list of pairs of parameters and values to match
+     * @since 2.0
+     */
+    public String getParamsToMatch() {
+        return paramsToMatch;
+    }
+
+    private List<StringParameterValue> getFilterParameters(@Nonnull CopyArtifactPickContext context) {
         // Initialize.. parse out the given parameters/values.
-        filters = new ArrayList<StringParameterValue>(5);
-        Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
+        List<StringParameterValue> filters = new ArrayList<StringParameterValue>(5);
+        Matcher m = PARAMVAL_PATTERN.matcher(context.getEnvVars().expand(getParamsToMatch()));
         while (m.find()) {
             filters.add(new StringParameterValue(m.group(1), m.group(2)));
         }
+        return filters;
     }
-
-    public boolean isValid(Job<?,?> job) {
-        if (filters.isEmpty()) return false;  // Unable to parse text after /
-        // Consider the filter valid for this job if any build for this job has all the filter params
-        outer:
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) try {
-            EnvVars env = run.getEnvironment(TaskListener.NULL);
-            for (StringParameterValue spv : filters) {
-                if (!env.containsKey(spv.getName())) {
-                    continue outer;
-                }
-            }
-            return true;
-        } catch (InterruptedException ignore) {
-        } catch (IOException ignore) {
-        }
-        return false;
-    }
-
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(@Nonnull Run<?,?> run, @Nonnull CopyArtifactPickContext context) {
         EnvVars otherEnv;
         try {
             otherEnv = run.getEnvironment(TaskListener.NULL);
@@ -101,11 +102,34 @@ public class ParametersBuildFilter extends BuildFilter {
                 }
             }
         }
+        List<StringParameterValue> filters = getFilterParameters(context);
         for (StringParameterValue spv : filters) {
             if (!spv.value.equals(otherEnv.get(spv.getName()))) {
+                context.logDebug(
+                        "{0}: {1} is declined",
+                        getDisplayName(),
+                        run.getDisplayName()
+                );
                 return false;
             }
         }
         return true;
+    }
+    
+    @Override
+    public String getDisplayName() {
+        return String.format(
+                "%s (%s)",
+                super.getDisplayName(),
+                getParamsToMatch()
+        );
+    }
+    
+    @Extension
+    public static class DescriptorImpl extends BuildFilterDescriptor {
+        @Override
+        public String getDisplayName() {
+            return Messages.ParametersBuildFilter_DisplayName();
+        }
     }
 }

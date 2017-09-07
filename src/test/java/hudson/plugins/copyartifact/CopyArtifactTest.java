@@ -37,6 +37,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
+import hudson.plugins.copyartifact.operation.CopyWorkspaceFiles;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.WrapperBuilder;
@@ -108,46 +109,6 @@ public class CopyArtifactTest {
 
     @Rule
     public TestName name = new TestName();
-
-    // Tests using slaves fails with Jenkins < 1.520 on Windows.
-    // See https://wiki.jenkins-ci.org/display/JENKINS/Unit+Test+on+Windows
-    private void purgeSlaves() {
-        List<Computer> disconnectingComputers = new ArrayList<Computer>();
-        List<VirtualChannel> closingChannels = new ArrayList<VirtualChannel>();
-        for (Computer computer: rule.jenkins.getComputers()) {
-            if (!(computer instanceof SlaveComputer)) {
-                continue;
-            }
-            // disconnect slaves.
-            // retrieve the channel before disconnecting.
-            // even a computer gets offline, channel delays to close.
-            if (!computer.isOffline()) {
-                VirtualChannel ch = computer.getChannel();
-                computer.disconnect(null);
-                disconnectingComputers.add(computer);
-                closingChannels.add(ch);
-            }
-        }
-        
-        try {
-            // Wait for all computers disconnected and all channels closed.
-            for (Computer computer: disconnectingComputers) {
-                computer.waitUntilOffline();
-            }
-            for (VirtualChannel ch: closingChannels) {
-                ch.join();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    @After
-    public void tearDown() throws Exception {
-        if(Functions.isWindows()) {
-            purgeSlaves();
-        }
-    }
 
     private FreeStyleProject createProject(String otherProject, String parameters, String filter,
             String target, boolean stable, boolean flatten, boolean optional, boolean fingerprintArtifacts)
@@ -524,11 +485,12 @@ public class CopyArtifactTest {
     }
 
     /** Test copy from workspace instead of artifacts area */
-    @Test
     public void testCopyFromWorkspace() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), null, new WorkspaceSelector(),
-                "**/*.txt", "", true, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(), null, new WorkspaceSelector(),
+                "**/*.txt", "", true, false, true);
+        assertTrue(ca.upgradeFromCopyartifact10());
+        p.getBuildersList().add(ca);
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -541,12 +503,14 @@ public class CopyArtifactTest {
 
     /** Test copy from workspace containing default ant excludes */
     @Test
-    public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
+    public void testDefaultExcludes() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new StatusBuildSelector(true),
                 "", "", false, false));
-        // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
+        ArtifactArchiver aa = new ArtifactArchiver("**/*");
+        aa.setDefaultExcludes(false);
+        other.getPublishersList().add(aa);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -556,10 +520,10 @@ public class CopyArtifactTest {
     @Test
     public void testExcludes() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new StatusBuildSelector(true),
                 "**", ".hg/**", "", false, false, true));
-        // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**/*"));
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -568,12 +532,14 @@ public class CopyArtifactTest {
     }
 
     @Test
-    public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {
+    public void testDefaultExcludesWithFlatten() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new StatusBuildSelector(true),
                 "", "", true, false));
-        // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
+        ArtifactArchiver aa = new ArtifactArchiver("**/*");
+        aa.setDefaultExcludes(false);
+        other.getPublishersList().add(aa);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -583,10 +549,10 @@ public class CopyArtifactTest {
     @Test
     public void testExcludesWithFlatten() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
+        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new StatusBuildSelector(true),
                 "**", ".hg/**", "", true, false, true));
-        // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
+        other.getPublishersList().add(new ArtifactArchiver("**/*"));
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -625,8 +591,10 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
         other.addProperty(paramsDef);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new SavedBuildSelector(), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new SavedBuildSelector(), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         FreeStyleBuild b = other.scheduleBuild2(0, new UserCause(),
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         rule.assertBuildStatusSuccess(b);
@@ -737,8 +705,10 @@ public class CopyArtifactTest {
     public void testTriggeredBuildSelector() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca1.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca1);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()));
@@ -760,8 +730,10 @@ public class CopyArtifactTest {
         rule.assertBuildStatus(Result.FAILURE, other.scheduleBuild2(0, new UserCause()).get());
         
         p.getBuildersList().remove(CopyArtifact.class);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(true), "*.txt", "", false, false, true);
+        ca2.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca2);
         rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
@@ -770,8 +742,10 @@ public class CopyArtifactTest {
         FreeStyleProject grandparent = createArtifactProject(),
                          parent = rule.createFreeStyleProject(),
                          p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
-                new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
+                new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca1.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca1);
         parent.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         grandparent.getPublishersList().add(new BuildTrigger(parent.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
@@ -800,8 +774,10 @@ public class CopyArtifactTest {
         rule.assertBuildStatus(Result.FAILURE, grandparent.scheduleBuild2(0, new UserCause()).get());
         
         p.getBuildersList().remove(CopyArtifact.class);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
-                new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
+                new TriggeredBuildSelector(true), "*.txt", "", false, false, true);
+        ca2.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca2);
         rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new UserCause()).get());
     }
 
@@ -813,8 +789,10 @@ public class CopyArtifactTest {
     public void testTriggeredBuildSelectorFromMatrix() throws Exception {
         MatrixProject other = createMatrixArtifactProject();
         FreeStyleProject p = rule.createFreeStyleProject();
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName() + "/FOO=two",
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName() + "/FOO=two",
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -837,8 +815,10 @@ public class CopyArtifactTest {
         FreeStyleProject other = createArtifactProject();
         MatrixProject p = createMatrixProject();
         p.setAxes(new AxisList(new Axis("FOO", "one", "two")));
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
-                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(),
+                null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -897,6 +877,7 @@ public class CopyArtifactTest {
         ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
         pmas.add(Jenkins.READ, Jenkins.ANONYMOUS.getName());
         pmas.add(Jenkins.READ, "joe");
+        pmas.add(Computer.BUILD, "joe");
         rule.jenkins.setAuthorizationStrategy(pmas);
         
         // only joe can access project "src"
@@ -906,6 +887,9 @@ public class CopyArtifactTest {
             auths.put(Item.READ, Sets.newHashSet("joe"));
             src.addProperty(new AuthorizationMatrixProperty(auths));
         }
+        src.getBuildersList().add(new ArtifactBuilder());
+        src.getPublishersList().add(new ArtifactArchiver("**/*"));
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
         
         // test access from anonymous
         {
@@ -937,7 +921,12 @@ public class CopyArtifactTest {
             
             dest = rule.jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
             CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
-            assertEquals("Should ignore/clear value for inaccessible project", "", ca.getProjectName());
+            
+            // since 2.0, the check is not performed at the configuration time.
+            assertEquals(src.getName(), ca.getProjectName());
+            
+            // the check is performed at runtime.
+            rule.assertBuildStatus(Result.FAILURE, dest.scheduleBuild2(0).get());
         }
         
         // test access from joe
@@ -956,6 +945,7 @@ public class CopyArtifactTest {
             Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
             auths.put(Item.READ, Sets.newHashSet("joe"));
             auths.put(Item.CONFIGURE, Sets.newHashSet("joe"));
+            auths.put(Item.BUILD, Sets.newHashSet("joe"));
             dest.addProperty(new AuthorizationMatrixProperty(auths));
             
             WebClient wc = rule.createWebClient();
@@ -967,6 +957,13 @@ public class CopyArtifactTest {
             dest = rule.jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
             CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
             assertEquals("Should ignore/clear value for inaccessible project", src.getName(), ca.getProjectName());
+            
+            // the check is performed at runtime.
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                    new TestQueueItemAuthenticator(User.get("joe").impersonate())
+            );
+            rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
         }
     }
 
@@ -1232,8 +1229,10 @@ public class CopyArtifactTest {
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         rule.assertBuildStatusSuccess(b);
         b.keepLog(true);
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "FOO=buildone",
-                new SavedBuildSelector(), "*.txt", "", false, false, true));
+        CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(other.getName(), "FOO=buildone",
+                new SavedBuildSelector(), "*.txt", "", false, false, true);
+        ca.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca);
         rule.assertBuildStatusSuccess(b = other.scheduleBuild2(0, new UserCause()).get());
         b.keepLog(true); // Keep #2 too, but it doesn't have FOO=buildone so should not be selected
         rule.assertBuildStatusSuccess(b = p.scheduleBuild2(0, new UserCause()).get());
@@ -1315,7 +1314,7 @@ public class CopyArtifactTest {
         assertFalse(configXml, configXml.contains("<projectName>"));
         assertTrue(configXml, configXml.contains("<project>plain</project>"));
         assertTrue(configXml, configXml.contains("<project>parameterized</project>"));
-        assertTrue(configXml, configXml.contains("<parameters>good=true</parameters>"));
+        assertTrue(configXml, configXml.contains("<paramsToMatch>good=true</paramsToMatch>"));
         assertTrue(configXml, configXml.contains("<project>matrix/which=two</project>"));
         
         MatrixProject matrixCopier = Jenkins.getInstance().getItemByFullName("matrix-copier", MatrixProject.class);
@@ -1324,7 +1323,7 @@ public class CopyArtifactTest {
         assertFalse(configXml, configXml.contains("<projectName>"));
         // When a project is specified with a variable, it is split improperly.
         assertTrue(configXml, configXml.contains("<project>matrix</project>"));
-        assertTrue(configXml, configXml.contains("<parameters>which=${which}</parameters>"));
+        assertTrue(configXml, configXml.contains("<paramsToMatch>which=${which}</paramsToMatch>"));
     }
 
     // A builder wrapping another builder.
@@ -1622,7 +1621,7 @@ public class CopyArtifactTest {
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                 upstream2.getName(),
                 "param=value",
-                new TriggeredBuildSelector(false),
+                new ParameterizedBuildSelector("SELECTOR"),
                 "**",
                 "foobar.txt",
                 "targetdir",
@@ -1656,8 +1655,8 @@ public class CopyArtifactTest {
         {
             CopyArtifact ca = caList.get(1);
             assertEquals(upstream2.getName(), ca.getProjectName());
-            assertEquals("param=value", ca.getParameters());
-            assertEquals(TriggeredBuildSelector.class, ca.getBuildSelector().getClass());
+            rule.assertEqualDataBoundBeans(new ParametersBuildFilter("param=value"), ca.getBuildFilter());
+            assertEquals(ParameterizedBuildSelector.class, ca.getBuildSelector().getClass());
             assertEquals("**", ca.getFilter());
             assertEquals("foobar.txt", ca.getExcludes());
             assertEquals("targetdir", ca.getTarget());

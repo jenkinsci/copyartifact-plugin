@@ -23,39 +23,31 @@
  */
 package hudson.plugins.copyartifact;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 import jenkins.model.Jenkins;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.Result;
-import hudson.model.AbstractProject;
-import hudson.model.AbstractBuild;
-import hudson.model.Cause;
-import hudson.model.Cause.UpstreamCause;
-import hudson.model.Job;
-import hudson.model.Run;
+import hudson.plugins.copyartifact.selector.TriggeringBuildSelector;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
+import hudson.plugins.copyartifact.selector.FallbackBuildSelector;
 import net.sf.json.JSONObject;
 
-import org.jvnet.localizer.Localizable;
-import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Copy artifacts from the build that triggered this build.
  * @author Alan Harder
+ * @deprecated use {@link TriggeredBuildSelector} instead.
  */
-public class TriggeredBuildSelector extends BuildSelector {
-    private static final Logger LOGGER = Logger.getLogger(TriggeredBuildSelector.class.getName());
+@Deprecated
+public class TriggeredBuildSelector extends Version1BuildSelector {
     /**
      * Which build should be used if triggered by multiple upstream builds.
      * 
      * Specified in buildstep configurations and the global configuration.
+     * @deprecated use {@link TriggeringBuildSelector.UpstreamFilterStrategy} instead.
      */
+    @Deprecated
     public enum UpstreamFilterStrategy {
         /**
          * Use global configuration.
@@ -64,40 +56,51 @@ public class TriggeredBuildSelector extends BuildSelector {
          * Should not be specified in the global configuration.
          * 
          */
-        UseGlobalSetting(false, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseGlobalSetting()),
+        UseGlobalSetting(TriggeringBuildSelector.UpstreamFilterStrategy.UseGlobalSetting),
         /**
          * Use the oldest build.
          * 
          * The default value for the global configuration.
          */
-        UseOldest(true,  Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseOldest()),
+        UseOldest(TriggeringBuildSelector.UpstreamFilterStrategy.UseOldest),
         /**
          * Use the newest build.
          */
-        UseNewest(true, Messages._TriggeredBuildSelector_UpstreamFilterStrategy_UseNewest()),
+        UseNewest(TriggeringBuildSelector.UpstreamFilterStrategy.UseNewest),
         ;
         
-        private final boolean forGlobalSetting;
-        private final Localizable displayName;
+        private final TriggeringBuildSelector.UpstreamFilterStrategy origin;
         
-        UpstreamFilterStrategy(boolean forGlobalSetting, Localizable displayName) {
-            this.forGlobalSetting = forGlobalSetting;
-            this.displayName = displayName;
+        UpstreamFilterStrategy(TriggeringBuildSelector.UpstreamFilterStrategy origin) {
+            this.origin = origin;
         }
         
         public String getDisplayName() {
-            return displayName.toString();
+            return origin.getDisplayName();
         }
         
         public boolean isForGlobalSetting() {
-            return forGlobalSetting;
+            return origin.isForGlobalSetting();
+        }
+        
+        /**
+         * @return the value of {@link TriggeringBuildSelector.UpstreamFilterStrategy} to this instance.
+         * @since 2.0
+         */
+        @Nonnull
+        public TriggeringBuildSelector.UpstreamFilterStrategy getOrigin() {
+            return origin;
+        }
+        
+        @Nonnull
+        public static TriggeringBuildSelector.UpstreamFilterStrategy getOriginFor(@CheckForNull UpstreamFilterStrategy value) {
+            return (value != null)?value.getOrigin():UseGlobalSetting.getOrigin();
         }
     };
     private Boolean fallbackToLastSuccessful;
     private final UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;
 
-    @DataBoundConstructor
     public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
         this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
         this.upstreamFilterStrategy = upstreamFilterStrategy;
@@ -152,73 +155,28 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        Run<?,?> result = null;
-
-        // Upstream job for matrix will be parent project, not only individual configuration:
-        List<String> jobNames = new ArrayList<String>();
-        jobNames.add(job.getFullName());
-        if ((job instanceof AbstractProject<?,?>) && ((AbstractProject<?,?>)job).getRootProject() != job) {
-            jobNames.add(((AbstractProject<?,?>)job).getRootProject().getFullName());
-        }
-
-        List<Run<?, ?>> upstreamBuilds = new ArrayList<Run<?, ?>>();
-
-        for (Cause cause: parent.getCauses()) {
-            if (cause instanceof UpstreamCause) {
-                UpstreamCause upstream = (UpstreamCause) cause;
-                Run<?, ?> upstreamRun = upstream.getUpstreamRun();
-                if (upstreamRun != null) {
-                    upstreamBuilds.add(upstreamRun);
-                }
-            }
-        }
-
-        if (isAllowUpstreamDependencies() && (parent instanceof AbstractBuild)) {
-            AbstractBuild<?, ?> parentBuild = (AbstractBuild<?,?>)parent;
-            
-            Map<AbstractProject, Integer> parentUpstreamBuilds = parentBuild.getUpstreamBuilds();
-            for (Map.Entry<AbstractProject, Integer> buildEntry : parentUpstreamBuilds.entrySet()) {
-                upstreamBuilds.add(buildEntry.getKey().getBuildByNumber(buildEntry.getValue()));
-            }
-
-        }
-
-        for (Run<?, ?> upstreamBuild : upstreamBuilds) {
-            Run<?,?> run = null;
-
-            if (jobNames.contains(upstreamBuild.getParent().getFullName())) {
-                // Use the 'job' parameter instead of directly the 'upstreamBuild', because of Matrix jobs.
-                run = job.getBuildByNumber(upstreamBuild.getNumber());
-            } else {
-                // Figure out the parent job and do a recursive call to getBuild
-                run = getBuild(job, env, filter, upstreamBuild);
-            }
-
-            if (run != null && filter.isSelectable(run, env)){
-                if (
-                        (result == null)
-                        || (isUseNewest() && result.getNumber() < run.getNumber())
-                        || (!isUseNewest() && result.getNumber() > run.getNumber())
-                ) {
-                    result = run;
-                }
-            }
-        }
-        
-        if (result == null && isFallbackToLastSuccessful()) {
-            //TODO: Write to console, that fallback is used.
-            result = super.getBuild(job, env, filter, parent);
-        }
-        return result;
+    public MigratedConfiguration migrateToVersion2() {
+        return new MigratedConfiguration(isFallbackToLastSuccessful()
+                ?new FallbackBuildSelector(
+                        new TriggeringBuildSelector(
+                                UpstreamFilterStrategy.getOriginFor(getUpstreamFilterStrategy()),
+                                isAllowUpstreamDependencies()
+                        ),
+                        new StatusBuildSelector(
+                                StatusBuildSelector.BuildStatus.Stable
+                        )
+                )
+                :new TriggeringBuildSelector(
+                        UpstreamFilterStrategy.getOriginFor(getUpstreamFilterStrategy()),
+                        isAllowUpstreamDependencies()
+                )
+        );
     }
     
-    @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
-    }
-
-    @Extension(ordinal=25)
+    /**
+     * @deprecated use {@link TriggeringBuildSelector.DescriptorImpl} instead.
+     */
+    @Deprecated
     public static class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         
@@ -230,6 +188,11 @@ public class TriggeredBuildSelector extends BuildSelector {
         
         public void setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy globalUpstreamFilterStrategy) {
             this.globalUpstreamFilterStrategy = globalUpstreamFilterStrategy;
+            Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins != null) {
+                ((TriggeringBuildSelector.DescriptorImpl)jenkins.getDescriptor(TriggeringBuildSelector.class))
+                    .setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy.getOriginFor(globalUpstreamFilterStrategy));
+            }
         }
         
         public UpstreamFilterStrategy getGlobalUpstreamFilterStrategy() {
@@ -243,5 +206,12 @@ public class TriggeredBuildSelector extends BuildSelector {
             save();
             return super.configure(req, json);
         }
+    }
+    
+    public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+    
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return DESCRIPTOR;
     }
 }

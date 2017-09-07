@@ -23,34 +23,187 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.model.Job;
 import hudson.model.Result;
 import hudson.model.Run;
+
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
- * Copy artifacts from the latest successful or stable build.
+ * Copy artifacts from the specific status build.
  * @author Alan Harder
  */
 public class StatusBuildSelector extends BuildSelector {
-    private Boolean stable;
+    public static enum BuildStatus {
+        /** Stable builds.*/
+        Stable(Messages._StatusBuildSelector_BuildStatus_Stable()),
+        
+        /** Stable or Unstable builds.*/
+        Successful(Messages._StatusBuildSelector_BuildStatus_Successful()),
+        
+        /** Unstable builds. */
+        Unstable(Messages._StatusBuildSelector_BuildStatus_Unstable()),
+        
+        /** Failed builds. */
+        Failed(Messages._StatusBuildSelector_BuildStatus_Failed()),
+        
+        /** Completed builds with any build results.*/
+        Completed(Messages._StatusBuildSelector_BuildStatus_Completed()),
+        
+        /** Any builds including incomplete (running) ones.*/
+        Any(Messages._StatusBuildSelector_BuildStatus_Any()),
+        
+        ;
+        private final Localizable displayName;
+        private BuildStatus(Localizable displayName) {
+            this.displayName = displayName;
+        }
+        
+        public String getDisplayName() {
+            return displayName.toString();
+        }
+    };
 
-    @DataBoundConstructor
+
+    @Nonnull
+    private final BuildStatus buildStatus;
+
+    @Deprecated
+    private transient Boolean stable;
+
+    /**
+     * @param stable true to select only stable builds, false to select stable and unstable builds.
+     * @deprecated use {@link #StatusBuildSelector(BuildStatus)} instead.
+     */
+    @Deprecated
     public StatusBuildSelector(boolean stable) {
-        this.stable = stable ? Boolean.TRUE : null;
+        this(stable?BuildStatus.Stable:BuildStatus.Successful);
     }
 
+    /**
+     * @since 2.0
+     */
+    public StatusBuildSelector() {
+        this(null);
+    }
+
+    /**
+     * @param buildStatus build status of the build to select
+     * @since 2.0
+     */
+    @DataBoundConstructor
+    public StatusBuildSelector(@CheckForNull BuildStatus buildStatus) {
+        this.buildStatus = (buildStatus != null)?buildStatus:BuildStatus.Stable;
+    }
+
+    @SuppressWarnings("unused")
+    @SuppressFBWarnings(value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE", justification="checks null to ensure it is @Nonnull")
+    private StatusBuildSelector readResolve() {
+        if (buildStatus == null) {
+            return new StatusBuildSelector(stable != null ? stable.booleanValue() : true);
+        }
+        return this;
+    }
+
+    /**
+     * @return build status to select
+     * @since 2.0
+     */
+    public BuildStatus getBuildStatus() {
+        return buildStatus;
+    }
+
+    @Deprecated
     public boolean isStable() {
-        return stable != null && stable.booleanValue();
+        return BuildStatus.Stable.equals(getBuildStatus());
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return isBuildResultBetterOrEqualTo(run, isStable() ? Result.SUCCESS : Result.UNSTABLE);
+    public Run<?, ?> getNextBuild(Job<?, ?> job, CopyArtifactPickContext context) {
+        Run<?, ?> previousBuild = context.getLastMatchBuild();
+        if (previousBuild == null) {
+            // the first time
+            switch(getBuildStatus()) {
+            case Stable:
+                return job.getLastStableBuild();
+            case Unstable:
+                return job.getLastUnstableBuild();
+            case Failed:
+                return job.getLastFailedBuild();
+            case Successful:
+                // really confusing, but in this case,
+                // "successful" means marked as SUCCESS or UNSTABLE.
+                return job.getLastSuccessfulBuild();
+            case Completed:
+                return job.getLastCompletedBuild();
+            case Any:
+                return job.getLastBuild();
+            }
+        } else {
+            // the second or later time
+            switch(getBuildStatus()) {
+            case Stable:
+                // really confusing, but in this case,
+                // "successful" means marked as SUCCESS.
+                return previousBuild.getPreviousSuccessfulBuild();
+            case Unstable:
+                for (
+                        previousBuild = previousBuild.getPreviousBuild();
+                        previousBuild != null;
+                        previousBuild = previousBuild.getPreviousBuild()
+                ) {
+                    Result r = previousBuild.getResult();
+                    if (Result.UNSTABLE.equals(r)) {
+                        return previousBuild;
+                    }
+                }
+                break;
+            case Failed:
+                return previousBuild.getPreviousFailedBuild();
+            case Successful:
+                for (
+                        previousBuild = previousBuild.getPreviousBuild();
+                        previousBuild != null;
+                        previousBuild = previousBuild.getPreviousBuild()
+                ) {
+                    Result r = previousBuild.getResult();
+                    if (r != null && r.isBetterOrEqualTo(Result.UNSTABLE)) {
+                        return previousBuild;
+                    }
+                }
+                break;
+            case Completed:
+                return previousBuild.getPreviousCompletedBuild();
+            case Any:
+                return previousBuild.getPreviousBuild();
+            }
+        }
+        return null;
     }
-
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDisplayName() {
+        return String.format(
+                "%s (%s)",
+                super.getDisplayName(),
+                getBuildStatus().toString()
+        );
+    }
+    
     @Extension(ordinal=100)
     public static final Descriptor<BuildSelector> DESCRIPTOR =
             new SimpleBuildSelectorDescriptor(

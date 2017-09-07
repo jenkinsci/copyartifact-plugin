@@ -23,8 +23,6 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.model.Descriptor;
-
 import org.jvnet.localizer.Localizable;
 
 /**
@@ -33,7 +31,7 @@ import org.jvnet.localizer.Localizable;
  *          new SimpleBuildSelectorDescriptor(MySelector.class, Messages._My_DisplayName()); }
  * @author Alan Harder
  */
-public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
+public class SimpleBuildSelectorDescriptor extends BuildSelectorDescriptor {
     private transient Localizable displayName;
 
     public SimpleBuildSelectorDescriptor(Class<? extends BuildSelector> clazz,

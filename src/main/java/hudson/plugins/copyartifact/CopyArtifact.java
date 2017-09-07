@@ -25,23 +25,25 @@ package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
-import hudson.console.HyperlinkNote;
 import hudson.diagnosis.OldDataMonitor;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
-import hudson.matrix.MatrixBuild;
 import hudson.matrix.MatrixProject;
-import hudson.maven.MavenBuild;
 import hudson.maven.MavenModuleSet;
-import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import hudson.plugins.copyartifact.filter.AndBuildFilter;
+import hudson.plugins.copyartifact.filter.NoBuildFilter;
+import hudson.plugins.copyartifact.operation.AbstractCopyOperation;
+import hudson.plugins.copyartifact.operation.CopyArtifactFiles;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -52,18 +54,16 @@ import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
-
 import jenkins.tasks.SimpleBuildStep;
+
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -72,11 +72,9 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Build step to copy artifacts from another project.
@@ -87,18 +85,99 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
     private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
-    private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
+
+    /**
+     * The result of picking the build to copy from.
+     */
+    public static class CopyArtifactPickResult {
+        public static enum Result {
+            /**
+             * a build is found.
+             */
+            Found,
+            /**
+             * no project (or job) is found.
+             */
+            ProjectNotFound,
+            /**
+             * a project is found but no build is found.
+             */
+            BuildNotFound,
+        };
+        
+        @Nonnull
+        public final Result result;
+        
+        private final Job<?, ?> job;
+        
+        @Nonnull
+        public Job<?, ?> getJob() {
+            switch(result) {
+            case Found:
+            case BuildNotFound:
+                return job;
+            default:
+                throw new IllegalStateException("Job is provided only when a project is found.");
+            }
+        }
+        
+        private final Run<?, ?> build;
+        
+        @Nonnull
+        public Run<?, ?> getBuild() {
+            switch(result) {
+            case Found:
+                return build;
+            default:
+                throw new IllegalStateException("Build is provided only when a build is found.");
+            }
+        }
+        
+        private CopyArtifactPickResult(Result result, Job<?, ?> job, Run<?, ?> build) {
+            this.result = result;
+            this.job = job;
+            this.build = build;
+        }
+        
+        private static CopyArtifactPickResult found(@Nonnull Run<?, ?> run) {
+            return new CopyArtifactPickResult(
+                    Result.Found,
+                    run.getParent(),
+                    run
+            );
+        }
+        
+        private static CopyArtifactPickResult projectNotFound() {
+            return new CopyArtifactPickResult(
+                    Result.ProjectNotFound,
+                    null,
+                    null
+            );
+        }
+        
+        private static CopyArtifactPickResult buildNotFound(@Nonnull Job<?, ?> job) {
+            return new CopyArtifactPickResult(
+                    Result.BuildNotFound,
+                    job,
+                    null
+            );
+        }
+    };
 
     @Deprecated private String projectName;
     private String project;
-    private String parameters;
-    private String filter, target;
-    private String excludes;
+    @Deprecated transient private String parameters;
+    @Deprecated transient private String filter, target;
+    @Deprecated transient private String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
-    private Boolean flatten, optional;
-    private boolean doNotFingerprintArtifacts;
+    @Deprecated transient private Boolean flatten;
+    private Boolean optional;
+    @Deprecated transient private boolean doNotFingerprintArtifacts;
     private String resultVariableSuffix;
+    private boolean verbose;
+    private BuildFilter buildFilter;
+    private CopyArtifactOperation operation;
 
     @Deprecated
     public CopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
@@ -117,77 +196,119 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         this(projectName);
         setParameters(parameters);
+        setSelector(selector);
+        setOptional(optional);
+        
+        setOperation(null);
         setFilter(filter);
         setTarget(target);
         setExcludes(excludes);
-        if (selector == null) {
-            selector = DEFAULT_BUILD_SELECTOR;
-        }
-        setSelector(selector);
         setFlatten(flatten);
-        setOptional(optional);
         setFingerprintArtifacts(fingerprintArtifacts);
     }
 
     @DataBoundConstructor
     public CopyArtifact(String projectName) {
-        // check the permissions only if we can
-        StaplerRequest req = Stapler.getCurrentRequest();
-        if (req!=null) {
-            AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
-            if (p != null) {
-                ItemGroup<?> context = p.getParent();
-
-                // Prevents both invalid values and access to artifacts of projects which this user cannot see.
-                // If value is parameterized, it will be checked when build runs.
-                Jenkins jenkins = Jenkins.getInstance();
-                if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
-                    projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
-            }
-        }
-
         this.project = projectName;
 
         // Apply defaults to all other properties.
-        setParameters(null);
-        setFilter(null);
-        setTarget(null);
-        setExcludes(null);
-        setSelector(DEFAULT_BUILD_SELECTOR);
-        setFlatten(false);
+        setSelector(null);
         setOptional(false);
-        setFingerprintArtifacts(false);
         setResultVariableSuffix(null);
+        setBuildFilter(null);
+        setOperation(null);
     }
 
-    @DataBoundSetter
+    /**
+     * @param parameters comma-separated list of pairs of parameters and values to match
+     * @deprecated use {@link #setBuildFilter(BuildFilter)} and {@link ParametersBuildFilter} instead.
+     */
+    @Deprecated
     public void setParameters(String parameters) {
-        this.parameters = Util.fixEmptyAndTrim(parameters);
+        parameters = Util.fixEmptyAndTrim(parameters);
+        setBuildFilter((parameters != null)?new ParametersBuildFilter(parameters):null);
+        this.parameters = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param filter comma separated apache-ant file patterns for files to include.
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setFilter(String filter) {
-        this.filter = Util.fixNull(filter).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setIncludes(filter);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFilter is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.filter = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param target directory to copy files to.
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setTarget(String target) {
-        this.target = Util.fixNull(target).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setTargetDir(target);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setTarget is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.target = null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param excludes comma separated apache-ant file patterns for files to exclude.
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setExcludes(String excludes) {
-        this.excludes = Util.fixNull(excludes).trim();
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setExcludes(excludes);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setExcludes is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.excludes = null;
     }
 
     @DataBoundSetter
-    public void setSelector(@Nonnull BuildSelector selector) {
-        this.selector = selector;
+    public void setSelector(@CheckForNull BuildSelector selector) {
+        this.selector = (selector != null)?selector:new StatusBuildSelector();
     }
 
-    @DataBoundSetter
+    /**
+     * @param flatten whether copy files ignoring directory trees.
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setFlatten(boolean flatten) {
-        this.flatten = flatten ? Boolean.TRUE : null;
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setFlatten(flatten);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFlatten is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.flatten = null;
     }
 
     @DataBoundSetter
@@ -195,9 +316,23 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.optional = optional ? Boolean.TRUE : null;
     }
 
-    @DataBoundSetter
+    /**
+     * @param fingerprintArtifacts whether to fingerprint copied artifacts.
+     * @deprecated see {@link #setOperation(CopyArtifactOperation)} and {@link AbstractCopyOperation}.
+     */
+    @Deprecated
     public void setFingerprintArtifacts(boolean fingerprintArtifacts) {
-        this.doNotFingerprintArtifacts = !fingerprintArtifacts;
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            ((AbstractCopyOperation)op).setFingerprintArtifacts(fingerprintArtifacts);
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "CopyArtifact#setFingerprintArtifacts is deprecated and not applicable {0}",
+                    op.getDescriptor().getDisplayName()
+            );
+        }
+        this.doNotFingerprintArtifacts = false;
     }
 
     /**
@@ -210,13 +345,59 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         this.resultVariableSuffix = Util.fixEmptyAndTrim(resultVariableSuffix);
     }
 
+    /**
+     * @param verbose whether output logs for diagnostics
+     * @since 2.0
+     */
+    @DataBoundSetter
+    public void setVerbose(boolean verbose) {
+        this.verbose = verbose;
+    }
+
+    /**
+     * @param buildFilter filter for builds
+     * @since 2.0
+     */
+    @DataBoundSetter
+    public void setBuildFilter(@CheckForNull BuildFilter buildFilter) {
+        this.buildFilter = (buildFilter != null)?buildFilter:new NoBuildFilter();
+    }
+
+    /**
+     * @param operation operation performed against the target build.
+     * 
+     * @since 2.0
+     */
+    @DataBoundSetter
+    public void setOperation(@CheckForNull CopyArtifactOperation operation) {
+        this.operation = (operation != null)?operation:new CopyArtifactFiles();
+    }
+
     // Upgrade data from old format
     public static class ConverterImpl extends XStream2.PassthruConverter<CopyArtifact> {
         public ConverterImpl(XStream2 xstream) { super(xstream); }
         @Override protected void callback(CopyArtifact obj, UnmarshallingContext context) {
             if (obj.selector == null) {
-                obj.selector = new StatusBuildSelector(obj.stable != null && obj.stable);
+                obj.setSelector(new StatusBuildSelector(
+                        (obj.stable == null || obj.stable.booleanValue())
+                        ?StatusBuildSelector.BuildStatus.Stable
+                        :StatusBuildSelector.BuildStatus.Successful
+                ));
                 OldDataMonitor.report(context, "1.355"); // Core version# when CopyArtifact 1.2 released
+            }
+            if (obj.parameters != null) {
+                obj.setParameters(obj.parameters);
+            }
+            if (obj.buildFilter == null) {
+                obj.setBuildFilter(null);
+            }
+            if (obj.operation == null) {
+                obj.setOperation(null);
+                obj.setFilter(obj.filter);
+                obj.setTarget(obj.target);
+                obj.setExcludes(obj.excludes);
+                obj.setFlatten((obj.flatten != null)?obj.flatten:false);
+                obj.setFingerprintArtifacts(!obj.doNotFingerprintArtifacts);
             }
             if (obj.isUpgradeNeeded()) {
                 // A Copy Artifact to be upgraded.
@@ -224,6 +405,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 // The upgrade will be performed by upgradeCopyArtifact.
                 setUpgradeNeeded();
             }
+            obj.upgradeFromCopyartifact10();
         }
     }
 
@@ -279,10 +461,50 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
+    @SuppressWarnings("deprecation") // Version1BuildSelector
+    @SuppressFBWarnings(value="BC_VACUOUS_INSTANCEOF", justification="conf.copyArtifactOperation might be a CopyOperation except AbstractCopyOperation with a selector from a external plugin.")
+    public boolean upgradeFromCopyartifact10() {
+        if (!(getSelector() instanceof Version1BuildSelector)) {
+            return false;
+        }
+        Version1BuildSelector selector = (Version1BuildSelector)getSelector();
+        Version1BuildSelector.MigratedConfiguration conf = selector.migrateToVersion2();
+        setSelector(conf.buildSelector);
+        if (conf.buildFilter != null && !(conf.buildFilter instanceof NoBuildFilter)) {
+            if (getBuildFilter() instanceof NoBuildFilter) {
+                setBuildFilter(conf.buildFilter);
+            } else {
+                setBuildFilter(new AndBuildFilter(
+                        conf.buildFilter,
+                        getBuildFilter()
+                ));
+            }
+        }
+        if (conf.copyArtifactOperation != null) {
+            if (
+                    conf.copyArtifactOperation instanceof AbstractCopyOperation
+                    && getOperation() != null
+                    && getOperation() instanceof AbstractCopyOperation
+            ) {
+                // copy configurations.
+                AbstractCopyOperation from = (AbstractCopyOperation)getOperation();
+                AbstractCopyOperation to = (AbstractCopyOperation)conf.copyArtifactOperation;
+                to.copyConfiguration(from);
+            }
+            setOperation(conf.copyArtifactOperation);
+        }
+        return true;
+    }
+
     public String getProjectName() {
         return project;
     }
     
+    /**
+     * @return comma-separated list of pairs of parameters and values to match
+     * @deprecated use {@link #getBuildFilter()} instead.
+     */
+    @Deprecated
     public String getParameters() {
         return parameters;
     }
@@ -296,19 +518,55 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return selector;
     }
 
+    /**
+     * @return comma separated apache-ant file patterns for files to include.
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getFilter() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getIncludes();
+        }
         return filter;
     }
 
+    /**
+     * @return comma separated apache-ant file patterns for files to exclude.
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getExcludes() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getExcludes();
+        }
         return excludes;
     }
 
+    /**
+     * @return directory to copy files to.
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public String getTarget() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).getTargetDir();
+        }
         return target;
     }
 
+    /**
+     * @return whether copy files ignoring directory trees.
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public boolean isFlatten() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).isFlatten();
+        }
         return flatten != null && flatten;
     }
 
@@ -323,6 +581,32 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return resultVariableSuffix;
     }
 
+    /**
+     * @return whether output logs for diagnostics.
+     * @since 2.0
+     */
+    public boolean isVerbose() {
+        return verbose;
+    }
+
+    /**
+     * @return the filter for builds.
+     * @since 2.0
+     */
+    @Nonnull
+    public BuildFilter getBuildFilter() {
+        return buildFilter;
+    }
+
+    /**
+     * @return the operation performed against the target build.
+     * @since 2.0
+     */
+    @Nonnull
+    public CopyArtifactOperation getOperation() {
+        return operation;
+    }
+
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
             Jenkins jenkins = Jenkins.getInstance();
@@ -333,10 +617,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             int i = projectName.lastIndexOf('/');
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */jenkins.getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
-                parameters = projectName.substring(i + 1);
+                setParameters(projectName.substring(i + 1));
             } else {
                 project = projectName;
-                parameters = null;
+                setParameters(null);
             }
             LOGGER.log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
@@ -351,7 +635,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return (projectName != null);
     }
 
+    /**
+     * @return whether to fingerprint copied artifacts.
+     * @deprecated use {@link #getOperation()} instead.
+     */
+    @Deprecated
     public boolean isFingerprintArtifacts() {
+        CopyArtifactOperation op = getOperation();
+        if (op instanceof AbstractCopyOperation) {
+            return ((AbstractCopyOperation)op).isFingerprintArtifacts();
+        }
         return !doNotFingerprintArtifacts;
     }
 
@@ -362,12 +655,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             throw new AbortException("Jenkins instance is unavailable.");
         }
         if (build instanceof AbstractBuild) {
-            upgradeIfNecessary(((AbstractBuild)build).getProject());
+            upgradeIfNecessary(((AbstractBuild<?, ?>)build).getProject());
         }
 
         EnvVars env = build.getEnvironment(listener);
         if (build instanceof AbstractBuild) {
-            env.putAll(((AbstractBuild)build).getBuildVariables()); // Add in matrix axes..
+            env.putAll(((AbstractBuild<?, ?>)build).getBuildVariables()); // Add in matrix axes..
         } else {
             // Abstract#getEnvironment(TaskListener) put build parameters to
             // environments, but Run#getEnvironment(TaskListener) doesn't.
@@ -385,84 +678,104 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             }
         }
 
-        PrintStream console = listener.getLogger();
-        String expandedProject = project, expandedFilter = filter;
-        String expandedExcludes = getExcludes();
+        CopyArtifactPickContext pickContext = new CopyArtifactPickContext();
+        pickContext.setJenkins(jenkins);
+        pickContext.setCopierBuild(build);
+        pickContext.setListener(listener);
+        pickContext.setEnvVars(env);
+        pickContext.setVerbose(isVerbose());
+        
+        String jobName = env.expand(getProjectName());
+        pickContext.setProjectName(jobName);
+        pickContext.setBuildFilter(getBuildFilter());
 
-        expandedProject = env.expand(project);
-        Job<?, ?> job = jenkins.getItem(expandedProject, getItemGroup(build), Job.class);
-        if (job != null && !expandedProject.equals(project)
-            // If projectName is parameterized, need to do permission check on source project.
-            && !canReadFrom(job, build)) {
-            job = null; // Disallow access
-        }
-        if (job == null) {
-            throw new AbortException(Messages.CopyArtifact_MissingProject(expandedProject));
-        }
-        Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
-        if (src == null) {
-            String message = Messages.CopyArtifact_MissingBuild(expandedProject);
-            if (isOptional()) {
-                // just return without an error
-                console.println(message);
-                return;
-            } else {
-                // Fail build if copy is not optional
-                throw new AbortException(message);
+        CopyArtifactPickResult pick = pickBuildToCopyFrom(getSelector(), pickContext);
+        switch(pick.result) {
+            case ProjectNotFound:
+            {
+                throw new AbortException(Messages.CopyArtifact_MissingProject(jobName));
+            }
+            case BuildNotFound:
+            {
+                String message = Messages.CopyArtifact_MissingBuild(jobName);
+                if (isOptional()) {
+                    // just return without an error
+                    pickContext.logInfo(message);
+                    return;
+                } else {
+                    // Fail build if copy is not optional
+                    throw new AbortException(message);
+                }
+            }
+            case Found:
+            {
+                // nothing to do.
+                break;
             }
         }
-        FilePath targetDir = workspace, baseTargetDir = targetDir;
-        targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
+
         // Add info about the selected build into the environment
         EnvAction envData = build.getAction(EnvAction.class);
         if (envData == null) {
             envData = new EnvAction();
             build.addAction(envData);
         }
-        envData.add(build, src, expandedProject, getResultVariableSuffix());
-        if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
-        expandedFilter = env.expand(filter);
-        if (expandedFilter.trim().length() == 0) expandedFilter = "**";
-        expandedExcludes = env.expand(expandedExcludes);
-        if (StringUtils.isBlank(expandedExcludes)) {
-            expandedExcludes = null;
+        envData.add(build, pick.getBuild(), jobName, getResultVariableSuffix());
+        
+        CopyArtifactOperationContext copyContext = new CopyArtifactOperationContext();
+        copyContext.setJenkins(jenkins);
+        copyContext.setCopierBuild(build);
+        copyContext.setListener(listener);
+        copyContext.setEnvVars(env);
+        copyContext.setVerbose(isVerbose());
+        copyContext.setWorkspace(workspace);
+
+        switch (getOperation().perform(pick.getBuild(), copyContext)) {
+        case NothingToDo:
+            if (!isOptional()) {
+                throw new AbortException(Messages.CopyArtifact_FailedToCopy(jobName));
+            }
+            // fall through
+        case Succeess:
+            // nothing to do
+            break;
         }
-
-        Copier copier = jenkins.getExtensionList(Copier.class).get(0).clone();
-
-        if (jenkins.getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
-        // use classes in the "maven-plugin" plugin as might not be installed
-            // Copy artifacts from the build (ArchiveArtifacts build step)
-            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-            // Copy artifacts from all modules of this Maven build (automatic archiving)
-            for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
-                // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
-                // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
-                Run<?,?> r = it.next();
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
-            }
-            if (!ok) {
-                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-            }
-        } else if (src instanceof MatrixBuild) {
-            boolean ok = false;
-            // Copy artifacts from all configurations of this matrix build
-            // Use MatrixBuild.getExactRuns if available
-            for (Run r : ((MatrixBuild) src).getExactRuns())
-                // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
-                              baseTargetDir, copier, console);
-
-            if (!ok) {
-                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-            }
-        } else {
-            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
-                throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
-            }
-        }
+        
     }
 
+    /**
+     * Pick a build to copy from.
+     * 
+     * @param selector build selector
+     * @param context context of picking process
+     * @return result of the picking process. It may contain picked build.
+     * @since 2.0
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     */
+    public CopyArtifactPickResult pickBuildToCopyFrom(BuildSelector selector, CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
+        Job<?, ?> job = context.getJenkins().getItem(
+                context.getProjectName(),
+                getItemGroup(context.getCopierBuild()),
+                Job.class
+        );
+        if (job != null && !canReadFrom(job, context.getCopierBuild())) {
+            job = null; // Disallow access
+        }
+        if (job == null) {
+            return CopyArtifactPickResult.projectNotFound();
+        }
+        
+        Run<?,?> src = selector.pickBuildToCopyFrom(job, context);
+        if (src == null) {
+            return CopyArtifactPickResult.buildNotFound(job);
+        }
+        
+        return CopyArtifactPickResult.found(src);
+    }
+    
     private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
         Job<?, ?> fromJob = job;
         Job<?, ?> toJob = build.getParent();
@@ -506,40 +819,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     // retrieve the "folder" (jenkins root if no folder used) for this build
-    private static ItemGroup getItemGroup(Run<?, ?> build) {
+    private static ItemGroup<?> getItemGroup(Run<?, ?> build) {
         return getRootProject(build.getParent()).getParent();
     }
 
-
-    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
-            FilePath baseTargetDir, Copier copier, PrintStream console)
-            throws IOException, InterruptedException {
-        FilePath srcDir = selector.getSourceDirectory(src, console);
-        if (srcDir == null) {
-            return isOptional();  // Fail build unless copy is optional
-        }
-
-        copier.initialize(src, dst, srcDir, baseTargetDir);
-        try {
-            int cnt;
-            if (!isFlatten())
-                cnt = copier.copyAll(srcDir, expandedFilter, expandedExcludes, targetDir, isFingerprintArtifacts());
-            else {
-                targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = srcDir.list(expandedFilter, expandedExcludes, false);
-                for (FilePath file : list)
-                    copier.copyOne(file, new FilePath(targetDir, file.getName()), isFingerprintArtifacts());
-                cnt = list.length;
-            }
-
-            console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
-                    HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
-            // Fail build if 0 files copied unless copy is optional
-            return cnt > 0 || isOptional();
-        } finally {
-            copier.end();
-        }
-    }
 
     /**
      * Tests whether specified variable name is valid.
@@ -627,7 +910,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return FormValidation.ok();
         }
 
-        public boolean isApplicable(Class<? extends AbstractProject> clazz) {
+        public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> clazz) {
             return true;
         }
 
@@ -635,6 +918,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return Messages.CopyArtifact_DisplayName();
         }
 
+        public List<BuildFilterDescriptor> getBuildFilterDescriptorList() {
+            return BuildFilter.allWithNoBuildFilter();
+        }
     }
 
     // Listen for project renames and update property here if needed.
@@ -668,7 +954,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                         projectName = projectName.substring(0, end);
                     }
 
-                    ItemGroup context = project.getParent();
+                    ItemGroup<?> context = project.getParent();
                     String newProjectName = Items.computeRelativeNamesAfterRenaming(oldFullName, newFullName, projectName, context);
                     if (!projectName.equals(newProjectName)) {
                         ca.project = newProjectName + suffix;
@@ -697,7 +983,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         // Decided not to record this data in build.xml, so marked transient:
         private transient Map<String,String> data = new HashMap<String,String>();
 
-        @Nullable
+        @CheckForNull
         private String calculateDefaultSuffix(@Nonnull Run<?,?> build, @Nonnull Run<?,?> src, @Nonnull String projectName) {
             ItemGroup<?> ctx = getItemGroup(build);
             Job<?,?> item = src.getParent();
@@ -725,7 +1011,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 @Nonnull Run<?,?> build,
                 @Nonnull Run<?,?> src,
                 @Nonnull String projectName,
-                @Nullable String resultVariableSuffix
+                @CheckForNull String resultVariableSuffix
         ) {
             if (data==null) return;
             

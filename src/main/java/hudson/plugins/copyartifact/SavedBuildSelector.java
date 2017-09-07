@@ -23,27 +23,21 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.model.Run;
-import org.kohsuke.stapler.DataBoundConstructor;
+import hudson.plugins.copyartifact.filter.SavedBuildFilter;
+import hudson.plugins.copyartifact.selector.Version1BuildSelector;
 
 /**
- * Copy artifacts from the latest saved build (marked "keep forever").
+ * Copy artifacts from the saved build (marked "keep forever").
  * @author Alan Harder
+ * @deprecated use {@link SavedBuildFilter} instead.
  */
-public class SavedBuildSelector extends BuildSelector {
-    @DataBoundConstructor
-    public SavedBuildSelector() { }
-
+@Deprecated
+public class SavedBuildSelector extends Version1BuildSelector {
     @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return run.isKeepLog();
+    public MigratedConfiguration migrateToVersion2() {
+        return new MigratedConfiguration(
+                new StatusBuildSelector(StatusBuildSelector.BuildStatus.Completed),
+                new SavedBuildFilter()
+        );
     }
-
-    @Extension(ordinal=50)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                SavedBuildSelector.class, Messages._SavedBuildSelector_DisplayName());
 }

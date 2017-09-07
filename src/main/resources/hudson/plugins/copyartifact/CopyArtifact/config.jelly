@@ -26,32 +26,18 @@ THE SOFTWARE.
   <f:entry title="${%Project name}" field="projectName">
     <f:editableComboBox items="${app.topLevelItemNames}" clazz="setting-input"/>
   </f:entry>
-  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
-  <f:entry title="${%Artifacts to copy}" field="filter">
-    <f:textbox/>
+  <f:entry field="optional">
+    <f:checkbox title="${%Optional}" />
   </f:entry>
-  <f:entry title="${%Artifacts not to copy}" field="excludes">
-    <f:textbox/>
-  </f:entry>
-  <f:entry title="${%Target directory}" field="target">
-    <f:textbox/>
-  </f:entry>
-  <f:entry title="${%Parameter filters}" field="parameters">
-    <f:textbox/>
-  </f:entry>
-  <f:entry help="/plugin/copyartifact/help-flatten-optional.html">
-    <f:checkbox field="flatten"/>
-    <label class="attach-previous">${%Flatten directories}</label>
-    <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="optional"/>
-    <label class="attach-previous">${%Optional}</label>
-    <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="fingerprintArtifacts" default="true"/>
-    <label class="attach-previous">${%Fingerprint Artifacts}</label>
+  <f:entry field="verbose">
+    <f:checkbox title="${%Debug output}" />
   </f:entry>
   <f:advanced>
     <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
       <f:textbox/>
     </f:entry>
   </f:advanced>
+  <f:dropdownDescriptorSelector field="selector" title="${%Which build}"/>
+  <f:dropdownDescriptorSelector field="buildFilter" title="${%Build filter}" descriptors="${descriptor.buildFilterDescriptorList}" />
+  <f:dropdownDescriptorSelector field="operation" title="${%Operation}" />
 </j:jelly>

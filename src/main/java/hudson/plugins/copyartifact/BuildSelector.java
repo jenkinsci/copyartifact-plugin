@@ -23,70 +23,130 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.io.IOException;
+
 import hudson.EnvVars;
 import hudson.ExtensionPoint;
-import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Result;
 import hudson.model.Job;
 import hudson.model.Run;
-import java.io.IOException;
-import java.io.PrintStream;
+
+import javax.annotation.Nonnull;
 
 /**
- * Extension point for selecting the build to copy artifacts from.
- * In a subclass override just isSelectable() for a standard loop through completed
- * builds, starting with the most recent.  Otherwise override getBuild() to provide
- * different build selection logic.
+ * Extension point for enumerating builds to copy artifacts from.
+ * Subclasses should override {@link #getNextBuild(Job, CopyArtifactPickContext)}.
+ * use {@link BuildSelectorDescriptor} for its descriptor.
+ * 
  * @author Alan Harder
  */
 public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint {
+    /**
+     * @param job       the job to pick a build from.
+     * @param context   context for the current execution of copyartifact.
+     * @return  the build matches this selector and conditions stored in the context.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     * 
+     * @since 2.0
+     */
+    public Run<?, ?> pickBuildToCopyFrom(@Nonnull Job<?,?> job, @Nonnull final CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
+        if (!Util.isOverridden(
+                BuildSelector.class,
+                getClass(),
+                "getNextBuild",
+                Job.class,
+                CopyArtifactPickContext.class
+        )) {
+            // backward compatibility.
+            context.logInfo("WARNING: {0} is desined for the older version of Copyartifact and might not fully finctions.", getDisplayName());
+            Run<?, ?> candidate = getBuild(
+                    job,
+                    context.getEnvVars(),
+                    new BuildFilter() {
+                        @Override
+                        public boolean isSelectable(Run<?, ?> run, EnvVars env) {
+                            return context.getBuildFilter().isSelectable(run, context);
+                        }
+                    },
+                    context.getCopierBuild()
+            );
+            if (candidate != null) {
+                context.logDebug("{0}: {1} found", getDisplayName(), candidate.getFullDisplayName());
+            } else {
+                context.logDebug("{0}: No matching build", getDisplayName());
+            }
+            return candidate;
+        }
+        
+        context.setLastMatchBuild(null);
+        while (true) {
+            Run<?, ?> candidate = getNextBuild(job, context);
+            context.setLastMatchBuild(candidate);
+            if (candidate == null) {
+                context.logDebug("{0}: No more matching builds.", getDisplayName());
+                return null;
+            }
+            context.logDebug("{0}: {1} found", getDisplayName(), candidate.getDisplayName());
+            BuildFilter filter = context.getBuildFilter();
+            if (!filter.isSelectable(candidate, context)) {
+                context.logDebug(
+                        "{0}: declined by the filter {1}",
+                        candidate.getFullDisplayName(),
+                        filter.getDisplayName()
+                );
+                continue;
+            }
+            context.logDebug("{0}: satisfied conditions.", candidate.getFullDisplayName());
+            return candidate;
+        }
+    }
 
     /**
-     * Find a build to copy artifacts from.
-     * @param job Source project
-     * @param env Environment for build that is copying artifacts
-     * @param filter Additional filter; returned result should return true (return null otherwise)
-     * @param parent Build to which artifacts are being copied
-     * @return Build to use, or null if no appropriate build was found
+     * Override this method to implement {@link BuildSelector}.
+     * Use {@link CopyArtifactPickContext#getLastMatchBuild()} to
+     * continue enumerating builds.
+     * Or you can save the execution state
+     * with {@link CopyArtifactPickContext#addExtension(Object)}
+     * 
+     * @param job       the job to pick a build from.
+     * @param context   context for the current execution of copyartifact.
+     * @return  the build matches this selector.
+     * @throws IOException if an error occurs while performing the operation.
+     * @throws InterruptedException if any thread interrupts the current thread.
+     * 
+     * @since 2.0
      */
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        // Backward compatibility:
-        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild",
-                              Job.class, EnvVars.class, BuildFilter.class)) {
-            Run<?,?> run = getBuild(job, env, filter);
-            return (run != null && filter.isSelectable(run, env)) ? run : null;
-        }
-
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
-            if (isSelectable(run, env) && filter.isSelectable(run, env))
-                return run;
-
+    public Run<?, ?> getNextBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context)
+            throws IOException, InterruptedException
+    {
+        // Though this can be protected,
+        // Util#isOverridden is applicable only for public methods.
         return null;
     }
 
     /**
-     * Find a build to copy artifacts from. Older and deprecated version of API.
-     * @param job Source project
-     * @param env Environment for build that is copying artifacts
-     * @param filter Additional filter; returned result should return true (return null otherwise)
-     * @return Build to use, or null if no appropriate build was found
+     * Returns the display name for this selector.
+     * You can override this to output configurations of this selector
+     * in verbose logs.
+     * 
+     * @return the display name for this selector.
+     * 
+     * @since 2.0
      */
-    @Deprecated
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
-        return getBuild(job, env, filter, null);
-    }
-
-    /**
-     * Should this build be selected?  Override just this method to use a standard
-     * loop through completed builds, starting with the most recent.
-     * @param run Build to check
-     * @param env Environment for build that is copying artifacts
-     * @return True to select this build
-     */
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
-        return false;
+    public String getDisplayName() {
+        try {
+            return getDescriptor().getDisplayName();
+        } catch (AssertionError e) {
+            // getDescriptor throws AssertionException
+            // if there's no descriptor available
+            // (e.g. selectors in unit tests)
+            return getClass().getName();
+        }
     }
 
     /**
@@ -112,14 +172,58 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
         return buildResult.isBetterOrEqualTo(resultToTest);
     }
 
-    protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
-        FilePath srcDir = new FilePath(src.getArtifactsDir());
-        if (srcDir.exists()) {
-            return srcDir;
-        } else {
-            console.println(Messages.CopyArtifact_MissingSrcArtifacts(srcDir));
-            return null;
+    //// For backward compatibility.
+    /**
+     * Find a build to copy artifacts from.
+     * @param job Source project
+     * @param env Environment for build that is copying artifacts
+     * @param filter Additional filter; returned result should return true (return null otherwise)
+     * @param parent Build to which artifacts are being copied
+     * @return Build to use, or null if no appropriate build was found
+     * 
+     * @deprecated implement {@link #getNextBuild(Job, CopyArtifactPickContext)} instead.
+     */
+    @Deprecated
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+        // Backward compatibility:
+        if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild",
+                              Job.class, EnvVars.class, BuildFilter.class)) {
+            Run<?,?> run = getBuild(job, env, filter);
+            return (run != null && filter.isSelectable(run, env)) ? run : null;
         }
+
+        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
+            if (isSelectable(run, env) && filter.isSelectable(run, env))
+                return run;
+
+        return null;
     }
 
+    /**
+     * Find a build to copy artifacts from. Older and deprecated version of API.
+     * @param job Source project
+     * @param env Environment for build that is copying artifacts
+     * @param filter Additional filter; returned result should return true (return null otherwise)
+     * @return Build to use, or null if no appropriate build was found
+     * 
+     * @deprecated implement {@link #getNextBuild(Job, CopyArtifactPickContext)} instead.
+     */
+    @Deprecated
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter) {
+        return getBuild(job, env, filter, null);
+    }
+
+    /**
+     * Should this build be selected?  Override just this method to use a standard
+     * loop through completed builds, starting with the most recent.
+     * @param run Build to check
+     * @param env Environment for build that is copying artifacts
+     * @return True to select this build
+     * 
+     * @deprecated implement {@link #getNextBuild(Job, CopyArtifactPickContext)} instead.
+     */
+    @Deprecated
+    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+        return false;
+    }
 }

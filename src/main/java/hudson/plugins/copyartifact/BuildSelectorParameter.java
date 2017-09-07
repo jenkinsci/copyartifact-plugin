@@ -32,7 +32,6 @@ import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.ParameterValue;
 import hudson.model.SimpleParameterDefinition;
 import hudson.model.StringParameterValue;
@@ -146,6 +145,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     private static final XStream2 XSTREAM = new XStream2();
 
+    @SuppressWarnings("deprecation")
     static void initAliases() {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins == null) {
@@ -155,5 +155,11 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         // Alias all BuildSelectors to their simple names
         for (Descriptor<BuildSelector> d : jenkins.getDescriptorByType(DescriptorImpl.class).getBuildSelectors())
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
+        
+        // For backward compatibilities
+        XSTREAM.alias("DownstreamBuildSelector", DownstreamBuildSelector.class);
+        XSTREAM.alias("LastCompletedBuildSelector", LastCompletedBuildSelector.class);
+        XSTREAM.alias("SavedBuildSelector", SavedBuildSelector.class);
+        XSTREAM.alias("WorkspaceBuildSelector", WorkspaceSelector.class);
     }
 }

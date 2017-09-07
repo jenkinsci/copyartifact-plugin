@@ -23,23 +23,25 @@
  */
 package hudson.plugins.copyartifact;
 
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.PermalinkProjectAction;
 import hudson.model.Run;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import hudson.plugins.copyartifact.selector.AbstractSpecificBuildSelector;
+
+import java.io.IOException;
+
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Copy artifacts from a specific build.
  * @author Alan Harder
  */
-public class SpecificBuildSelector extends BuildSelector {
-
-    private static final Logger LOGGER = Logger.getLogger(SpecificBuildSelector.class.getName());
+public class SpecificBuildSelector extends AbstractSpecificBuildSelector {
 
     private final String buildNumber;
 
@@ -53,10 +55,11 @@ public class SpecificBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
-        String num = env.expand(buildNumber);
+    @CheckForNull
+    public Run<?, ?> getBuild(@Nonnull Job<?, ?> job, @Nonnull CopyArtifactPickContext context) throws IOException, InterruptedException {
+        String num = context.getEnvVars().expand(buildNumber);
         if (num.startsWith("$")) {
-            LOGGER.log(Level.FINE, "unresolved variable {0}", num);
+            context.logDebug("unresolved variable {0}", num);
             return null;
         }
 
@@ -84,11 +87,7 @@ public class SpecificBuildSelector extends BuildSelector {
         }
 
         if (run == null) {
-            LOGGER.log(Level.FINE, "no such build {0} in {1}", new Object[] {num, job.getFullName()});
-            return null;
-        }
-        if (!filter.isSelectable(run, env)) {
-            LOGGER.log(Level.FINE, "{0} claims {1} is not selectable", new Object[] {filter, run});
+            context.logDebug("no such build {0} in {1}", num, job.getFullName());
             return null;
         }
         return run;

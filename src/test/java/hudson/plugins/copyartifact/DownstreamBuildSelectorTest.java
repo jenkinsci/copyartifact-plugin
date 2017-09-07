@@ -74,6 +74,7 @@ public class DownstreamBuildSelectorTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
     
+    /* TODO: Move to DownstreamBuildFilterTest
     @Test
     public void testConfiguration() throws Exception {
         final String UPSTREAM_PROJECT_NAME = "${UPSTREAM_PROJECT_NAME}";
@@ -89,7 +90,7 @@ public class DownstreamBuildSelectorTest {
                                 UPSTREAM_PROJECT_NAME,
                                 UPSTREAM_BUILD_NUMBER
                         ),
-                        "**/*",
+                        "** /*",
                         "",
                         "",
                         false,
@@ -116,6 +117,7 @@ public class DownstreamBuildSelectorTest {
         assertEquals(UPSTREAM_PROJECT_NAME, selector.getUpstreamProjectName());
         assertEquals(UPSTREAM_BUILD_NUMBER, selector.getUpstreamBuildNumber());
     }
+    */
     
     @Test
     public void testPerformSuccess() throws Exception {
@@ -133,21 +135,24 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(downstream.getFullName(), Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
-                upstream.getFullName(),
-                "",
-                new TriggeredBuildSelector(
-                        false,
-                        TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest,
-                        false
-                ),
-                "**/*",
-                "",
-                "",
-                false,
-                false,
-                true    // important! required to have Jenkins track builds.
-        ));
+        {
+            CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(
+                    upstream.getFullName(),
+                    "",
+                    new TriggeredBuildSelector(
+                            false,
+                            TriggeredBuildSelector.UpstreamFilterStrategy.UseNewest
+                    ),
+                    "**/*",
+                    "",
+                    "",
+                    false,
+                    false,
+                    true    // important! required to have Jenkins track builds.
+            );
+            ca.upgradeFromCopyartifact10();
+            downstream.getBuildersList().add(ca);
+        }
         downstream.getPublishersList().add(new ArtifactArchiver(
                 "artifact2.txt",
                 "",
@@ -193,7 +198,7 @@ public class DownstreamBuildSelectorTest {
         // not use variables.
         {
             FreeStyleProject p = j.createFreeStyleProject();
-            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+            CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -206,7 +211,9 @@ public class DownstreamBuildSelectorTest {
                     false,
                     false,
                     true
-            ));
+            );
+            ca.upgradeFromCopyartifact10();
+            p.getBuildersList().add(ca);
             
             FreeStyleBuild b = p.scheduleBuild2(0).get();
             j.assertBuildStatusSuccess(b);
@@ -225,7 +232,7 @@ public class DownstreamBuildSelectorTest {
                     new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                     new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
             ));
-            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+            CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -238,7 +245,9 @@ public class DownstreamBuildSelectorTest {
                     false,
                     false,
                     true
-            ));
+            );
+            ca.upgradeFromCopyartifact10();
+            p.getBuildersList().add(ca);
             
             FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
@@ -260,7 +269,7 @@ public class DownstreamBuildSelectorTest {
                     new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                     new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
             ));
-            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+            CopyArtifact ca = CopyArtifactUtil.createCopyArtifact(
                     downstream.getFullName(),
                     "",
                     new DownstreamBuildSelector(
@@ -273,7 +282,9 @@ public class DownstreamBuildSelectorTest {
                     false,
                     false,
                     true
-            ));
+            );
+            ca.upgradeFromCopyartifact10();
+            p.getBuildersList().add(ca);
             
             FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
@@ -303,7 +314,7 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(downstream.getFullName(), Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(
                 upstream.getFullName(),
                 "",
                 new TriggeredBuildSelector(
@@ -317,7 +328,9 @@ public class DownstreamBuildSelectorTest {
                 false,
                 false,
                 true    // important! required to have Jenkins track builds.
-        ));
+        );
+        ca1.upgradeFromCopyartifact10();
+        downstream.getBuildersList().add(ca1);
         downstream.getPublishersList().add(new ArtifactArchiver(
                 "artifact2.txt",
                 "",
@@ -356,7 +369,7 @@ public class DownstreamBuildSelectorTest {
                 new StringParameterDefinition("UPSTREAM_PROJECT_NAME", ""),
                 new StringParameterDefinition("UPSTREAM_BUILD_NUMBER", "")
         ));
-        p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(
                 downstream.getFullName(),
                 "",
                 new DownstreamBuildSelector(
@@ -371,7 +384,9 @@ public class DownstreamBuildSelectorTest {
                     // Look! As this is an optional, the build doesn't fail even if the build is not found.
                     // This allows us to find exceptions.
                 true
-        ));
+        );
+        ca2.upgradeFromCopyartifact10();
+        p.getBuildersList().add(ca2);
         
         // upstreamProjectName is empty
         {
@@ -450,7 +465,7 @@ public class DownstreamBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger("../folder2/downstream", Result.SUCCESS.toString()));
         
         downstream.getBuildersList().add(new FileWriteBuilder("artifact2.txt", "${BUILD_ID}"));
-        downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+        CopyArtifact ca1 = CopyArtifactUtil.createCopyArtifact(
                 "../folder1/upstream",
                 "",
                 new TriggeredBuildSelector(
@@ -464,7 +479,9 @@ public class DownstreamBuildSelectorTest {
                 false,
                 false,
                 true    // important! required to have Jenkins track builds.
-        ));
+        );
+        ca1.upgradeFromCopyartifact10();
+        downstream.getBuildersList().add(ca1);
         downstream.getPublishersList().add(new ArtifactArchiver(
                 "artifact2.txt",
                 "",
@@ -484,7 +501,7 @@ public class DownstreamBuildSelectorTest {
         j.assertBuildStatusSuccess(upstreamBuild);
         j.assertBuildStatusSuccess(downstreamBuild);
         
-        copier.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+        CopyArtifact ca2 = CopyArtifactUtil.createCopyArtifact(
                 "../../folder2/downstream",
                 "",
                 new DownstreamBuildSelector(
@@ -497,7 +514,9 @@ public class DownstreamBuildSelectorTest {
                 false,
                 false,
                 true
-        ));
+        );
+        ca2.upgradeFromCopyartifact10();
+        copier.getBuildersList().add(ca2);
         
         FreeStyleBuild b = copier.scheduleBuild2(0).get();
         j.assertBuildStatusSuccess(b);
@@ -507,6 +526,7 @@ public class DownstreamBuildSelectorTest {
         assertEquals(downstreamBuild.getId(), artifact.readToString());
     }
     
+    /* TODO: Move to DownstreamBuildFilterTest
     @Test
     public void testCheckUpstreamProjectName() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
@@ -577,7 +597,9 @@ public class DownstreamBuildSelectorTest {
             SecurityContextHolder.getContext().setAuthentication(a);
         }
     }
+    */
     
+    /* TODO: Move to DownstreamBuildFilterTest
     @Test
     public void testCheckUpstreamBuildNumber() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
@@ -654,7 +676,9 @@ public class DownstreamBuildSelectorTest {
             SecurityContextHolder.getContext().setAuthentication(a);
         }
     }
+    */
 
+    /* TODO: Move to DownstreamBuildFilterTest
     @Test
     public void testAutoCompleteUpstreamProjectName() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl) j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
@@ -698,7 +722,9 @@ public class DownstreamBuildSelectorTest {
         actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
         assertArrayEquals(new String[] {}, actualValues.toArray(new String [actualValues.size()]));
     }
+    */
 
+    /* TODO: Move to DownstreamBuildFilterTest
     @Test
     public void testCheckUpstreamProjectNameForWorkflow() throws Exception {
         FreeStyleProject context = j.createFreeStyleProject();
@@ -708,6 +734,7 @@ public class DownstreamBuildSelectorTest {
         // DownstreamBuildSelector is not applicable to workflow.
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(context, target.getFullName()).kind);
     }
+    */
     
     @Test
     public void testUpstreamIsWorkflow() throws Exception {
