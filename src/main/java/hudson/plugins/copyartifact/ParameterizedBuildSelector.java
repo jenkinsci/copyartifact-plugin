@@ -32,7 +32,9 @@ import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
 
+import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -102,8 +104,17 @@ public class ParameterizedBuildSelector extends BuildSelector {
         return xml;
     }
 
-    @Extension(ordinal=-20)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                ParameterizedBuildSelector.class, Messages._ParameterizedBuildSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension(ordinal=-20) @Symbol("buildParameter")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(ParameterizedBuildSelector.class, Messages._ParameterizedBuildSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }

@@ -32,6 +32,7 @@ import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Run;
 import hudson.util.ComboBoxModel;
 import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -57,7 +58,7 @@ public class PermalinkBuildSelector extends BuildSelector {
         return (run != null && filter.isSelectable(run, env)) ? run : null;
     }
 
-    @Extension
+    @Extension @Symbol("permalink")
     public static class DescriptorImpl extends Descriptor<BuildSelector> {
         @Override
         public String getDisplayName() {

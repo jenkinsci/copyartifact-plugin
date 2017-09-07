@@ -41,6 +41,7 @@ import hudson.model.Job;
 import hudson.model.Run;
 import net.sf.json.JSONObject;
 
+import org.jenkinsci.Symbol;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -218,7 +219,7 @@ public class TriggeredBuildSelector extends BuildSelector {
         return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
     }
 
-    @Extension(ordinal=25)
+    @Extension(ordinal=25)  @Symbol("upstream")
     public static class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         

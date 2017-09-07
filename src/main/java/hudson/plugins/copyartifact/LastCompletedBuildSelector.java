@@ -28,6 +28,8 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Result;
 import hudson.model.Run;
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -44,8 +46,17 @@ public class LastCompletedBuildSelector extends BuildSelector {
         return true;
     }
 
-    @Extension
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                LastCompletedBuildSelector.class, Messages._LastCompletedBuildSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension @Symbol("lastCompleted")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(LastCompletedBuildSelector.class, Messages._LastCompletedBuildSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }
