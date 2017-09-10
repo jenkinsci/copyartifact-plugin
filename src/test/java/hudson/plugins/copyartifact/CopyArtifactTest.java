@@ -1367,7 +1367,8 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
         FilePath fileToTest = b.getWorkspace().child("from-plain/tag.txt");
         assertTrue(fileToTest.exists());
-        assertEquals("jenkins-plain-2\n", fileToTest.readToString());
+        // Ignore line endings as it may differ for OS and autocrlf configurations.
+        assertEquals("jenkins-plain-2", StringUtils.trim(fileToTest.readToString()));
         
         configXml = copier.getConfigFile().asString();
         assertFalse(configXml, configXml.contains("<projectName>"));
