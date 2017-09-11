@@ -152,8 +152,10 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
             return;
         }
+        DescriptorImpl descriptor = jenkins.getDescriptorByType(DescriptorImpl.class);
+        List<Descriptor<BuildSelector>> descriptorList = descriptor.getBuildSelectors();
         // Alias all BuildSelectors to their simple names
-        for (Descriptor<BuildSelector> d : jenkins.getDescriptorByType(DescriptorImpl.class).getBuildSelectors())
+        for (Descriptor<BuildSelector> d : descriptorList)
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
     }
 }
