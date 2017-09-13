@@ -31,6 +31,8 @@ import com.thoughtworks.xstream.XStreamException;
 import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.ParameterValue;
@@ -146,14 +148,17 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     private static final XStream2 XSTREAM = new XStream2();
 
-    static void initAliases() {
+    @Initializer(after=InitMilestone.PLUGINS_STARTED)
+    public static void initAliases() {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins == null) {
             LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
             return;
         }
+        DescriptorImpl descriptor = jenkins.getDescriptorByType(DescriptorImpl.class);
+        List<Descriptor<BuildSelector>> descriptorList = descriptor.getBuildSelectors();
         // Alias all BuildSelectors to their simple names
-        for (Descriptor<BuildSelector> d : jenkins.getDescriptorByType(DescriptorImpl.class).getBuildSelectors())
+        for (Descriptor<BuildSelector> d : descriptorList)
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
     }
 }
