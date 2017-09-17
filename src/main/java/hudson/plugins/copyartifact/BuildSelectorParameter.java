@@ -24,7 +24,9 @@
 package hudson.plugins.copyartifact;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.thoughtworks.xstream.XStreamException;
@@ -98,6 +100,27 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     @Extension
     public static class DescriptorImpl extends ParameterDescriptor {
+        public DescriptorImpl() {
+            super();
+            try {
+                throw new Exception("for stracktrace");
+            } catch(Exception e) {
+                LOGGER.log(
+                    Level.INFO,
+                    String.format(
+                        "I'm called with ctor of BuildSelectorParameter.DescriptorImpl at %s",
+                        Jenkins.getInstance().getInitLevel().toString()
+                    ),
+                    e
+                );
+                System.err.println(String.format(
+                    "%s: I'm called with BuildSelectorParameter.DescriptorImpl at %s",
+                    new Date(),
+                    Jenkins.getInstance().getInitLevel().toString()
+                ));
+                e.printStackTrace(System.err);
+            }
+        }
         @Override
         public String getDisplayName() {
             return Messages.BuildSelectorParameter_DisplayName();
@@ -155,6 +178,18 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
             return;
         }
+        LOGGER.log(
+            Level.INFO,
+            String.format(
+                "I'm called with @Initializer(PLUGIN_STARTED) at %s",
+                Jenkins.getInstance().getInitLevel().toString()
+            )
+        );
+        System.err.println(String.format(
+            "%s: I'm called with @Initializer(PLUGIN_STARTED) at %s",
+            new Date(),
+            Jenkins.getInstance().getInitLevel().toString()
+        ));
         DescriptorImpl descriptor = jenkins.getDescriptorByType(DescriptorImpl.class);
         List<Descriptor<BuildSelector>> descriptorList = descriptor.getBuildSelectors();
         // Alias all BuildSelectors to their simple names
