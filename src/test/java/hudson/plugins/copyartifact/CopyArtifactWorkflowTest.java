@@ -26,6 +26,7 @@ package hudson.plugins.copyartifact;
 import static org.junit.Assert.*;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Job;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
@@ -33,27 +34,36 @@ import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.Cause.UserCause;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
+import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
+import hudson.tasks.ArtifactArchiver;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.Rule;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.IOException;
 import java.util.List;
-import org.jvnet.hudson.test.Issue;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
 public class CopyArtifactWorkflowTest {
 
-    @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    @ClassRule
+    public static JenkinsRule jenkinsRule = new JenkinsRule();
+
+    @After
+    public void deleteAllJobs() throws Exception {
+        for (Job<?, ?> job: jenkinsRule.jenkins.getItems(Job.class)) {
+            job.delete();
+        }
+    }
 
     @Test
     public void test_simpleUntriggeredCopy() throws Exception {
@@ -145,5 +155,174 @@ public class CopyArtifactWorkflowTest {
         WorkflowJob job = jenkinsRule.jenkins.createProject(WorkflowJob.class, name);
         job.setDefinition(new CpsFlowDefinition("node {" + script + "}", true));
         return job;
+    }
+
+    // Tests for symbols.
+    // Test only that symbols are accessible as expected.
+    // No tests for features here as they should be tested in other tests.
+    // The latest pipeline supports calling `copyArtifacts` without `step`.
+
+    @Test
+    public void testDownstreamBuildSelector() throws Exception {
+        // upstream (freestyle) -> copiee (fresstyle)
+        // copier (pipeline) copies from copiee, which is downstream of `upstream`.
+        // DownstreamBuildSelector support detecting relations between only `AbstractProject`s.
+
+        FreeStyleProject upstream = jenkinsRule.createFreeStyleProject("upstream");
+        upstream.getBuildersList().add(new FileWriteBuilder("upstream_artifact.txt", "${BUILD_TAG}"));
+        ArtifactArchiver aa = new ArtifactArchiver("upstream_artifact.txt");
+        aa.setFingerprint(true);        // important to have Jenkins track builds
+        upstream.getPublishersList().add(aa);
+
+        FreeStyleProject copiee = jenkinsRule.createFreeStyleProject("copiee");
+        CopyArtifact ca = new CopyArtifact("upstream");
+        ca.setFingerprintArtifacts(true);       // important to have Jenkins track builds
+        copiee.getBuildersList().add(ca);
+        copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+
+        jenkinsRule.assertBuildStatusSuccess(upstream.scheduleBuild2(0));
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: downstream(upstreamProjectName: 'upstream', upstreamBuildNumber: '1')));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testLastCompletedBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: lastCompleted()));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testParameterizedBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: buildParameter('<StatusBuildSelector/>')));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testPermalinkBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: permalink('lastStableBuild')));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testSavedBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0)).keepLog();
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: latestSavedBuild()));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testSpecificBuildSelector() throws Exception {
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: specific(\"${build('copiee').number}\")));"
+            + "echo readFile('artifact.txt');"
+        );
+        createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testStatusBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: lastSuccessful()));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
+    @Test
+    public void testTriggeredBuildSelector() throws Exception {
+        WorkflowJob copiee = createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+            + "build('copier');"
+        );
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: upstream()));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.getLastBuild()));
+    }
+
+    @Test
+    public void testWorkspaceBuildSelector() throws Exception {
+        // workspace is useless for pipeline jobs
+        FreeStyleProject copiee = jenkinsRule.createFreeStyleProject("copiee");
+        copiee.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        copiee.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
+
+        WorkflowJob copier = createWorkflow(
+            "copier",
+            "step(copyArtifacts(projectName: 'copiee', selector: workspace()));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
     }
 }
