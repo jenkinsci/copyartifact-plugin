@@ -36,17 +36,20 @@ import jenkins.model.Jenkins;
 public class CopyArtifactPlugin extends Plugin {
     @Override
     public void postInitialize() throws Exception {
-        Logger.getLogger(CopyArtifactPlugin.class.getName()).log(
-            Level.INFO,
-            String.format(
-                "I'm called with Plugin#postInitialize at %s",
-                Jenkins.getInstance().getInitLevel().toString()
-            )
-        );
-        System.err.println(String.format(
-            "%s: I'm called with Plugin#postInitialize at %s",
-            new Date(),
-            Jenkins.getInstance().getInitLevel().toString()
-        ));
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins != null) {
+            Logger.getLogger(CopyArtifactPlugin.class.getName()).log(
+                Level.INFO,
+                String.format(
+                    "I'm called with Plugin#postInitialize at %s",
+                    jenkins.getInitLevel().toString()
+                )
+            );
+            System.err.println(String.format(
+                "%s: I'm called with Plugin#postInitialize at %s",
+                new Date(),
+                jenkins.getInitLevel().toString()
+            ));
+        }
     }
 }
