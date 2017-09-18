@@ -23,10 +23,33 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import hudson.Plugin;
+import jenkins.model.Jenkins;
 
 /**
  * Copy Artifact plugin.
  */
 public class CopyArtifactPlugin extends Plugin {
+    @Override
+    public void postInitialize() throws Exception {
+        Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins != null) {
+            Logger.getLogger(CopyArtifactPlugin.class.getName()).log(
+                Level.INFO,
+                String.format(
+                    "I'm called with Plugin#postInitialize at %s",
+                    jenkins.getInitLevel().toString()
+                )
+            );
+            System.err.println(String.format(
+                "%s: I'm called with Plugin#postInitialize at %s",
+                new Date(),
+                jenkins.getInitLevel().toString()
+            ));
+        }
+    }
 }
