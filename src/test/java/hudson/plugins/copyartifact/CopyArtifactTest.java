@@ -1006,9 +1006,6 @@ public class CopyArtifactTest {
     @LocalData
     @Test
     public void testPermissionWhenParameterizedForMatrixConfig() throws Exception {
-        // This test fails before Jenkins 1.406
-        if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
-
         FreeStyleProject p = createProject("testMatrix/FOO=$FOO", null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "FOO");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
@@ -1021,12 +1018,8 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
     }
 
-    @LocalData
     @Test
     public void testPermissionWhenParameterizedForMavenModule() throws Exception {
-        // This test fails before Jenkins 1.406
-        if (new VersionNumber("1.406").isNewerThan(Hudson.getVersion())) return; // Skip
-
         MavenModuleSet mp = setupMavenJob();
         mp.addProperty(new AuthorizationMatrixProperty(
                 Collections.singletonMap(Item.READ, Collections.singleton("authenticated"))));
