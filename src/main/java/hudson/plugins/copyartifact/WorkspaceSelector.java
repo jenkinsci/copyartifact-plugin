@@ -31,6 +31,10 @@ import hudson.model.Descriptor;
 import hudson.model.Run;
 import java.io.IOException;
 import java.io.PrintStream;
+
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
+import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -62,8 +66,17 @@ public class WorkspaceSelector extends BuildSelector {
         }
     }
 
-    @Extension(ordinal=-20)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                WorkspaceSelector.class, Messages._WorkspaceSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension(ordinal=-20) @Symbol("workspace")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(WorkspaceSelector.class, Messages._WorkspaceSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }

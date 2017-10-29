@@ -28,7 +28,10 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Result;
 import hudson.model.Run;
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 
 /**
  * Copy artifacts from the latest successful or stable build.
@@ -37,10 +40,20 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class StatusBuildSelector extends BuildSelector {
     private Boolean stable;
 
-    @DataBoundConstructor
+    @Deprecated
     public StatusBuildSelector(boolean stable) {
+        setStable(stable);
+    }
+
+    @DataBoundConstructor
+    public StatusBuildSelector() {
+    }
+
+    @DataBoundSetter
+    public void setStable(boolean stable) {
         this.stable = stable ? Boolean.TRUE : null;
     }
+
 
     public boolean isStable() {
         return stable != null && stable.booleanValue();
@@ -51,8 +64,17 @@ public class StatusBuildSelector extends BuildSelector {
         return isBuildResultBetterOrEqualTo(run, isStable() ? Result.SUCCESS : Result.UNSTABLE);
     }
 
-    @Extension(ordinal=100)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                StatusBuildSelector.class, Messages._StatusBuildSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension(ordinal=100) @Symbol("lastSuccessful")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(StatusBuildSelector.class, Messages._StatusBuildSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }

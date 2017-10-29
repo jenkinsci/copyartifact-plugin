@@ -31,6 +31,9 @@ import hudson.model.PermalinkProjectAction;
 import hudson.model.Run;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -94,8 +97,17 @@ public class SpecificBuildSelector extends BuildSelector {
         return run;
     }
 
-    @Extension(ordinal=-10)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                SpecificBuildSelector.class, Messages._SpecificBuildSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension(ordinal=-10) @Symbol("specific")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(SpecificBuildSelector.class, Messages._SpecificBuildSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }

@@ -27,6 +27,8 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Run;
+import jenkins.model.Jenkins;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -42,8 +44,17 @@ public class SavedBuildSelector extends BuildSelector {
         return run.isKeepLog();
     }
 
-    @Extension(ordinal=50)
-    public static final Descriptor<BuildSelector> DESCRIPTOR =
-            new SimpleBuildSelectorDescriptor(
-                SavedBuildSelector.class, Messages._SavedBuildSelector_DisplayName());
+    /**
+     * @deprecated
+     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
+     */
+    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
+
+    @Extension(ordinal=50) @Symbol("latestSavedBuild")
+    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
+        public DescriptorImpl() {
+            super(SavedBuildSelector.class, Messages._SavedBuildSelector_DisplayName());
+            DESCRIPTOR = this;
+        }
+    }
 }

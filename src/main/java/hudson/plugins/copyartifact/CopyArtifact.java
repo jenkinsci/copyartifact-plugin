@@ -68,6 +68,7 @@ import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -573,7 +574,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return expected.equals(expanded);
     }
     
-    @Extension
+    @Extension @Symbol("copyArtifacts")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
         public FormValidation doCheckProjectName(

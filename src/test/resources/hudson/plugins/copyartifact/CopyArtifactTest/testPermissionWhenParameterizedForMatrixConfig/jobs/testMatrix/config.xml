@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<matrix-project>
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.security.AuthorizationMatrixProperty>
+      <useProjectSecurity>true</useProjectSecurity>
+      <permission>hudson.model.Item.Read:anonymous</permission>
+    </hudson.security.AuthorizationMatrixProperty>
+  </properties>
+  <scm class="hudson.scm.NullSCM"/>
+  <canRoam>true</canRoam>
+  <disabled>false</disabled>
+  <blockBuildWhenDownstreamBuilding>false</blockBuildWhenDownstreamBuilding>
+  <blockBuildWhenUpstreamBuilding>false</blockBuildWhenUpstreamBuilding>
+  <triggers class="vector"/>
+  <concurrentBuild>false</concurrentBuild>
+  <axes>
+    <hudson.matrix.TextAxis>
+      <name>FOO</name>
+      <values>
+        <string>foo</string>
+        <string>bar</string>
+      </values>
+    </hudson.matrix.TextAxis>
+  </axes>
+  <builders>
+    <hudson.tasks.Shell>
+      <command>echo foo &gt; foo.txt</command>
+    </hudson.tasks.Shell>
+  </builders>
+  <publishers>
+    <hudson.tasks.ArtifactArchiver>
+      <artifacts>*.txt</artifacts>
+      <latestOnly>false</latestOnly>
+    </hudson.tasks.ArtifactArchiver>
+  </publishers>
+  <buildWrappers/>
+  <runSequentially>false</runSequentially>
+</matrix-project>
