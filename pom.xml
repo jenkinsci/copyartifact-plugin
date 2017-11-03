@@ -28,6 +28,19 @@
       <java.level>7</java.level>
     </properties>
 
+    <build>
+      <plugins>
+        <plugin>
+          <groupId>org.jenkins-ci.tools</groupId>
+          <artifactId>maven-hpi-plugin</artifactId>
+          <configuration>
+            <!-- Renamed "upstream()" to "triggered()" -->
+            <compatibleSinceVersion>1.40</compatibleSinceVersion>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+
     <dependencies>
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>

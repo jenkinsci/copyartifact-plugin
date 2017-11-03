@@ -299,7 +299,7 @@ public class CopyArtifactWorkflowTest {
 
         WorkflowJob copier = jenkinsRule.createWorkflow(
             "copier",
-            "copyArtifacts(projectName: 'copiee', selector: upstream());"
+            "copyArtifacts(projectName: 'copiee', selector: triggered());"
             + "echo readFile('artifact.txt');"
         );
         jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
