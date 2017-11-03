@@ -44,6 +44,7 @@ import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -95,21 +96,41 @@ public class TriggeredBuildSelector extends BuildSelector {
         }
     };
     private Boolean fallbackToLastSuccessful;
-    private final UpstreamFilterStrategy upstreamFilterStrategy;
+    private UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;
 
     @DataBoundConstructor
+    public TriggeredBuildSelector() {
+        this(false);
+    }
+
+    /**
+     * @param fallbackToLastSuccessful {@code true} to fallback to the last successful build when no appropriate build is found.
+     * @param upstreamFilterStrategy strategy to pick the most appropriate upstream build.
+     * @param allowUpstreamDependencies {@code true} to scan upstream builds also using relation provided by fingerprints.
+     * @deprecated Use {@link #TriggeredBuildSelector()} instead.
+     */
+    @Deprecated
     public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy, boolean allowUpstreamDependencies) {
-        this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
-        this.upstreamFilterStrategy = upstreamFilterStrategy;
+        this.setFallbackToLastSuccessful(fallbackToLastSuccessful);
+        this.setUpstreamFilterStrategy(upstreamFilterStrategy);
         this.allowUpstreamDependencies = allowUpstreamDependencies;
     }
 
+    /**
+     * @param fallbackToLastSuccessful {@code true} to fallback to the last successful build when no appropriate build is found.
+     * @param upstreamFilterStrategy strategy to pick the most appropriate upstream build.
+     * @deprecated Use {@link #TriggeredBuildSelector()} instead.
+     */
     @Deprecated
     public TriggeredBuildSelector(boolean fallbackToLastSuccessful, UpstreamFilterStrategy upstreamFilterStrategy) {
         this(fallbackToLastSuccessful, upstreamFilterStrategy, false);
     }
 
+    /**
+     * @param fallback {@code true} to fallback to the last successful build when no appropriate build is found.
+     * @deprecated Use {@link #TriggeredBuildSelector()} instead.
+     */
     @Deprecated
     public TriggeredBuildSelector(boolean fallback) {
         this(fallback, UpstreamFilterStrategy.UseGlobalSetting, false);
@@ -120,10 +141,26 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     /**
+     * @param fallbackToLastSuccessful {@code true} to fallback to the last successful build when no appropriate build is found.
+     */
+    @DataBoundSetter
+    public void setFallbackToLastSuccessful(boolean fallbackToLastSuccessful) {
+        this.fallbackToLastSuccessful = fallbackToLastSuccessful ? Boolean.TRUE : null;
+    }
+
+    /**
      * @return Which build should be used if triggered by multiple upstream builds.
      */
     public UpstreamFilterStrategy getUpstreamFilterStrategy() {
         return upstreamFilterStrategy;
+    }
+
+    /**
+     * @param upstreamFilterStrategy strategy to pick the most appropriate upstream build.
+     */
+    @DataBoundSetter
+    public void setUpstreamFilterStrategy(UpstreamFilterStrategy upstreamFilterStrategy) {
+        this.upstreamFilterStrategy = upstreamFilterStrategy;
     }
 
     /**
@@ -152,6 +189,15 @@ public class TriggeredBuildSelector extends BuildSelector {
         return allowUpstreamDependencies;
     }
     
+
+    /**
+     * @param allowUpstreamDependencies {@code true} to scan upstream builds also using relation provided by fingerprints.
+     */
+    @DataBoundSetter
+    public void setAllowUpstreamDependencies(boolean allowUpstreamDependencies) {
+        this.allowUpstreamDependencies = allowUpstreamDependencies;
+    }
+
     @Override
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         Run<?,?> result = null;
@@ -219,7 +265,7 @@ public class TriggeredBuildSelector extends BuildSelector {
         return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
     }
 
-    @Extension(ordinal=25)  @Symbol("upstream")
+    @Extension(ordinal=25)  @Symbol("triggered")
     public static class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         private UpstreamFilterStrategy globalUpstreamFilterStrategy;
         
