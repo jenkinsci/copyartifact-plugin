@@ -1861,7 +1861,7 @@ public class CopyArtifactTest {
     }
     
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
-        private final org.acegisecurity.Authentication auth;
+        private final transient org.acegisecurity.Authentication auth;
         
         public TestQueueItemAuthenticator(org.acegisecurity.Authentication auth) {
             this.auth = auth;
