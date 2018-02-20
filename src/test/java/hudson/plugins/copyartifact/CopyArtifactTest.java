@@ -539,7 +539,7 @@ public class CopyArtifactTest {
         assertFile(false, "c.log", b);
     }
 
-    /** Test copy from workspace containing default ant excludes */
+    @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
@@ -553,20 +553,23 @@ public class CopyArtifactTest {
         assertFile(true, ".hg/defaultexclude.txt", b);
     }
 
+    @Issue("JENKINS-18662")
     @Test
     public void testExcludes() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
-                "**", ".hg/**", "", false, false, true));
+                "**", "**/b/,foo*", "", false, false, true));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "subdir/subfoo.txt", b);
-        assertFile(false, ".hg/defaultexclude.txt", b);
+        assertFile(false, "deepfoo/a/b/c.log", b);
+        assertFile(false, "foo.txt", b);
     }
 
+    @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
@@ -580,18 +583,19 @@ public class CopyArtifactTest {
         assertFile(true, "defaultexclude.txt", b);
     }
 
+    @Issue("JENKINS-18662")
     @Test
     public void testExcludesWithFlatten() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(), p = rule.createFreeStyleProject();
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "", new WorkspaceSelector(),
-                "**", ".hg/**", "", true, false, true));
+                "**", "**/*.log", "", true, false, true));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
         FreeStyleBuild b = p.scheduleBuild2(0, new UserCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "subfoo.txt", b);
-        assertFile(false, "defaultexclude.txt", b);
+        assertFile(false, "c.log", b);
     }
 
     /** projectName in CopyArtifact build steps should be updated if a job is renamed */
