@@ -53,6 +53,10 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpcore</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -148,13 +152,6 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>mailer</artifactId>
         <version>1.20</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <!-- Required by maven-plugin -->
-        <groupId>org.apache.ant</groupId>
-        <artifactId>ant</artifactId>
-        <version>1.9.2</version>
         <scope>test</scope>
       </dependency>
       <dependency>

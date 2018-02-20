@@ -33,8 +33,8 @@ import java.io.IOException;
 import java.io.PrintStream;
 
 import jenkins.model.Jenkins;
+import jenkins.util.VirtualFile;
 import org.jenkinsci.Symbol;
-import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -52,17 +52,17 @@ public class WorkspaceSelector extends BuildSelector {
         return true;
     }
 
-    @Override protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
+    @Override protected VirtualFile getArtifacts(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
         if (src instanceof AbstractBuild) {
             FilePath srcDir = ((AbstractBuild) src).getWorkspace();
             if (srcDir != null && srcDir.exists()) {
-                return srcDir;
+                return srcDir.toVirtualFile();
             } else {
                 console.println(Messages.CopyArtifact_MissingSrcWorkspace()); // (see JENKINS-3330)
                 return null;
             }
         } else {
-            return super.getSourceDirectory(src, console);
+            return super.getArtifacts(src, console);
         }
     }
 

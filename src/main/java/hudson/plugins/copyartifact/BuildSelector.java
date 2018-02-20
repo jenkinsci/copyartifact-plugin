@@ -33,6 +33,8 @@ import hudson.model.Job;
 import hudson.model.Run;
 import java.io.IOException;
 import java.io.PrintStream;
+import javax.annotation.CheckForNull;
+import jenkins.util.VirtualFile;
 
 /**
  * Extension point for selecting the build to copy artifacts from.
@@ -112,6 +114,26 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
         return buildResult.isBetterOrEqualTo(resultToTest);
     }
 
+    /**
+     * Load artifacts from a given build.
+     * @param sourceBuild a build which may have associated artifacts
+     * @param console a way to print messages
+     * @return a {@linkplain VirtualFile#isDirectory directory} of artifacts, or null if missing
+     */
+    protected @CheckForNull VirtualFile getArtifacts(Run<?, ?> sourceBuild, PrintStream console) throws IOException, InterruptedException {
+        if (Util.isOverridden(BuildSelector.class, getClass(), "getSourceDirectory", Run.class, PrintStream.class)) {
+            FilePath old = getSourceDirectory(sourceBuild, console);
+            return old != null ? old.toVirtualFile() : null;
+        } else {
+            VirtualFile root = sourceBuild.getArtifactManager().root();
+            return root.isDirectory() ? root : null;
+        }
+    }
+
+    /**
+     * @deprecated rather override {@link #getArtifacts}
+     */
+    @Deprecated
     protected FilePath getSourceDirectory(Run<?,?> src, PrintStream console) throws IOException, InterruptedException {
         FilePath srcDir = new FilePath(src.getArtifactsDir());
         if (srcDir.exists()) {

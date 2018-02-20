@@ -31,7 +31,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * masks the cost of digest computation.
  *
  * @author Kohsuke Kawaguchi
+ * @deprecated No longer used.
  */
+@Deprecated
 @Extension(ordinal=-100)
 public class FingerprintingCopyMethod extends Copier {
 
