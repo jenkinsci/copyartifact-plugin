@@ -94,6 +94,7 @@ import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
 import hudson.Util;
 import hudson.remoting.Callable;
+import hudson.tasks.Fingerprinter;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
@@ -312,6 +313,8 @@ public class CopyArtifactTest {
         // testing no fingerprints
         String d = b.getWorkspace().child("foo.txt").digest();
         assertNull(Hudson.getInstance().getFingerprintMap().get(d));
+        assertNull(s.getAction(Fingerprinter.FingerprintAction.class));
+        assertNull(b.getAction(Fingerprinter.FingerprintAction.class));
     }
 
     @Test

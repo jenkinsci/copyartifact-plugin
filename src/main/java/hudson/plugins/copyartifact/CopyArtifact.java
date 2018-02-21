@@ -561,12 +561,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                     f.addFor(src);
                     f.addFor(dst);
                 }
-                for (Run<?, ?> r : new Run<?, ?>[] {src, dst}) {
-                    Fingerprinter.FingerprintAction fa = r.getAction(Fingerprinter.FingerprintAction.class);
-                    if (fa != null) {
-                        fa.add(fingerprintsShallow);
-                    } else {
-                        r.addAction(new Fingerprinter.FingerprintAction(r, fingerprintsShallow));
+                if (!fingerprintsShallow.isEmpty()) {
+                    for (Run<?, ?> r : new Run<?, ?>[] {src, dst}) {
+                        Fingerprinter.FingerprintAction fa = r.getAction(Fingerprinter.FingerprintAction.class);
+                        if (fa != null) {
+                            fa.add(fingerprintsShallow);
+                        } else {
+                            r.addAction(new Fingerprinter.FingerprintAction(r, fingerprintsShallow));
+                        }
                     }
                 }
             }
