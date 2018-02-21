@@ -543,7 +543,6 @@ public class CopyArtifactTest {
         assertFile(false, "c.log", b);
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
@@ -574,7 +573,6 @@ public class CopyArtifactTest {
         assertFile(false, "foo.txt", b);
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {

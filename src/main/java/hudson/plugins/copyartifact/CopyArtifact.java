@@ -59,7 +59,7 @@ import java.io.PrintStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -90,8 +90,6 @@ import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
 import org.apache.tools.ant.DirectoryScanner;
 import org.apache.tools.ant.types.selectors.SelectorUtils;
-import org.apache.tools.ant.types.selectors.TokenizedPath;
-import org.apache.tools.ant.types.selectors.TokenizedPattern;
 
 /**
  * Build step to copy artifacts from another project.
@@ -544,7 +542,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
         try {
             targetDir.mkdirs();  // Create target if needed
-            List<String> list = scan(srcDir, expandedFilter, expandedExcludes);
+            Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
             for (String file : list) {
                 copyOne(src, dst, fingerprints, srcDir.child(file), new FilePath(targetDir, isFlatten() ? file.replaceFirst(".+/", "") : file), md5);
             }
@@ -567,27 +565,6 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 }
             }
         }
-    }
-
-    private static List<String> scan(VirtualFile root, String expandedFilter, @CheckForNull String expandedExcludes) throws IOException {
-        List<String> r = new ArrayList<>();
-        // TODO need VirtualFile.list(String, String, boolean) like FilePath offers
-        List<TokenizedPattern> patts = new ArrayList<>();
-        if (expandedExcludes != null) {
-            for (String patt : expandedExcludes.split(",")) {
-                patts.add(new TokenizedPattern(normalizePattern(patt)));
-            }
-        }
-        FILE: for (String child : root.list(expandedFilter)) {
-            child = child.replace('\\', '/'); // TODO list(String) ought to specify `/` as the separator
-            for (TokenizedPattern patt : patts) {
-                if (patt.matchPath(new TokenizedPath(child), true)) {
-                    continue FILE;
-                }
-            }
-            r.add(child);
-        }
-        return r;
     }
 
     /** Similar to a method in {@link DirectoryScanner}. */

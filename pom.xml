@@ -24,8 +24,8 @@
     </licenses>
 
     <properties>
-        <jenkins-core.version>2.109-20180221.170307-1</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
-        <jenkins-war.version>2.109-20180221.170329-1</jenkins-war.version>
+        <jenkins-core.version>2.109-20180221.200457-2</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
+        <jenkins-war.version>2.109-20180221.200518-2</jenkins-war.version>
       <java.level>8</java.level>
     </properties>
 
