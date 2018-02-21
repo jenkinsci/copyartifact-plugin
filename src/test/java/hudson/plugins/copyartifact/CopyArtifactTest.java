@@ -93,6 +93,8 @@ import org.jvnet.hudson.test.recipes.WithPlugin;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
+import jenkins.model.ArtifactManagerConfiguration;
+import org.jenkinsci.plugins.compress_artifacts.CompressingArtifactManagerFactory;
 
 import org.jvnet.hudson.test.TestBuilder;
 
@@ -2119,4 +2121,18 @@ public class CopyArtifactTest {
             );
         }
     }
+
+    @Issue("JENKINS-22637")
+    @Test
+    public void compressArtifacts() throws Exception {
+        ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(new CompressingArtifactManagerFactory());
+        FreeStyleProject other = createArtifactProject();
+        rule.buildAndAssertSuccess(other);
+        FreeStyleProject p = createProject(other.getName(), null, "", "", false, false, false, false);
+        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
+        assertFile(true, "foo.txt", b);
+        assertFile(true, "subdir/subfoo.txt", b);
+        assertFile(true, "deepfoo/a/b/c.log", b);
+    }
+
 }
