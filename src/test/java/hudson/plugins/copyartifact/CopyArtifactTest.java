@@ -557,7 +557,6 @@ public class CopyArtifactTest {
         assertFile(true, ".hg/defaultexclude.txt", b);
     }
 
-    @Ignore("TODO not yet fully (re-)implemented")
     @Issue("JENKINS-18662")
     @Test
     public void testExcludes() throws Exception {
@@ -589,7 +588,6 @@ public class CopyArtifactTest {
         assertFile(true, "defaultexclude.txt", b);
     }
 
-    @Ignore("TODO not yet fully (re-)implemented")
     @Issue("JENKINS-18662")
     @Test
     public void testExcludesWithFlatten() throws Exception {

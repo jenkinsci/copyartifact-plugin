@@ -88,6 +88,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
+import org.apache.tools.ant.DirectoryScanner;
+import org.apache.tools.ant.types.selectors.SelectorUtils;
 import org.apache.tools.ant.types.selectors.TokenizedPath;
 import org.apache.tools.ant.types.selectors.TokenizedPattern;
 
@@ -567,27 +569,37 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
-    private List<String> scan(VirtualFile root, String expandedFilter, @CheckForNull String expandedExcludes) throws IOException {
+    private static List<String> scan(VirtualFile root, String expandedFilter, @CheckForNull String expandedExcludes) throws IOException {
         List<String> r = new ArrayList<>();
         // TODO need VirtualFile.list(String, String, boolean) like FilePath offers
         List<TokenizedPattern> patts = new ArrayList<>();
         if (expandedExcludes != null) {
             for (String patt : expandedExcludes.split(",")) {
-                patts.add(new TokenizedPattern(patt));
+                patts.add(new TokenizedPattern(normalizePattern(patt)));
             }
         }
-        for (String child : root.list(expandedFilter)) {
+        FILE: for (String child : root.list(expandedFilter)) {
+            child = child.replace('\\', '/'); // TODO list(String) ought to specify `/` as the separator
             for (TokenizedPattern patt : patts) {
-                if (patt.matchPath(new TokenizedPath(child), true)) { // TODO does not seem to handle some ** cases
-                    continue;
+                if (patt.matchPath(new TokenizedPath(child), true)) {
+                    continue FILE;
                 }
             }
-            r.add(child.replace('\\', '/')); // TODO list(String) ought to specify `/` as the separator
+            r.add(child);
         }
         return r;
     }
 
-    private void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5) throws IOException, InterruptedException {
+    /** Similar to a method in {@link DirectoryScanner}. */
+    private static String normalizePattern(String p) {
+        String pattern = p.replace('\\', '/'); // we only deal with forward slashes here
+        if (pattern.endsWith("/")) {
+            pattern += SelectorUtils.DEEP_TREE_MATCH;
+        }
+        return pattern;
+    }
+
+    private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5) throws IOException, InterruptedException {
         assert (fingerprints == null) == (md5 == null);
         // TODO JENKINS-26810 handle symlinks and file attributes if supported
         try {
