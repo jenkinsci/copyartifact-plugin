@@ -100,7 +100,6 @@ import org.jvnet.hudson.test.TestBuilder;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
-import org.junit.Ignore;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -1807,7 +1806,6 @@ public class CopyArtifactTest {
         }
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-20546")
     @Test
     public void testSymlinks() throws Exception {
@@ -1831,7 +1829,6 @@ public class CopyArtifactTest {
         assertEquals("nonexistent", ws.child("link2").readLink());
     }
     
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-32832")
     @Test
     public void testSymlinksInDirectory() throws Exception {

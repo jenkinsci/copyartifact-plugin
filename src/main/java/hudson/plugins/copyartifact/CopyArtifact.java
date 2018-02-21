@@ -444,13 +444,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (jenkins.getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
         // use classes in the "maven-plugin" plugin as might not be installed
             // Copy artifacts from the build (ArchiveArtifacts build step)
-            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, console);
+            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, listener);
             // Copy artifacts from all modules of this Maven build (automatic archiving)
             for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
                 // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
                 // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
                 Run<?,?> r = it.next();
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, console);
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, listener);
             }
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
@@ -461,13 +461,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             // Use MatrixBuild.getExactRuns if available
             for (Run r : ((MatrixBuild) src).getExactRuns())
                 // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()), console);
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()), listener);
 
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
             }
         } else {
-            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, console)) {
+            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, listener)) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
             }
         }
@@ -521,7 +521,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
 
-    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, @CheckForNull String expandedExcludes, FilePath targetDir, PrintStream console) throws IOException, InterruptedException {
+    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, @CheckForNull String expandedExcludes, FilePath targetDir, TaskListener listener) throws IOException, InterruptedException {
+        PrintStream console = listener.getLogger();
         VirtualFile srcDir = selector.getArtifacts(src, console);
         if (srcDir == null) {
             return isOptional();  // Fail build unless copy is optional
@@ -544,7 +545,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             targetDir.mkdirs();  // Create target if needed
             Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
             for (String file : list) {
-                copyOne(src, dst, fingerprints, srcDir.child(file), new FilePath(targetDir, isFlatten() ? file.replaceFirst(".+/", "") : file), md5);
+                copyOne(src, dst, fingerprints, srcDir.child(file), new FilePath(targetDir, isFlatten() ? file.replaceFirst(".+/", "") : file), md5, listener);
             }
             int cnt = list.size();
             console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
@@ -576,9 +577,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         return pattern;
     }
 
-    private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5) throws IOException, InterruptedException {
+    private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5, TaskListener listener) throws IOException, InterruptedException {
         assert (fingerprints == null) == (md5 == null);
-        // TODO JENKINS-26810 handle symlinks
+        String link = s.readLink();
+        if (link != null) {
+            d.getParent().mkdirs();
+            d.symlinkTo(link, listener);
+            return;
+        }
         try {
             try (InputStream is = s.open(); OutputStream os = d.write()) {
                 OutputStream os2;
