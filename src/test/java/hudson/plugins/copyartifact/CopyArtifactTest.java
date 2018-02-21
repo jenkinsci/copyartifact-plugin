@@ -2168,7 +2168,7 @@ public class CopyArtifactTest {
         }
         @Override
         public VirtualFile root() {
-            return new RemotableVF(VirtualFile.forFile(dir), false);
+            return new RemotableVF(VirtualFile.forFile(dir), 0);
         }
         @Override
         public void onLoad(Run<?, ?> build) {
@@ -2181,18 +2181,23 @@ public class CopyArtifactTest {
     }
     private static final class RemotableVF extends VirtualFile {
         private final VirtualFile delegate;
-        private final boolean remoted;
-        RemotableVF(VirtualFile delegate, boolean remoted) {
+        /** 0 for initial object; 1 for return value of {@link #asRemotable}; 2 for copy actually serialized to agent. */
+        private final int remoted;
+        RemotableVF(VirtualFile delegate, int remoted) {
             this.delegate = delegate;
             this.remoted = remoted;
         }
         @Override
         public VirtualFile asRemotable() {
-            assertFalse(remoted);
-            return new RemotableVF(delegate, true);
+            assertEquals(0, remoted);
+            return new RemotableVF(delegate, 1);
+        }
+        private Object writeReplace() {
+            assertEquals(1, remoted);
+            return new RemotableVF(delegate, 2);
         }
         private void remoteOnly() {
-            assertTrue(remoted);
+            assertEquals(2, remoted);
         }
         @Override
         public String getName() {
