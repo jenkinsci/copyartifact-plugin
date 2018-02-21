@@ -601,7 +601,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5) throws IOException, InterruptedException {
         assert (fingerprints == null) == (md5 == null);
-        // TODO JENKINS-26810 handle symlinks and file attributes if supported
+        // TODO JENKINS-26810 handle symlinks
         try {
             try (InputStream is = s.open(); OutputStream os = d.write()) {
                 OutputStream os2;
@@ -618,6 +618,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 d.touch(s.lastModified());
             } catch (IOException x) {
                 LOGGER.warning(x.getMessage());
+            }
+            int mode = s.mode();
+            if (mode != -1) {
+                d.chmod(mode);
             }
             if (fingerprints != null) {
                 String digest = Util.toHexString(md5.digest());

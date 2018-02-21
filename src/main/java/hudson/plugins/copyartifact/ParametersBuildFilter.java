@@ -102,7 +102,7 @@ public class ParametersBuildFilter extends BuildFilter {
             }
         }
         for (StringParameterValue spv : filters) {
-            if (!spv.value.equals(otherEnv.get(spv.getName()))) {
+            if (!spv.getValue().equals(otherEnv.get(spv.getName()))) {
                 return false;
             }
         }

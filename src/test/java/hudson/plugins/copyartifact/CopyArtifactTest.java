@@ -65,7 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
@@ -94,11 +93,13 @@ import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
 import jenkins.model.ArtifactManagerConfiguration;
+import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.compress_artifacts.CompressingArtifactManagerFactory;
 
 import org.jvnet.hudson.test.TestBuilder;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.*;
 import org.junit.Ignore;
 
 /**
@@ -1671,20 +1672,9 @@ public class CopyArtifactTest {
         }
     }
     
-    private boolean isFilePermissionSupported() throws Exception {
-        return rule.jenkins.getRootPath().mode() != -1;
-    }
-    
-    @Ignore("TODO not yet (re-)implemented")
     @Test
     public void testFilePermission() throws Exception {
-        if (!isFilePermissionSupported()) {
-            Logger.getLogger(CopyArtifactTest.class.getName()).warning(String.format(
-                    "Skipped %s as file permission is not supported on this platform",
-                    name.getMethodName()
-            ));
-            return;
-        }
+        assumeThat(rule.jenkins.getRootPath().mode(), not(-1));
         
         FreeStyleProject copiee = rule.createFreeStyleProject();
         FreeStyleBuild copieeBuild = copiee.scheduleBuild2(0).get();

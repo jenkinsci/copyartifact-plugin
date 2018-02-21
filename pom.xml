@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.37</version>
+        <version>3.4</version>
         <relativePath />
     </parent>
 
@@ -24,9 +24,9 @@
     </licenses>
 
     <properties>
-      <!-- To support (and test) @Symbol annotations (requires workflow-cps >= 2.10) -->
-      <jenkins.version>1.642.3</jenkins.version>
-      <java.level>7</java.level>
+        <jenkins-core.version>2.109-20180221.170307-1</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
+        <jenkins-war.version>2.109-20180221.170329-1</jenkins-war.version>
+      <java.level>8</java.level>
     </properties>
 
     <dependencies>
@@ -35,7 +35,7 @@
         <artifactId>maven-plugin</artifactId>
         <version>2.7.1</version>
         <optional>true</optional>
-        <exclusions>
+        <exclusions> <!-- TODO use 3.0 -->
           <!-- See https://issues.jenkins-ci.org/browse/JENKINS-25625 -->
           <exclusion>
             <groupId>org.jenkins-ci</groupId>
@@ -56,6 +56,10 @@
           <exclusion>
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
