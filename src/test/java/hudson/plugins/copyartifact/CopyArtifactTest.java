@@ -92,7 +92,17 @@ import org.jvnet.hudson.test.recipes.WithPlugin;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
+import hudson.Util;
+import hudson.remoting.Callable;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import jenkins.model.ArtifactManager;
 import jenkins.model.ArtifactManagerConfiguration;
+import jenkins.model.ArtifactManagerFactory;
+import jenkins.model.ArtifactManagerFactoryDescriptor;
+import jenkins.util.VirtualFile;
 import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.compress_artifacts.CompressingArtifactManagerFactory;
 
@@ -100,6 +110,7 @@ import org.jvnet.hudson.test.TestBuilder;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
+import org.jvnet.hudson.test.TestExtension;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -2116,6 +2127,141 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
+    }
+
+    @Issue("JENKINS-49635")
+    @Test
+    public void directDownload() throws Exception {
+        ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(new DirectArtifactManagerFactory());
+        FreeStyleProject other = createArtifactProject();
+        FreeStyleBuild s = rule.buildAndAssertSuccess(other);
+        FreeStyleProject p = createProject(other.getName(), null, "", "", false, false, false, true);
+        p.setAssignedNode(rule.createSlave());
+        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
+        for (String file : new String[] {"foo.txt", "subdir/subfoo.txt", "deepfoo/a/b/c.log"}) {
+            assertFile(true, file, b);
+            String digest = b.getWorkspace().child(file).digest();
+            Fingerprint f = Jenkins.get().getFingerprintMap().get(digest);
+            assertSame(f.getOriginal().getRun(), s);
+            assertTrue(f.getRangeSet(p).includes(b.getNumber()));
+        }
+    }
+    public static final class DirectArtifactManagerFactory extends ArtifactManagerFactory {
+        @Override
+        public ArtifactManager managerFor(Run<?, ?> build) {
+            return new DirectArtifactManager(build);
+        }
+        @TestExtension("directDownload")
+        public static final class DescriptorImpl extends ArtifactManagerFactoryDescriptor {}
+    }
+    private static final class DirectArtifactManager extends ArtifactManager {
+        private File dir;
+        DirectArtifactManager(Run<?, ?> build) {
+            onLoad(build);
+        }
+        @Override
+        public void archive(FilePath workspace, Launcher launcher, BuildListener listener, Map<String, String> artifacts) throws IOException, InterruptedException {
+            workspace.copyRecursiveTo(new FilePath.ExplicitlySpecifiedDirScanner(artifacts), new FilePath(dir), "copying");
+        }
+        @Override
+        public VirtualFile root() {
+            return new RemotableVF(VirtualFile.forFile(dir), false);
+        }
+        @Override
+        public void onLoad(Run<?, ?> build) {
+            dir = new File(Jenkins.get().getRootDir(), Util.getDigestOf(build.getExternalizableId()));
+        }
+        @Override
+        public boolean delete() throws IOException, InterruptedException {
+            return false;
+        }
+    }
+    private static final class RemotableVF extends VirtualFile {
+        private final VirtualFile delegate;
+        private final boolean remoted;
+        RemotableVF(VirtualFile delegate, boolean remoted) {
+            this.delegate = delegate;
+            this.remoted = remoted;
+        }
+        @Override
+        public VirtualFile asRemotable() {
+            assertFalse(remoted);
+            return new RemotableVF(delegate, true);
+        }
+        private void remoteOnly() {
+            assertTrue(remoted);
+        }
+        @Override
+        public String getName() {
+            return delegate.getName();
+        }
+        @Override
+        public URI toURI() {
+            return delegate.toURI();
+        }
+        @Override
+        public VirtualFile getParent() {
+            return new RemotableVF(delegate.getParent(), remoted);
+        }
+        @Override
+        public boolean isDirectory() throws IOException {
+            return delegate.isDirectory();
+        }
+        @Override
+        public boolean isFile() throws IOException {
+            return delegate.isFile();
+        }
+        @Override
+        public String readLink() throws IOException {
+            return delegate.readLink();
+        }
+        @Override
+        public boolean exists() throws IOException {
+            return delegate.exists();
+        }
+        @Override
+        public VirtualFile[] list() throws IOException {
+            remoteOnly();
+            return Arrays.stream(delegate.list()).map(f -> new RemotableVF(f, remoted)).toArray(VirtualFile[]::new);
+        }
+        @Override
+        public Collection<String> list(String includes, String excludes, boolean useDefaultExcludes) throws IOException {
+            remoteOnly();
+            return delegate.list(includes, excludes, useDefaultExcludes);
+        }
+        @Override
+        public VirtualFile child(String string) {
+            return new RemotableVF(delegate.child(string), remoted);
+        }
+        @Override
+        public long length() throws IOException {
+            remoteOnly();
+            return delegate.length();
+        }
+        @Override
+        public long lastModified() throws IOException {
+            remoteOnly();
+            return delegate.lastModified();
+        }
+        @Override
+        public int mode() throws IOException {
+            remoteOnly();
+            return delegate.mode();
+        }
+        @Override
+        public boolean canRead() throws IOException {
+            remoteOnly();
+            return delegate.canRead();
+        }
+        @Override
+        public InputStream open() throws IOException {
+            remoteOnly();
+            return delegate.open();
+        }
+        @Override
+        public <V> V run(Callable<V, IOException> clbl) throws IOException {
+            return delegate.run(clbl);
+        }
     }
 
 }

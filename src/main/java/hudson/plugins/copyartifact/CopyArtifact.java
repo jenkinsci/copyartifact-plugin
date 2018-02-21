@@ -42,6 +42,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import hudson.remoting.VirtualChannel;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
@@ -51,6 +52,7 @@ import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.VariableResolver;
 import hudson.util.XStream2;
+import java.io.File;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -86,10 +88,9 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
-import org.apache.tools.ant.DirectoryScanner;
-import org.apache.tools.ant.types.selectors.SelectorUtils;
 
 /**
  * Build step to copy artifacts from another project.
@@ -527,63 +528,98 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (srcDir == null) {
             return isOptional();  // Fail build unless copy is optional
         }
-
-        Map<String, String> fingerprints;
-        MessageDigest md5;
-        if (isFingerprintArtifacts()) {
-            fingerprints = new HashMap<>();
-            try {
-                md5 = MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException x) {
-                throw new AssertionError(x);
-            }
-        } else {
-            fingerprints = null;
-            md5 = null;
-        }
+        Map<String, String> fingerprints = null; // entry → MD5
         try {
-            targetDir.mkdirs();  // Create target if needed
-            Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
-            for (String file : list) {
-                copyOne(src, dst, fingerprints, srcDir.child(file), new FilePath(targetDir, isFlatten() ? file.replaceFirst(".+/", "") : file), md5, listener);
+            if (targetDir.isRemote()) {
+                VirtualFile srcDirRemote = srcDir.asRemotable();
+                if (srcDirRemote != null) {
+                    // Perform listing and copying on the agent side so we do not need to stream data from the master.
+                    fingerprints = targetDir.act(new Copy(targetDir, srcDirRemote, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()));
+                } else {
+                    fingerprints = new Copy(targetDir, srcDir, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()).invoke(null, null);
+                }
+            } else {
+                fingerprints = new Copy(targetDir, srcDir, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()).invoke(null, null);
             }
-            int cnt = list.size();
+            int cnt = fingerprints.size();
             console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
                     HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
             // Fail build if 0 files copied unless copy is optional
             return cnt > 0 || isOptional();
         } finally {
             if (fingerprints != null) {
+                Map<String, String> fingerprintsShallow = new HashMap<>();
+                FingerprintMap map = Jenkins.get().getFingerprintMap();
+                for (Map.Entry<String, String> entry : fingerprints.entrySet()) {
+                    String name = entry.getKey().replaceFirst(".+/", "");
+                    String digest = entry.getValue();
+                    if (digest == null) {
+                        continue;
+                    }
+                    fingerprintsShallow.put(name, digest);
+                    Fingerprint f = map.getOrCreate(src, name, digest);
+                    f.addFor(src);
+                    f.addFor(dst);
+                }
                 for (Run<?, ?> r : new Run<?, ?>[] {src, dst}) {
-                    if (fingerprints.size() > 0) {
-                        Fingerprinter.FingerprintAction fa = r.getAction(Fingerprinter.FingerprintAction.class);
-                        if (fa != null) {
-                            fa.add(fingerprints);
-                        } else {
-                            r.addAction(new Fingerprinter.FingerprintAction(r, fingerprints));
-                        }
+                    Fingerprinter.FingerprintAction fa = r.getAction(Fingerprinter.FingerprintAction.class);
+                    if (fa != null) {
+                        fa.add(fingerprintsShallow);
+                    } else {
+                        r.addAction(new Fingerprinter.FingerprintAction(r, fingerprintsShallow));
                     }
                 }
             }
         }
     }
 
-    /** Similar to a method in {@link DirectoryScanner}. */
-    private static String normalizePattern(String p) {
-        String pattern = p.replace('\\', '/'); // we only deal with forward slashes here
-        if (pattern.endsWith("/")) {
-            pattern += SelectorUtils.DEEP_TREE_MATCH;
+    private static final class Copy extends MasterToSlaveFileCallable<Map<String, String>> {
+        private static final long serialVersionUID = 1;
+        private final FilePath targetDir;
+        private final VirtualFile srcDir;
+        private final String expandedFilter;
+        private final String expandedExcludes;
+        private final boolean fingerprint;
+        private final TaskListener listener;
+        private final boolean flatten;
+        Copy(FilePath targetDir, VirtualFile srcDir, String expandedFilter, String expandedExcludes, boolean fingerprint, TaskListener listener, boolean flatten) {
+            this.targetDir = targetDir;
+            this.srcDir = srcDir;
+            this.expandedFilter = expandedFilter;
+            this.expandedExcludes = expandedExcludes;
+            this.fingerprint = fingerprint;
+            this.listener = listener;
+            this.flatten = flatten;
         }
-        return pattern;
+        @Override
+        public Map<String, String> invoke(File _file, VirtualChannel _vc) throws IOException, InterruptedException {
+            targetDir.mkdirs();  // Create target if needed
+            Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
+            Map<String, String> fingerprints = new HashMap<>();
+            MessageDigest md5;
+            if (fingerprint) {
+                try {
+                    md5 = MessageDigest.getInstance("MD5");
+                } catch (NoSuchAlgorithmException x) {
+                    throw new AssertionError(x);
+                }
+            } else {
+                md5 = null;
+            }
+            for (String entry : list) {
+                String digest = copyOne(srcDir.child(entry), new FilePath(targetDir, flatten ? entry.replaceFirst(".+/", "") : entry), md5, listener);
+                fingerprints.put(entry, digest);
+            }
+            return fingerprints;
+        }
     }
 
-    private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5, TaskListener listener) throws IOException, InterruptedException {
-        assert (fingerprints == null) == (md5 == null);
+    private static String copyOne(VirtualFile s, FilePath d, @CheckForNull MessageDigest md5, TaskListener listener) throws IOException, InterruptedException {
         String link = s.readLink();
         if (link != null) {
             d.getParent().mkdirs();
             d.symlinkTo(link, listener);
-            return;
+            return null;
         }
         try {
             try (InputStream is = s.open(); OutputStream os = d.write()) {
@@ -606,14 +642,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (mode != -1) {
                 d.chmod(mode);
             }
-            if (fingerprints != null) {
-                String digest = Util.toHexString(md5.digest());
-                FingerprintMap map = Jenkins.getActiveInstance().getFingerprintMap();
-                Fingerprint f = map.getOrCreate(src, s.getName(), digest);
-                f.addFor(src);
-                f.addFor(dst);
-                fingerprints.put(s.getName(), digest);
-            }
+            return md5 != null ? Util.toHexString(md5.digest()) : null;
         } catch (IOException e) {
             throw new IOException("Failed to copy " + s + " to " + d, e);
         }
