@@ -260,7 +260,7 @@ public class CopyArtifactWorkflowTest {
     public void testSpecificBuildSelector() throws Exception {
         WorkflowJob copier = jenkinsRule.createWorkflow(
             "copier",
-            "copyArtifacts(projectName: 'copiee', selector: specific(\"${build('copiee').number}\"));"
+            "copyArtifacts(projectName: 'copiee', selector: specific(build('copiee').id));"
             + "echo readFile('artifact.txt');"
         );
         jenkinsRule.createWorkflow(

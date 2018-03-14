@@ -193,6 +193,19 @@
       <tag>HEAD</tag>
   </scm>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <configuration>
+          <!-- JENKINS-47074: Build ID precedes display names. -->
+          <compatibleSinceVersion>1.40</compatibleSinceVersion>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>

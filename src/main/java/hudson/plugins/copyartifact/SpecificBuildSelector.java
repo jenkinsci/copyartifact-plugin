@@ -33,6 +33,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
+
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -63,28 +65,7 @@ public class SpecificBuildSelector extends BuildSelector {
             return null;
         }
 
-        Run<?,?> run = null;
-
-        if(num.matches("[0-9]*")) {
-            //If its a number, retrieve the build.
-            run = job.getBuildByNumber(Integer.parseInt(num));
-        } else {
-            //Otherwise, check if the buildNumber value is a permalink or a display name.
-            PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
-            if (p == null) {
-                //Not a permalink so check if the buildNumber value is a display name.
-                for(Run<?,?> build: job.getBuilds()){
-                    if(num.equals(build.getDisplayName())) {
-                        //First named build found is the right one, going from latest build to oldest.
-                        run = build;
-                        break;
-                    }
-                }
-            } else {
-                //Retrieve the permalink
-                run = p.resolve(job);
-            }
-        }
+        Run<?,?> run = getSpecifiedBuild(job, num);
 
         if (run == null) {
             LOGGER.log(Level.FINE, "no such build {0} in {1}", new Object[] {num, job.getFullName()});
@@ -95,6 +76,51 @@ public class SpecificBuildSelector extends BuildSelector {
             return null;
         }
         return run;
+    }
+
+    /**
+     * Retrieve a build with the specified identifier.
+     *
+     * Looks up followings:
+     * 
+     * <ol>
+     *   <li>Build ID</li>
+     *   <li>Build Number (if ID is a number)</li>
+     *   <li>Permalink</li>
+     *   <li>Display name</li>
+     *
+     * @param job job to search
+     * @param num identifier
+     * @return a build with the specified identifier. null if not match.
+     */
+    private Run<?, ?> getSpecifiedBuild(Job<?,?> job, String num) {
+        if (StringUtils.isBlank(num)) {
+            return null;
+        }
+
+        Run<?,?> run = job.getBuild(num);
+
+        if (run != null) {
+            return run;
+        }
+
+        if(num.matches("[0-9]+")) {
+            return job.getBuildByNumber(Integer.parseInt(num));
+        }
+
+        PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
+        if (p != null) {
+            return p.resolve(job);
+        }
+
+        for (Run<?,?> build: job.getBuilds()) {
+            if (num.equals(build.getDisplayName())) {
+                //First named build found is the right one, going from latest build to oldest.
+                return build;
+            }
+        }
+
+        return null;
     }
 
     /**
