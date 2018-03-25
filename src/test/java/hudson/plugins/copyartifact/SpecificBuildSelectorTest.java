@@ -1,6 +1,7 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,4 +60,18 @@ public class SpecificBuildSelectorTest {
         assertEquals(p.getLastUnsuccessfulBuild(), s.getBuild(p, new EnvVars("NUM", "lastUnsuccessfulBuild"), f, null));
     }
 
+    @Issue("JENKINS-47074")
+    @Test
+    public void testBuildId() throws Exception {
+        FreeStyleProject p = rule.createFreeStyleProject();
+        FreeStyleBuild b1 = rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FreeStyleBuild b2 = rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+
+        // Build ID precedes to display names.
+        b1.setDisplayName(b2.getId());
+        b2.setDisplayName(b1.getId());
+
+        assertEquals(b1, new SpecificBuildSelector(b1.getId()).getBuild(p, new EnvVars(), new BuildFilter(), null));
+        assertEquals(b2, new SpecificBuildSelector(b2.getId()).getBuild(p, new EnvVars(), new BuildFilter(), null));
+    }
 }
