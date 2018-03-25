@@ -271,6 +271,23 @@ public class CopyArtifactWorkflowTest {
         jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
     }
 
+    @Issue("JENKINS-47074")
+    @Test
+    public void testSpecificBuildSelectorWithId() throws Exception {
+        // build number == build id since Jenkins 1.597 (JENKINS-24380).
+        WorkflowJob copier = jenkinsRule.createWorkflow(
+            "copier",
+            "copyArtifacts(projectName: 'copiee', selector: specific(build('copiee').id));"
+            + "echo readFile('artifact.txt');"
+        );
+        jenkinsRule.createWorkflow(
+            "copiee",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
+    }
+
     @Test
     public void testStatusBuildSelector() throws Exception {
         WorkflowJob copiee = jenkinsRule.createWorkflow(
