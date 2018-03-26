@@ -713,10 +713,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 Job<?,?> nearest = Items.findNearest(Job.class, value, anc.getParent());
                 if (nearest != null) {
                 result = FormValidation.error(
-                    hudson.tasks.Messages.BuildTrigger_NoSuchProject(
+                    Messages.BuildTrigger_NoSuchProject(
                         value, nearest.getName()));
                 } else {
-                    result = FormValidation.error(hudson.tasks.Messages.BuildTrigger_NoProjectSpecified());
+                    result = FormValidation.error(Messages.BuildTrigger_NoProjectSpecified());
                 }
             }
             return result;
