@@ -60,7 +60,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URL;
-import java.nio.file.Files;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -642,7 +641,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
         @Override
         public byte[] invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
-            Files.createDirectories(Util.fileToPath(f.getParentFile()));
+            hudson.util.IOUtils.mkdirs(f.getParentFile());
             MessageDigest md5 = md5();
             try (InputStream is = u.openStream(); OutputStream os = new FileOutputStream(f)) {
                 IOUtils.copy(is, new DigestOutputStream(os, md5));
