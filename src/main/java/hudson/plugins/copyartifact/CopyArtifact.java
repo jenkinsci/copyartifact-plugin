@@ -53,11 +53,14 @@ import hudson.util.FormValidation;
 import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 import java.io.File;
+import java.io.FileOutputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.URL;
+import java.nio.file.Files;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -530,17 +533,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
         Map<String, String> fingerprints = null; // entry → MD5
         try {
-            if (targetDir.isRemote()) {
-                VirtualFile srcDirRemote = srcDir.asRemotable();
-                if (srcDirRemote != null) {
-                    // Perform listing and copying on the agent side so we do not need to stream data from the master.
-                    fingerprints = targetDir.act(new Copy(targetDir, srcDirRemote, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()));
-                } else {
-                    fingerprints = new Copy(targetDir, srcDir, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()).invoke(null, null);
-                }
-            } else {
-                fingerprints = new Copy(targetDir, srcDir, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten()).invoke(null, null);
-            }
+            fingerprints = copy(targetDir, srcDir, expandedFilter, expandedExcludes, isFingerprintArtifacts(), listener, isFlatten());
             int cnt = fingerprints.size();
             console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
                     HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
@@ -575,48 +568,26 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
-    private static final class Copy extends MasterToSlaveFileCallable<Map<String, String>> {
-        private static final long serialVersionUID = 1;
-        private final FilePath targetDir;
-        private final VirtualFile srcDir;
-        private final String expandedFilter;
-        private final String expandedExcludes;
-        private final boolean fingerprint;
-        private final TaskListener listener;
-        private final boolean flatten;
-        Copy(FilePath targetDir, VirtualFile srcDir, String expandedFilter, String expandedExcludes, boolean fingerprint, TaskListener listener, boolean flatten) {
-            this.targetDir = targetDir;
-            this.srcDir = srcDir;
-            this.expandedFilter = expandedFilter;
-            this.expandedExcludes = expandedExcludes;
-            this.fingerprint = fingerprint;
-            this.listener = listener;
-            this.flatten = flatten;
+    private static Map<String, String> copy(FilePath targetDir, VirtualFile srcDir, String expandedFilter, String expandedExcludes, boolean fingerprint, TaskListener listener, boolean flatten) throws IOException, InterruptedException {
+        targetDir.mkdirs();  // Create target if needed
+        Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
+        Map<String, String> fingerprints = new HashMap<>();
+        for (String entry : list) {
+            String digest = copyOne(srcDir.child(entry), new FilePath(targetDir, flatten ? entry.replaceFirst(".+/", "") : entry), fingerprint, listener);
+            fingerprints.put(entry, digest);
         }
-        @Override
-        public Map<String, String> invoke(File _file, VirtualChannel _vc) throws IOException, InterruptedException {
-            targetDir.mkdirs();  // Create target if needed
-            Collection<String> list = srcDir.list(expandedFilter.replace('\\', '/'), expandedExcludes != null ? expandedExcludes.replace('\\', '/') : null, false);
-            Map<String, String> fingerprints = new HashMap<>();
-            MessageDigest md5;
-            if (fingerprint) {
-                try {
-                    md5 = MessageDigest.getInstance("MD5");
-                } catch (NoSuchAlgorithmException x) {
-                    throw new AssertionError(x);
-                }
-            } else {
-                md5 = null;
-            }
-            for (String entry : list) {
-                String digest = copyOne(srcDir.child(entry), new FilePath(targetDir, flatten ? entry.replaceFirst(".+/", "") : entry), md5, listener);
-                fingerprints.put(entry, digest);
-            }
-            return fingerprints;
+        return fingerprints;
+    }
+
+    private static MessageDigest md5() {
+        try {
+            return MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException x) {
+            throw new AssertionError(x);
         }
     }
 
-    private static String copyOne(VirtualFile s, FilePath d, @CheckForNull MessageDigest md5, TaskListener listener) throws IOException, InterruptedException {
+    private static String copyOne(VirtualFile s, FilePath d, boolean fingerprint, TaskListener listener) throws IOException, InterruptedException {
         String link = s.readLink();
         if (link != null) {
             d.getParent().mkdirs();
@@ -624,15 +595,28 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return null;
         }
         try {
-            try (InputStream is = s.open(); OutputStream os = d.write()) {
-                OutputStream os2;
-                if (md5 != null) {
-                    md5.reset();
-                    os2 = new DigestOutputStream(os, md5);
+            URL u = s.toExternalURL();
+            byte[] digest;
+            if (u != null) {
+                if (fingerprint) {
+                    digest = d.act(new CopyURLWithFingerprinting(u));
                 } else {
-                    os2 = os;
+                    d.copyFromRemotely(u);
+                    digest = null;
                 }
-                IOUtils.copy(is, os2);
+            } else {
+                if (fingerprint) {
+                    MessageDigest md5 = md5();
+                    try (InputStream is = s.open(); OutputStream os = d.write()) {
+                        IOUtils.copy(is, new DigestOutputStream(os, md5));
+                    }
+                    digest = md5.digest();
+                } else {
+                    try (InputStream is = s.open()) {
+                        d.copyFrom(is);
+                    }
+                    digest = null;
+                }
             }
             // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
             try {
@@ -644,9 +628,26 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (mode != -1) {
                 d.chmod(mode);
             }
-            return md5 != null ? Util.toHexString(md5.digest()) : null;
+            return digest != null ? Util.toHexString(digest) : null;
         } catch (IOException e) {
             throw new IOException("Failed to copy " + s + " to " + d, e);
+        }
+    }
+
+    private static class CopyURLWithFingerprinting extends MasterToSlaveFileCallable<byte[]> {
+        private static final long serialVersionUID = 1;
+        private final URL u;
+        CopyURLWithFingerprinting(URL u) {
+            this.u = u;
+        }
+        @Override
+        public byte[] invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+            Files.createDirectories(Util.fileToPath(f.getParentFile()));
+            MessageDigest md5 = md5();
+            try (InputStream is = u.openStream(); OutputStream os = new FileOutputStream(f)) {
+                IOUtils.copy(is, new DigestOutputStream(os, md5));
+            }
+            return md5.digest();
         }
     }
 

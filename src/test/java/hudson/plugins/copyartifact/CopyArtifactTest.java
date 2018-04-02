@@ -2130,7 +2130,7 @@ public class CopyArtifactTest {
         FreeStyleBuild s = rule.buildAndAssertSuccess(other);
         FreeStyleProject p = createProject(other.getName(), null, "", "", false, false, false, true);
         p.setAssignedNode(rule.createSlave());
-        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
+        FreeStyleBuild b = DirectArtifactManagerFactory.whileBlockingOpen(() -> rule.buildAndAssertSuccess(p));
         for (String file : new String[] {"foo.txt", "subdir/subfoo.txt", "deepfoo/a/b/c.log"}) {
             assertFile(true, file, b);
             String digest = b.getWorkspace().child(file).digest();
