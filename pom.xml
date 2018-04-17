@@ -63,12 +63,16 @@
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>structs</artifactId>
-          <version>1.10</version>
+          <version>1.14</version>
       </dependency>
       <!-- Used for UI test -->
       <dependency>
