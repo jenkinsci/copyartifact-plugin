@@ -24,8 +24,7 @@
     </licenses>
 
     <properties>
-        <jenkins-core.version>2.118-20180416.205358-1</jenkins-core.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/3302 -->
-        <jenkins-war.version>2.118-20180416.205448-1</jenkins-war.version>
+        <jenkins.version>2.118</jenkins.version>
         <java.level>8</java.level>
         <workflow-api-plugin.version>2.28-20180416.205621-1</workflow-api-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/67 -->
         <useBeta>true</useBeta>
