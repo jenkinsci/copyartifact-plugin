@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.7</version>
+        <version>3.9</version>
         <relativePath />
     </parent>
 
@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
     <description>Adds a build step to copy artifacts from another project.</description>
-    <version>1.40-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <url>https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</url>
 
     <licenses>
@@ -24,9 +24,11 @@
     </licenses>
 
     <properties>
+        <revision>1.40</revision>
+        <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.118</jenkins.version>
         <java.level>8</java.level>
-        <workflow-api-plugin.version>2.28-20180416.205621-1</workflow-api-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/67 -->
+        <workflow-api-plugin.version>2.28-rc333.0675e9e9cb4c</workflow-api-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/67 -->
         <useBeta>true</useBeta>
     </properties>
 
@@ -215,7 +217,7 @@
       <connection>scm:git:git://github.com/jenkinsci/copyartifact-plugin.git</connection>
       <developerConnection>scm:git:git@github.com:jenkinsci/copyartifact-plugin.git</developerConnection>
       <url>https://github.com/jenkinsci/copyartifact-plugin</url>
-      <tag>HEAD</tag>
+      <tag>${scmTag}</tag>
   </scm>
 
   <repositories>
