@@ -36,7 +36,9 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
  * using the Jenkins FilePath class.  Has -100 ordinal value so any other
  * plugin implementing this extension point should override this one.
  * @author Alan Harder
+ * @deprecated No longer used.
  */
+@Deprecated
 @Extension(ordinal=-200)
 public class FilePathCopyMethod extends Copier {
     /** @see FilePath#copyRecursiveTo(String,FilePath) */

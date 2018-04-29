@@ -21,7 +21,9 @@ import java.util.logging.Logger;
  * @author Alan Harder
  * @author Kohsuke Kawaguchi
  * @see "JENKINS-7753"
+ * @deprecated No longer used.
  */
+@Deprecated
 public abstract class Copier implements ExtensionPoint {
 
     private static Logger LOG = Logger.getLogger(Copier.class.getName());

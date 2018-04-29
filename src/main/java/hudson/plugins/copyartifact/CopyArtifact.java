@@ -46,13 +46,20 @@ import hudson.security.ACL;
 import hudson.security.SecurityRealm;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
+import hudson.tasks.Fingerprinter;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.annotation.CheckForNull;
 
 import jenkins.model.Jenkins;
 
@@ -78,6 +86,12 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import jenkins.util.VirtualFile;
+import org.apache.commons.io.IOUtils;
+import org.apache.tools.ant.DirectoryScanner;
+import org.apache.tools.ant.types.selectors.SelectorUtils;
+import org.apache.tools.ant.types.selectors.TokenizedPath;
+import org.apache.tools.ant.types.selectors.TokenizedPattern;
 
 /**
  * Build step to copy artifacts from another project.
@@ -412,7 +426,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 throw new AbortException(message);
             }
         }
-        FilePath targetDir = workspace, baseTargetDir = targetDir;
+        FilePath targetDir = workspace;
         targetDir.mkdirs(); // being a SimpleBuildStep guarantees it will have a workspace, but the physical dir might not yet exist.
         // Add info about the selected build into the environment
         EnvAction envData = build.getAction(EnvAction.class);
@@ -429,18 +443,16 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             expandedExcludes = null;
         }
 
-        Copier copier = jenkins.getExtensionList(Copier.class).get(0).clone();
-
         if (jenkins.getPlugin("maven-plugin") != null && (src instanceof MavenModuleSetBuild) ) {
         // use classes in the "maven-plugin" plugin as might not be installed
             // Copy artifacts from the build (ArchiveArtifacts build step)
-            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+            boolean ok = perform(src, build, expandedFilter, expandedExcludes, targetDir, console);
             // Copy artifacts from all modules of this Maven build (automatic archiving)
             for (Iterator<MavenBuild> it = ((MavenModuleSetBuild)src).getModuleLastBuilds().values().iterator(); it.hasNext(); ) {
                 // for(Run r: ....values()) causes upcasting and loading MavenBuild compiled with jdk 1.6.
                 // SEE https://wiki.jenkins-ci.org/display/JENKINS/Tips+for+optional+dependencies for details.
                 Run<?,?> r = it.next();
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console);
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir, console);
             }
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
@@ -451,14 +463,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             // Use MatrixBuild.getExactRuns if available
             for (Run r : ((MatrixBuild) src).getExactRuns())
                 // Use subdir of targetDir with configuration name (like "jdk=java6u20")
-                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()),
-                              baseTargetDir, copier, console);
+                ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()), console);
 
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
             }
         } else {
-            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, baseTargetDir, copier, console)) {
+            if (!perform(src, build, expandedFilter, expandedExcludes, targetDir, console)) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
             }
         }
@@ -512,33 +523,112 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
 
-    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, String expandedExcludes, FilePath targetDir,
-            FilePath baseTargetDir, Copier copier, PrintStream console)
-            throws IOException, InterruptedException {
-        FilePath srcDir = selector.getSourceDirectory(src, console);
+    private boolean perform(Run src, Run<?,?> dst, String expandedFilter, @CheckForNull String expandedExcludes, FilePath targetDir, PrintStream console) throws IOException, InterruptedException {
+        VirtualFile srcDir = selector.getArtifacts(src, console);
         if (srcDir == null) {
             return isOptional();  // Fail build unless copy is optional
         }
 
-        copier.initialize(src, dst, srcDir, baseTargetDir);
-        try {
-            int cnt;
-            if (!isFlatten())
-                cnt = copier.copyAll(srcDir, expandedFilter, expandedExcludes, targetDir, isFingerprintArtifacts());
-            else {
-                targetDir.mkdirs();  // Create target if needed
-                FilePath[] list = srcDir.list(expandedFilter, expandedExcludes, false);
-                for (FilePath file : list)
-                    copier.copyOne(file, new FilePath(targetDir, file.getName()), isFingerprintArtifacts());
-                cnt = list.length;
+        Map<String, String> fingerprints;
+        MessageDigest md5;
+        if (isFingerprintArtifacts()) {
+            fingerprints = new HashMap<>();
+            try {
+                md5 = MessageDigest.getInstance("MD5");
+            } catch (NoSuchAlgorithmException x) {
+                throw new AssertionError(x);
             }
-
+        } else {
+            fingerprints = null;
+            md5 = null;
+        }
+        try {
+            targetDir.mkdirs();  // Create target if needed
+            List<String> list = scan(srcDir, expandedFilter, expandedExcludes);
+            for (String file : list) {
+                copyOne(src, dst, fingerprints, srcDir.child(file), new FilePath(targetDir, isFlatten() ? file.replaceFirst(".+/", "") : file), md5);
+            }
+            int cnt = list.size();
             console.println(Messages.CopyArtifact_Copied(cnt, HyperlinkNote.encodeTo('/'+ src.getParent().getUrl(), src.getParent().getFullDisplayName()),
                     HyperlinkNote.encodeTo('/'+src.getUrl(), Integer.toString(src.getNumber()))));
             // Fail build if 0 files copied unless copy is optional
             return cnt > 0 || isOptional();
         } finally {
-            copier.end();
+            if (fingerprints != null) {
+                for (Run<?, ?> r : new Run<?, ?>[] {src, dst}) {
+                    if (fingerprints.size() > 0) {
+                        Fingerprinter.FingerprintAction fa = r.getAction(Fingerprinter.FingerprintAction.class);
+                        if (fa != null) {
+                            fa.add(fingerprints);
+                        } else {
+                            r.addAction(new Fingerprinter.FingerprintAction(r, fingerprints));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static List<String> scan(VirtualFile root, String expandedFilter, @CheckForNull String expandedExcludes) throws IOException {
+        List<String> r = new ArrayList<>();
+        // TODO need VirtualFile.list(String, String, boolean) like FilePath offers
+        List<TokenizedPattern> patts = new ArrayList<>();
+        if (expandedExcludes != null) {
+            for (String patt : expandedExcludes.split(",")) {
+                patts.add(new TokenizedPattern(normalizePattern(patt)));
+            }
+        }
+        FILE: for (String child : root.list(expandedFilter)) {
+            child = child.replace('\\', '/'); // TODO list(String) ought to specify `/` as the separator
+            for (TokenizedPattern patt : patts) {
+                if (patt.matchPath(new TokenizedPath(child), true)) {
+                    continue FILE;
+                }
+            }
+            r.add(child);
+        }
+        return r;
+    }
+
+    /** Similar to a method in {@link DirectoryScanner}. */
+    private static String normalizePattern(String p) {
+        String pattern = p.replace('\\', '/'); // we only deal with forward slashes here
+        if (pattern.endsWith("/")) {
+            pattern += SelectorUtils.DEEP_TREE_MATCH;
+        }
+        return pattern;
+    }
+
+    private static void copyOne(Run<?,?> src, Run<?,?> dst, Map<String, String> fingerprints, VirtualFile s, FilePath d, MessageDigest md5) throws IOException, InterruptedException {
+        assert (fingerprints == null) == (md5 == null);
+        // TODO JENKINS-26810 handle symlinks and file attributes if supported
+        try {
+            try (InputStream is = s.open(); OutputStream os = d.write()) {
+                OutputStream os2;
+                if (md5 != null) {
+                    md5.reset();
+                    os2 = new DigestOutputStream(os, md5);
+                } else {
+                    os2 = os;
+                }
+                IOUtils.copy(is, os2);
+            }
+            // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
+            try {
+                d.touch(s.lastModified());
+            } catch (IOException x) {
+                LOGGER.warning(x.getMessage());
+            }
+            if (fingerprints != null) {
+                String digest = Util.toHexString(md5.digest());
+                FingerprintMap map = Jenkins.getActiveInstance().getFingerprintMap();
+                Fingerprint f = map.getOrCreate(src, s.getName(), digest);
+                f.addFor(src);
+                f.addFor(dst);
+                fingerprints.put(s.getName(), digest);
+            }
+        } catch (IOException e) {
+            throw new IOException("Failed to copy " + s + " to " + d, e);
         }
     }
 
