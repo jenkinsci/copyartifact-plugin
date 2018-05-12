@@ -36,39 +36,8 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <version>2.7.1</version>
+        <version>3.1.2</version>
         <optional>true</optional>
-        <exclusions> <!-- TODO use 3.0 -->
-          <!-- See https://issues.jenkins-ci.org/browse/JENKINS-25625 -->
-          <exclusion>
-            <groupId>org.jenkins-ci</groupId>
-            <artifactId>SECURITY-144-compat</artifactId>
-          </exclusion>
-          <!--
-              To pick up http component classes from jenkins-test-harness dependencies
-              in test executions.
-          -->
-          <exclusion>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>org.apache.ant</groupId>
-            <artifactId>ant</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
