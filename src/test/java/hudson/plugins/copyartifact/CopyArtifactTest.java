@@ -65,7 +65,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
@@ -93,13 +92,16 @@ import org.jvnet.hudson.test.recipes.WithPlugin;
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.google.common.collect.Sets;
+import hudson.tasks.Fingerprinter;
 import jenkins.model.ArtifactManagerConfiguration;
+import static org.hamcrest.Matchers.*;
 import org.jenkinsci.plugins.compress_artifacts.CompressingArtifactManagerFactory;
+import org.jenkinsci.plugins.workflow.DirectArtifactManagerFactory;
 
 import org.jvnet.hudson.test.TestBuilder;
 
 import static org.junit.Assert.*;
-import org.junit.Ignore;
+import static org.junit.Assume.*;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
@@ -301,6 +303,8 @@ public class CopyArtifactTest {
         // testing no fingerprints
         String d = b.getWorkspace().child("foo.txt").digest();
         assertNull(Hudson.getInstance().getFingerprintMap().get(d));
+        assertNull(s.getAction(Fingerprinter.FingerprintAction.class));
+        assertNull(b.getAction(Fingerprinter.FingerprintAction.class));
     }
 
     @Test
@@ -542,7 +546,6 @@ public class CopyArtifactTest {
         assertFile(false, "c.log", b);
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludes() throws Exception {
@@ -573,7 +576,6 @@ public class CopyArtifactTest {
         assertFile(false, "foo.txt", b);
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-14900")
     @Test
     public void testCopyFromWorkspaceWithDefaultExcludesWithFlatten() throws Exception {
@@ -1671,20 +1673,9 @@ public class CopyArtifactTest {
         }
     }
     
-    private boolean isFilePermissionSupported() throws Exception {
-        return rule.jenkins.getRootPath().mode() != -1;
-    }
-    
-    @Ignore("TODO not yet (re-)implemented")
     @Test
     public void testFilePermission() throws Exception {
-        if (!isFilePermissionSupported()) {
-            Logger.getLogger(CopyArtifactTest.class.getName()).warning(String.format(
-                    "Skipped %s as file permission is not supported on this platform",
-                    name.getMethodName()
-            ));
-            return;
-        }
+        assumeThat(rule.jenkins.getRootPath().mode(), not(-1));
         
         FreeStyleProject copiee = rule.createFreeStyleProject();
         FreeStyleBuild copieeBuild = copiee.scheduleBuild2(0).get();
@@ -1819,7 +1810,6 @@ public class CopyArtifactTest {
         }
     }
 
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-20546")
     @Test
     public void testSymlinks() throws Exception {
@@ -1843,7 +1833,6 @@ public class CopyArtifactTest {
         assertEquals("nonexistent", ws.child("link2").readLink());
     }
     
-    @Ignore("TODO not yet (re-)implemented")
     @Issue("JENKINS-32832")
     @Test
     public void testSymlinksInDirectory() throws Exception {
@@ -2131,6 +2120,24 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
+    }
+
+    @Issue("JENKINS-49635")
+    @Test
+    public void directDownload() throws Exception {
+        ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(new DirectArtifactManagerFactory());
+        FreeStyleProject other = createArtifactProject();
+        FreeStyleBuild s = rule.buildAndAssertSuccess(other);
+        FreeStyleProject p = createProject(other.getName(), null, "", "", false, false, false, true);
+        p.setAssignedNode(rule.createSlave());
+        FreeStyleBuild b = DirectArtifactManagerFactory.whileBlockingOpen(() -> rule.buildAndAssertSuccess(p));
+        for (String file : new String[] {"foo.txt", "subdir/subfoo.txt", "deepfoo/a/b/c.log"}) {
+            assertFile(true, file, b);
+            String digest = b.getWorkspace().child(file).digest();
+            Fingerprint f = Jenkins.get().getFingerprintMap().get(digest);
+            assertSame(f.getOriginal().getRun(), s);
+            assertTrue(f.getRangeSet(p).includes(b.getNumber()));
+        }
     }
 
 }

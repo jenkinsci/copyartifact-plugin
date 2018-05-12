@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.37</version>
+        <version>3.10</version>
         <relativePath />
     </parent>
 
@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
     <description>Adds a build step to copy artifacts from another project.</description>
-    <version>1.40-SNAPSHOT</version>
+    <version>${revision}${changelist}</version>
     <url>https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</url>
 
     <licenses>
@@ -24,9 +24,12 @@
     </licenses>
 
     <properties>
-      <!-- To support (and test) @Symbol annotations (requires workflow-cps >= 2.10) -->
-      <jenkins.version>1.642.3</jenkins.version>
-      <java.level>7</java.level>
+        <revision>1.40</revision>
+        <changelist>-SNAPSHOT</changelist>
+        <jenkins.version>2.118</jenkins.version>
+        <java.level>8</java.level>
+        <workflow-api-plugin.version>2.28-rc333.0675e9e9cb4c</workflow-api-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/67 -->
+        <useBeta>true</useBeta>
     </properties>
 
     <dependencies>
@@ -35,7 +38,7 @@
         <artifactId>maven-plugin</artifactId>
         <version>2.7.1</version>
         <optional>true</optional>
-        <exclusions>
+        <exclusions> <!-- TODO use 3.0 -->
           <!-- See https://issues.jenkins-ci.org/browse/JENKINS-25625 -->
           <exclusion>
             <groupId>org.jenkins-ci</groupId>
@@ -57,12 +60,20 @@
             <groupId>org.apache.ant</groupId>
             <artifactId>ant</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>structs</artifactId>
-          <version>1.6</version>
+          <version>1.14</version>
       </dependency>
       <!-- Used for UI test -->
       <dependency>
@@ -139,7 +150,7 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-api</artifactId>
-        <version>2.20</version>
+        <version>${workflow-api-plugin.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -161,6 +172,13 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-api</artifactId>
+        <version>${workflow-api-plugin.version}</version>
+        <classifier>tests</classifier>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
         <version>1.9.5</version>
@@ -171,6 +189,12 @@
                 <artifactId>hamcrest-core</artifactId>
             </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
+        <version>2.0.8</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
     <reporting>
@@ -193,7 +217,7 @@
       <connection>scm:git:git://github.com/jenkinsci/copyartifact-plugin.git</connection>
       <developerConnection>scm:git:git@github.com:jenkinsci/copyartifact-plugin.git</developerConnection>
       <url>https://github.com/jenkinsci/copyartifact-plugin</url>
-      <tag>HEAD</tag>
+      <tag>${scmTag}</tag>
   </scm>
 
   <repositories>

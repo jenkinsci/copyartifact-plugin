@@ -31,7 +31,6 @@ import com.gargoylesoftware.htmlunit.util.NameValuePair;
 import hudson.cli.CLI;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Queue;
 import java.net.URL;
 import java.util.Arrays;
 
@@ -73,9 +72,7 @@ public class BuildSelectorParameterTest {
         wc.waitForBackgroundJavaScript(10000);
         form.getInputByName("_.buildNumber").setValueAttribute("6");
         rule.submit(form);
-        Queue.Item q = rule.jenkins.getQueue().getItem(job);
-        if (q != null) q.getFuture().get();
-        while (job.getLastBuild().isBuilding()) Thread.sleep(100);
+        rule.waitUntilNoActivity();
         assertEquals("<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
                      ceb.getEnvVars().get("SELECTOR").replaceAll("\\s+", ""));
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
@@ -88,9 +85,7 @@ public class BuildSelectorParameterTest {
         post.setRequestParameters(Arrays.asList(new NameValuePair("SELECTOR", xml),
                                                 post.getRequestParameters().get(0)));
         wc.getPage(post);
-        q = rule.jenkins.getQueue().getItem(job);
-        if (q != null) q.getFuture().get();
-        while (job.getLastBuild().isBuilding()) Thread.sleep(100);
+        rule.waitUntilNoActivity();
         assertEquals(xml, ceb.getEnvVars().get("SELECTOR"));
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
@@ -98,9 +93,7 @@ public class BuildSelectorParameterTest {
         CLI cli = new CLI(rule.getURL());
         assertEquals(0, cli.execute(
                 "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"));
-        q = rule.jenkins.getQueue().getItem(job);
-        if (q != null) q.getFuture().get();
-        while (job.getLastBuild().isBuilding()) Thread.sleep(100);
+        rule.waitUntilNoActivity();
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
     

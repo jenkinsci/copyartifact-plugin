@@ -35,6 +35,7 @@ import hudson.model.StringParameterValue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -102,7 +103,7 @@ public class ParametersBuildFilter extends BuildFilter {
             }
         }
         for (StringParameterValue spv : filters) {
-            if (!spv.value.equals(otherEnv.get(spv.getName()))) {
+            if (!Objects.equals(spv.getValue(), otherEnv.get(spv.getName()))) {
                 return false;
             }
         }
