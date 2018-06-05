@@ -102,12 +102,18 @@ import org.jvnet.hudson.test.TestBuilder;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
+import org.junit.ClassRule;
+import org.jvnet.hudson.test.BuildWatcher;
 
 /**
  * Test interaction of copyartifact plugin with Jenkins core.
  * @author Alan Harder
  */
 public class CopyArtifactTest {
+
+    @ClassRule
+    public static BuildWatcher watcher = new BuildWatcher();
+
     @Rule
     public final JenkinsRule rule = new JenkinsRule();
 
