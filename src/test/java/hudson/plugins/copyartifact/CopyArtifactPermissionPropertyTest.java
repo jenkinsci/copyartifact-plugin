@@ -31,6 +31,7 @@ import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.model.FreeStyleProject;
+import hudson.model.JobProperty;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,6 +43,9 @@ import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.MockFolder;
+
+import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
+import org.jenkinsci.plugins.workflow.multibranch.JobPropertyStep;
 
 /**
  * Tests for {@link CopyArtifactPermissionProperty}
@@ -269,6 +273,13 @@ public class CopyArtifactPermissionPropertyTest {
         assertEquals(Arrays.asList("../project1"), d.doAutoCompleteProjectNames("../p", child).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", freestyle).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", freestyle).getValues());
+    }
+
+    @Test public void configProps() throws Exception {
+        JobProperty property = new CopyArtifactPermissionProperty("project1,project2");
+        SnippetizerTester tester = new SnippetizerTester(j);
+        tester.assertRoundTrip(new JobPropertyStep(Collections.singletonList(property)),
+                "properties([copyArtifactPermission('project1,project2')])" );
     }
 
     /**
