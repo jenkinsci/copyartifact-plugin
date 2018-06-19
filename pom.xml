@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.10</version>
+        <version>3.15</version>
         <relativePath />
     </parent>
 
@@ -26,9 +26,9 @@
     <properties>
         <revision>1.41</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.118</jenkins.version>
+        <jenkins.version>2.121.1</jenkins.version>
         <java.level>8</java.level>
-        <workflow-api-plugin.version>2.28-rc333.0675e9e9cb4c</workflow-api-plugin.version> <!-- TODO https://github.com/jenkinsci/workflow-api-plugin/pull/67 -->
+        <workflow-api-plugin.version>2.28</workflow-api-plugin.version>
         <useBeta>true</useBeta>
     </properties>
 
@@ -43,6 +43,11 @@
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>structs</artifactId>
           <version>1.14</version>
+      </dependency>
+      <dependency>
+          <groupId>org.jenkins-ci.plugins</groupId>
+          <artifactId>apache-httpcomponents-client-4-api</artifactId>
+          <version>4.5.5-3.0</version>
       </dependency>
       <!-- Used for UI test -->
       <dependency>

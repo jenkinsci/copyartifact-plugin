@@ -52,6 +52,7 @@ import hudson.util.DescribableList;
 import hudson.util.FormValidation;
 import hudson.util.VariableResolver;
 import hudson.util.XStream2;
+import io.jenkins.plugins.httpclient.RobustHTTPClient;
 import java.io.File;
 import java.io.FileOutputStream;
 
@@ -93,6 +94,7 @@ import javax.annotation.Nullable;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.client.methods.HttpGet;
 
 /**
  * Build step to copy artifacts from another project.
@@ -598,9 +600,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             byte[] digest;
             if (u != null) {
                 if (fingerprint) {
-                    digest = d.act(new CopyURLWithFingerprinting(u));
+                    digest = d.act(new CopyURLWithFingerprinting(u, listener));
                 } else {
-                    d.copyFromRemotely(u);
+                    new RobustHTTPClient().copyFromRemotely(d, u, listener);
                     digest = null;
                 }
             } else {
@@ -636,16 +638,21 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private static class CopyURLWithFingerprinting extends MasterToSlaveFileCallable<byte[]> {
         private static final long serialVersionUID = 1;
         private final URL u;
-        CopyURLWithFingerprinting(URL u) {
+        private final TaskListener listener;
+        private final RobustHTTPClient client = new RobustHTTPClient();
+        CopyURLWithFingerprinting(URL u, TaskListener listener) {
             this.u = u;
+            this.listener = listener;
         }
         @Override
         public byte[] invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             hudson.util.IOUtils.mkdirs(f.getParentFile());
             MessageDigest md5 = md5();
-            try (InputStream is = u.openStream(); OutputStream os = new FileOutputStream(f)) {
-                IOUtils.copy(is, new DigestOutputStream(os, md5));
-            }
+            client.connect("download", "download " + RobustHTTPClient.sanitize(u) + " to " + f, c -> c.execute(new HttpGet(u.toString())), response -> {
+                try (InputStream is = response.getEntity().getContent(); OutputStream os = new FileOutputStream(f)) {
+                    IOUtils.copy(is, new DigestOutputStream(os, md5));
+                }
+            }, listener);
             return md5.digest();
         }
     }
