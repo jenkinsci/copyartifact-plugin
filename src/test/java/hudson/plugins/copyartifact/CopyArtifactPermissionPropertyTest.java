@@ -32,12 +32,17 @@ import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.model.FreeStyleProject;
 import hudson.model.JobProperty;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import jenkins.model.Jenkins;
 
 import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -45,7 +50,9 @@ import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.MockFolder;
 
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.multibranch.JobPropertyStep;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 /**
  * Tests for {@link CopyArtifactPermissionProperty}
@@ -273,6 +280,23 @@ public class CopyArtifactPermissionPropertyTest {
         assertEquals(Arrays.asList("../project1"), d.doAutoCompleteProjectNames("../p", child).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", freestyle).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", freestyle).getValues());
+    }
+
+    @Test
+    public void inPipeline() throws Exception {
+        WorkflowJob upstream = j.createProject(WorkflowJob.class, "upstream");
+        WorkflowJob downstream = j.createProject(WorkflowJob.class, "downstream");
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+            grant(Jenkins.READ).everywhere().toAuthenticated());
+        upstream.setDefinition(new CpsFlowDefinition("node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}", true));
+        downstream.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("UPSTREAM", "upstream")));
+        downstream.setDefinition(new CpsFlowDefinition("node {copyArtifacts '${UPSTREAM}'}", true));
+        j.buildAndAssertSuccess(upstream);
+        j.assertLogContains(Messages.CopyArtifact_MissingProject("upstream"), j.assertBuildStatus(Result.FAILURE, downstream.scheduleBuild2(0)));
+        upstream.setDefinition(new CpsFlowDefinition("properties([copyArtifactPermission('downstream')]); node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}", true));
+        j.buildAndAssertSuccess(upstream);
+        j.buildAndAssertSuccess(downstream);
     }
 
     @Test public void configProps() throws Exception {
