@@ -30,6 +30,7 @@
         <java.level>8</java.level>
         <workflow-api-plugin.version>2.28</workflow-api-plugin.version>
         <useBeta>true</useBeta>
+        <workflow-cps-plugin.version>2.32</workflow-cps-plugin.version>
     </properties>
 
     <dependencies>
@@ -59,7 +60,7 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>cloudbees-folder</artifactId>
-        <version>4.0</version>
+        <version>5.16</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -76,7 +77,7 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>credentials</artifactId>
-        <version>1.24</version>
+        <version>2.1.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -100,7 +101,14 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-cps</artifactId>
-        <version>2.32</version>
+        <version>${workflow-cps-plugin.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-cps</artifactId>
+        <version>${workflow-cps-plugin.version}</version>
+        <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -168,6 +176,11 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>scm-api</artifactId>
         <version>2.0.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-multibranch</artifactId>
+        <version>2.10</version>
         <scope>test</scope>
       </dependency>
     </dependencies>
