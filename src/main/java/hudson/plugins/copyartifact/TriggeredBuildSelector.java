@@ -23,13 +23,11 @@
  */
 package hudson.plugins.copyartifact;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Result;
