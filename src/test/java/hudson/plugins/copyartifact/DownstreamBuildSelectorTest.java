@@ -693,10 +693,10 @@ public class DownstreamBuildSelectorTest {
             DownstreamBuildSelector.DescriptorImpl d) {
 
         Set<String> actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
-        assertArrayEquals(expectedValues, actualValues.toArray(new String [actualValues.size()]));
+        assertArrayEquals(expectedValues, actualValues.toArray(new String [0]));
         //JENKINS-32526: Auto-completion disabled if no context
         actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
-        assertArrayEquals(new String[] {}, actualValues.toArray(new String [actualValues.size()]));
+        assertArrayEquals(new String[] {}, actualValues.toArray(new String [0]));
     }
 
     @Test
