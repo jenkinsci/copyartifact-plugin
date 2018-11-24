@@ -62,10 +62,8 @@ public class ParameterizedBuildSelectorTest {
         return j.jenkins.createProject(WorkflowJob.class, "test"+j.jenkins.getItems().size());
     }
 
-    /**
+    /*
      * Should not cause a fatal error even for an undefined variable.
-     * 
-     * @throws Exception
      */
     @Issue("JENKINS-30357")
     @Test
@@ -90,8 +88,6 @@ public class ParameterizedBuildSelectorTest {
     
     /**
      * Also applicable for workflow jobs.
-     * 
-     * @throws Exception
      */
     @Issue("JENKINS-30357")
     @Test
@@ -134,10 +130,8 @@ public class ParameterizedBuildSelectorTest {
         assertEquals("foobar", IOUtils.toString(vf.open()));
     }
     
-    /**
+    /*
      * Should not cause a fatal error even for a broken selector.
-     * 
-     * @throws Exception
      */
     @Test
     public void testBrokenParameter() throws Exception {
@@ -164,10 +158,8 @@ public class ParameterizedBuildSelectorTest {
         j.assertBuildStatusSuccess(b);
     }
     
-    /**
+    /*
      * Should not cause a fatal error even for an unavailable selector.
-     * 
-     * @throws Exception
      */
     @Test
     public void testUnavailableSelector() throws Exception {
@@ -195,10 +187,8 @@ public class ParameterizedBuildSelectorTest {
     }
     
     
-    /**
+    /*
      * Should not cause a fatal error even for an empty selector.
-     * 
-     * @throws Exception
      */
     @Test
     public void testEmptySelector() throws Exception {
@@ -225,10 +215,8 @@ public class ParameterizedBuildSelectorTest {
         j.assertBuildStatusSuccess(b);
     }
     
-    /**
+    /*
      * Also accepts immediate value.
-     * 
-     * @throws Exception
      */
     @Test
     public void testImmediateValue() throws Exception {
@@ -271,10 +259,8 @@ public class ParameterizedBuildSelectorTest {
     }
     
     
-    /**
+    /*
      * Also accepts variable expression.
-     * 
-     * @throws Exception
      */
     @Test
     public void testVariableExpression() throws Exception {

@@ -48,7 +48,7 @@ public class FileWriteBuilder extends Builder {
     /**
      * @param filename variables will be expanded
      * @param content variables will be expanded
-     * @param encoding
+     * @param encoding encoding to be used
      */
     public FileWriteBuilder(String filename, String content, String encoding) {
         this.filename = filename;

@@ -69,9 +69,8 @@ public class TriggeredBuildSelectorTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
     
-    /**
+    /*
      * Tests that web configuration page works correct.
-     * @throws Exception
      */
     @Test
     public void testWebConfiguration() throws Exception {
