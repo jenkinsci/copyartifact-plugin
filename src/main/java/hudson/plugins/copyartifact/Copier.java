@@ -187,7 +187,7 @@ public abstract class Copier implements ExtensionPoint {
      * to allow each initialize-end session to run against different objects, so you need not copy any state
      * that your {@link Copier} might maintain.
      * 
-     * This is a cheap hack to implement a factory withot breaking backward compatibility.
+     * This is a cheap hack to implement a factory without breaking backward compatibility.
      *
      * If you maintain no state, this method can return {@code this} without creating a copy.
      */

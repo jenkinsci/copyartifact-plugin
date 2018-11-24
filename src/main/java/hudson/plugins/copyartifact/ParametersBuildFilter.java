@@ -94,7 +94,7 @@ public class ParametersBuildFilter extends BuildFilter {
             // We need expand build parameters manually.
             // See JENKINS-26694 for details.
             for(ParametersAction pa: run.getActions(ParametersAction.class)) {
-                // We have to extract parameters manally as ParametersAction#buildEnvVars
+                // We have to extract parameters manually as ParametersAction#buildEnvVars
                 // (overrides EnvironmentContributingAction#buildEnvVars)
                 // is applicable only for AbstractBuild.
                 for(ParameterValue pv: pa.getParameters()) {

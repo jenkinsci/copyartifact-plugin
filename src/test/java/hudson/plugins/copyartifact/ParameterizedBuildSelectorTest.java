@@ -82,7 +82,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = copier.scheduleBuild2(0).get();
         j.assertBuildStatusSuccess(b);
@@ -153,7 +153,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -183,7 +183,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -214,7 +214,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 true,   // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
                 0,
@@ -297,7 +297,7 @@ public class ParameterizedBuildSelectorTest {
                 "",     // excludes
                 false,  // flatten
                 false,  // optional
-                false   // finterprintArtifacts
+                false   // fingerprintArtifacts
         ));
         FreeStyleBuild b = j.assertBuildStatusSuccess((FreeStyleBuild)copier.scheduleBuild2(
                 0,
