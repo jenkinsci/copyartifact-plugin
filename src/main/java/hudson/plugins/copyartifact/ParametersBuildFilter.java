@@ -69,8 +69,7 @@ public class ParametersBuildFilter extends BuildFilter {
                 }
             }
             return true;
-        } catch (InterruptedException ignore) {
-        } catch (IOException ignore) {
+        } catch (InterruptedException | IOException ignore) {
         }
         return false;
     }

@@ -139,9 +139,7 @@ public abstract class Copier implements ExtensionPoint {
                 // avoid cyclic invocation.
                 return copyAll(srcDir, filter, targetDir, fingerprintArtifacts);
             }
-        } catch(SecurityException e) {
-            LOG.log(Level.WARNING, "Unexpected exception in copyartifact-plugin", e);
-        } catch(NoSuchMethodException e) {
+        } catch(SecurityException | NoSuchMethodException e) {
             LOG.log(Level.WARNING, "Unexpected exception in copyartifact-plugin", e);
         }
         throw new AbstractMethodError("You need override Copier#copyAll(FilePath, String, String, FilePath, boolean)");
