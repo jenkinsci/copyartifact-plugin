@@ -104,7 +104,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // specifies upgradeCopyArtifact is needed to work.
     private static boolean upgradeNeeded = false;
-    private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
     private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
 
     @Deprecated private String projectName;

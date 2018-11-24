@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 @Deprecated
 public abstract class Copier implements ExtensionPoint {
 
-    private static Logger LOG = Logger.getLogger(Copier.class.getName());
+    private static final Logger LOG = Logger.getLogger(Copier.class.getName());
 
     /**
      * Called before copy-artifact operation.
