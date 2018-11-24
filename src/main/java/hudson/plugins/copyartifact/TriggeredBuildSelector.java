@@ -92,7 +92,7 @@ public class TriggeredBuildSelector extends BuildSelector {
         public boolean isForGlobalSetting() {
             return forGlobalSetting;
         }
-    };
+    }
     private Boolean fallbackToLastSuccessful;
     private UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;

@@ -157,7 +157,7 @@ public class DownstreamBuildSelectorTest {
         
         upstream.save();
         downstream.save();
-        j.jenkins.rebuildDependencyGraph();;
+        j.jenkins.rebuildDependencyGraph();
         
         
         // upstreamBuild1 -> downstreamBuild1
@@ -327,7 +327,7 @@ public class DownstreamBuildSelectorTest {
         
         upstream.save();
         downstream.save();
-        j.jenkins.rebuildDependencyGraph();;
+        j.jenkins.rebuildDependencyGraph();
         
         
         // upstreamBuild1 -> downstreamBuild1

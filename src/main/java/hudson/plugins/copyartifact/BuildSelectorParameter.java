@@ -123,7 +123,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                     new Predicate<Descriptor<BuildSelector>>() {
                         public boolean apply(Descriptor<BuildSelector> input) {
                             return !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName());
-                        };
+                        }
                     }
             ));
         }
