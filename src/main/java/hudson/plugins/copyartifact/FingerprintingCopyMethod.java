@@ -81,11 +81,8 @@ public class FingerprintingCopyMethod extends Copier {
         }
         try {
             md5.reset();
-            DigestOutputStream out =new DigestOutputStream(d.write(),md5);
-            try {
+            try (DigestOutputStream out = new DigestOutputStream(d.write(), md5)) {
                 s.copyTo(out);
-            } finally {
-                out.close();
             }
             try {
                 d.chmod(s.mode());
