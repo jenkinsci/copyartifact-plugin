@@ -26,6 +26,7 @@ package hudson.plugins.copyartifact;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import com.thoughtworks.xstream.XStreamException;
 import jenkins.model.Jenkins;
@@ -41,10 +42,6 @@ import hudson.util.XStream2;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 
 /**
  * @author Alan Harder
@@ -107,7 +104,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             if (jenkins == null) {
                 return DescriptorExtensionList.createDescriptorList((Jenkins)null, BuildSelector.class);
             }
-            return jenkins.<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
+            return jenkins.getDescriptorList(BuildSelector.class);
         }
 
         /**
@@ -118,16 +115,13 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             if (jenkins == null) {
                 return Collections.emptyList();
             }
-            return Lists.newArrayList(Collections2.filter(
-                    jenkins.getDescriptorList(BuildSelector.class),
-                    new Predicate<Descriptor<BuildSelector>>() {
-                        public boolean apply(Descriptor<BuildSelector> input) {
-                            return !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName());
-                        }
-                    }
-            ));
+
+            return jenkins.getDescriptorList(BuildSelector.class)
+                    .stream()
+                    .filter(it -> !it.clazz.equals(ParameterizedBuildSelector.class))
+                    .collect(Collectors.toList());
         }
-        
+
         @Override
         public String getHelpFile(String fieldName) {
             if ("defaultSelector".equals(fieldName) || "parameter".equals(fieldName)) {
@@ -155,9 +149,10 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             return;
         }
         DescriptorImpl descriptor = jenkins.getDescriptorByType(DescriptorImpl.class);
-        List<Descriptor<BuildSelector>> descriptorList = descriptor.getBuildSelectors();
+        List<Descriptor<BuildSelector>> descriptors = descriptor.getBuildSelectors();
         // Alias all BuildSelectors to their simple names
-        for (Descriptor<BuildSelector> d : descriptorList)
+        for (Descriptor<BuildSelector> d : descriptors) {
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
+        }
     }
 }

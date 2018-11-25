@@ -24,7 +24,6 @@
 package hudson.plugins.copyartifact;
 
 import com.thoughtworks.xstream.converters.UnmarshallingContext;
-
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -50,12 +49,10 @@ import hudson.tasks.Builder;
 import hudson.tasks.Fingerprinter;
 import hudson.util.DescribableList;
 import hudson.util.FormValidation;
-import hudson.util.VariableResolver;
 import hudson.util.XStream2;
 import io.jenkins.plugins.httpclient.RobustHTTPClient;
 import java.io.File;
 import java.io.FileOutputStream;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -73,13 +70,17 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.CheckForNull;
-
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
-
 import jenkins.tasks.SimpleBuildStep;
+import jenkins.util.VirtualFile;
 import org.acegisecurity.Authentication;
 import org.acegisecurity.GrantedAuthority;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
@@ -88,13 +89,6 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import jenkins.MasterToSlaveFileCallable;
-import jenkins.util.VirtualFile;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.client.methods.HttpGet;
 
 /**
  * Build step to copy artifacts from another project.
@@ -664,31 +658,20 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      * @param variableName
      * @return true if <code>variableName</code> is valid as a variable name.
      */
-    static boolean isValidVariableName(final String variableName) {
-        if(StringUtils.isBlank(variableName)) {
+    static boolean isValidVariableName(String variableName) {
+        if (StringUtils.isBlank(variableName)) {
             return false;
         }
-        
+
         // The pattern for variables are defined in hudson.Util.VARIABLE.
         // It's not exposed unfortunately and tests the variable
         // by actually expanding that.
-        final String expected = "GOOD";
-        String expanded = Util.replaceMacro(
-            String.format("${%s}", variableName),
-            new VariableResolver<String>() {
-                @Override
-                public String resolve(String name) {
-                    if(variableName.equals(name)) {
-                        return expected;
-                    }
-                    return null;
-                }
-            }
-        );
-        
+        String expected = "GOOD";
+        String expanded = Util.replaceMacro(String.format("${%s}", variableName), name -> variableName.equals(name) ? expected : null);
+
         return expected.equals(expanded);
     }
-    
+
     @Extension @Symbol("copyArtifacts")
     public static final class DescriptorImpl extends BuildStepDescriptor<Builder> {
 
