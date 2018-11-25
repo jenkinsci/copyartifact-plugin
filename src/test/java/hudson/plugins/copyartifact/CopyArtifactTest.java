@@ -287,10 +287,10 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
-        
+
         // testing fingerprints
         String d = b.getWorkspace().child("foo.txt").digest();
-        Fingerprint f = Hudson.getInstance().getFingerprintMap().get(d);
+        Fingerprint f = Jenkins.get().getFingerprintMap().get(d);
         assertSame(f.getOriginal().getRun(),s);
         assertTrue(f.getRangeSet(p).includes(b.getNumber()));
     }
@@ -305,10 +305,10 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
         assertFile(true, "deepfoo/a/b/c.log", b);
-        
+
         // testing no fingerprints
         String d = b.getWorkspace().child("foo.txt").digest();
-        assertNull(Hudson.getInstance().getFingerprintMap().get(d));
+        assertNull(Jenkins.get().getFingerprintMap().get(d));
         assertNull(s.getAction(Fingerprinter.FingerprintAction.class));
         assertNull(b.getAction(Fingerprinter.FingerprintAction.class));
     }
@@ -471,8 +471,7 @@ public class CopyArtifactTest {
 
     private static String pomName(String module, String version) {
         return module + '/' + version + '/' +
-               (MAVEN_POM_CUTOFF.isNewerThan(Hudson.getVersion()) ? "pom.xml"
-                                                                  : (module + '-' + version + ".pom"));
+               (MAVEN_POM_CUTOFF.isNewerThan(Jenkins.getVersion()) ? "pom.xml" : (module + '-' + version + ".pom"));
     }
 
     /** Test copying from a particular module of a maven job */
