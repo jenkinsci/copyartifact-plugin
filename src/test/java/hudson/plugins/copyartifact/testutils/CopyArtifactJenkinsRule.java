@@ -26,7 +26,7 @@ package hudson.plugins.copyartifact.testutils;
 
 import java.io.IOException;
 
-import org.apache.commons.httpclient.HttpStatus;
+import org.apache.http.HttpStatus;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jvnet.hudson.test.JenkinsRule;
