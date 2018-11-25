@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.CheckForNull;
 
@@ -41,9 +42,6 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 
 import hudson.Extension;
 import hudson.model.AutoCompletionCandidates;
@@ -125,13 +123,9 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
             // if no wild card, simply complete match.
             return pattern.equals(name);
         }
-        
-        List<String> literals = Arrays.asList(pattern.split("\\*", -1));
-        String regex = StringUtils.join(Lists.transform(literals, new Function<String, String>() {
-            public String apply(String input) {
-                return (input != null)?Pattern.quote(input):"";
-            }
-        }), ".*");
+
+        String[] literals = StringUtils.splitPreserveAllTokens(pattern, '*');
+        String regex = Arrays.stream(literals).map(Pattern::quote).collect(Collectors.joining(".*"));
         return name.matches(regex);
     }
     
