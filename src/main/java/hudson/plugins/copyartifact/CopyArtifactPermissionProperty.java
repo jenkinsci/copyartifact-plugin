@@ -83,7 +83,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
     @DataBoundConstructor
     public CopyArtifactPermissionProperty(String projectNames) {
         List<String> rawProjectNameList = Arrays.asList((projectNames != null)?StringUtils.split(projectNames, ','):new String[0]);
-        projectNameList = new ArrayList<String>(rawProjectNameList.size());
+        projectNameList = new ArrayList<>(rawProjectNameList.size());
         for (String rawProjectName: rawProjectNameList) {
             if (StringUtils.isBlank(rawProjectName)) {
                 continue;
@@ -199,7 +199,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
             if (StringUtils.isBlank(projectNames)) {
                 return Collections.emptyList();
             }
-            List<String> notFound = new ArrayList<String>();
+            List<String> notFound = new ArrayList<>();
             for (String projectName: StringUtils.split(projectNames, ',')) {
                 if (StringUtils.isBlank(projectName)) {
                     continue;

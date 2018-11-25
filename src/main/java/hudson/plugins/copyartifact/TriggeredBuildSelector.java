@@ -201,13 +201,13 @@ public class TriggeredBuildSelector extends BuildSelector {
         Run<?,?> result = null;
 
         // Upstream job for matrix will be parent project, not only individual configuration:
-        List<String> jobNames = new ArrayList<String>();
+        List<String> jobNames = new ArrayList<>();
         jobNames.add(job.getFullName());
         if ((job instanceof AbstractProject<?,?>) && ((AbstractProject<?,?>)job).getRootProject() != job) {
             jobNames.add(((AbstractProject<?,?>)job).getRootProject().getFullName());
         }
 
-        List<Run<?, ?>> upstreamBuilds = new ArrayList<Run<?, ?>>();
+        List<Run<?, ?>> upstreamBuilds = new ArrayList<>();
 
         for (Cause cause: parent.getCauses()) {
             if (cause instanceof UpstreamCause) {

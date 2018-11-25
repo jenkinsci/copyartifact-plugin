@@ -41,7 +41,7 @@ public class FingerprintingCopyMethod extends Copier {
     private Run<?,?> src;
     private Run<?,?> dst;
     private final MessageDigest md5 = newMD5();
-    private final Map<String,String> fingerprints = new HashMap<String, String>();
+    private final Map<String,String> fingerprints = new HashMap<>();
 
     @Override
     public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {

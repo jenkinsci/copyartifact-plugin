@@ -524,14 +524,14 @@ public class DownstreamBuildSelectorTest {
         
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
         {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> map = new HashMap<>();
             map.put(Item.READ, Sets.newHashSet("devel"));
             project1.addProperty(new AuthorizationMatrixProperty(map));
         }
         
         FreeStyleProject project2 = folder1.createProject(FreeStyleProject.class, "project2");
         {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> map = new HashMap<>();
             map.put(Item.READ, Sets.newHashSet("devel"));
             project2.addProperty(new AuthorizationMatrixProperty(map));
         }
@@ -594,14 +594,14 @@ public class DownstreamBuildSelectorTest {
         // project3  cannot read from devel
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
         {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> map = new HashMap<>();
             map.put(Item.READ, Sets.newHashSet("devel"));
             project1.addProperty(new AuthorizationMatrixProperty(map));
         }
         
         FreeStyleProject project2 = j.createFreeStyleProject("project2");
         {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> map = new HashMap<>();
             map.put(Item.READ, Sets.newHashSet("devel"));
             project2.addProperty(new AuthorizationMatrixProperty(map));
         }
@@ -669,7 +669,7 @@ public class DownstreamBuildSelectorTest {
         // project2  cannot read from devel
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
         {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> map = new HashMap<>();
             map.put(Item.READ, Sets.newHashSet("devel"));
             project1.addProperty(new AuthorizationMatrixProperty(map));
         }
@@ -692,10 +692,10 @@ public class DownstreamBuildSelectorTest {
             AbstractProject project,
             DownstreamBuildSelector.DescriptorImpl d) {
 
-        Set<String> actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
+        Set<String> actualValues = new TreeSet<>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
         assertArrayEquals(expectedValues, actualValues.toArray(new String [0]));
         //JENKINS-32526: Auto-completion disabled if no context
-        actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
+        actualValues = new TreeSet<>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
         assertArrayEquals(new String[] {}, actualValues.toArray(new String [0]));
     }
 

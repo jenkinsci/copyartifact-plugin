@@ -123,8 +123,8 @@ public class CopyArtifactTest {
     // Tests using slaves fails with Jenkins < 1.520 on Windows.
     // See https://wiki.jenkins-ci.org/display/JENKINS/Unit+Test+on+Windows
     private void purgeSlaves() {
-        List<Computer> disconnectingComputers = new ArrayList<Computer>();
-        List<VirtualChannel> closingChannels = new ArrayList<VirtualChannel>();
+        List<Computer> disconnectingComputers = new ArrayList<>();
+        List<VirtualChannel> closingChannels = new ArrayList<>();
         for (Computer computer: rule.jenkins.getComputers()) {
             if (!(computer instanceof SlaveComputer)) {
                 continue;
@@ -918,7 +918,7 @@ public class CopyArtifactTest {
         // only joe can access project "src"
         FreeStyleProject src = rule.createFreeStyleProject();
         {
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> auths = new HashMap<>();
             auths.put(Item.READ, Sets.newHashSet("joe"));
             src.addProperty(new AuthorizationMatrixProperty(auths));
         }
@@ -936,7 +936,7 @@ public class CopyArtifactTest {
                     false,
                     true
             ));
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> auths = new HashMap<>();
             auths.put(Item.READ, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
             auths.put(Item.CONFIGURE, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
             dest.addProperty(new AuthorizationMatrixProperty(auths));
@@ -969,7 +969,7 @@ public class CopyArtifactTest {
                     false,
                     true
             ));
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
+            Map<Permission, Set<String>> auths = new HashMap<>();
             auths.put(Item.READ, Sets.newHashSet("joe"));
             auths.put(Item.CONFIGURE, Sets.newHashSet("joe"));
             dest.addProperty(new AuthorizationMatrixProperty(auths));
@@ -1906,7 +1906,7 @@ public class CopyArtifactTest {
         //
         FreeStyleProject copiee = createArtifactProject();
         Map<Permission, Set<String>> copieePermissions
-                = new HashMap<Permission, Set<String>>();
+                = new HashMap<>();
         copieePermissions.put(Item.READ, Sets.newHashSet(test1.getId()));
         copiee.addProperty(new AuthorizationMatrixProperty(copieePermissions));
         
@@ -1915,7 +1915,7 @@ public class CopyArtifactTest {
                 new StringParameterDefinition("copyfrom",  copiee.getFullName())
         ));
         Map<Permission, Set<String>> copierPermissions
-                = new HashMap<Permission, Set<String>>();
+                = new HashMap<>();
         copierPermissions.put(Item.READ, Sets.newHashSet(test1.getId(), test2.getId()));
         copierPermissions.put(Item.BUILD, Sets.newHashSet(test1.getId(), test2.getId(), Jenkins.ANONYMOUS.getName()));
         copier.addProperty(new AuthorizationMatrixProperty(copierPermissions));

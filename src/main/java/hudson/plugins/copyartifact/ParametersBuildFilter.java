@@ -50,7 +50,7 @@ public class ParametersBuildFilter extends BuildFilter {
 
     public ParametersBuildFilter(String paramsToMatch) {
         // Initialize.. parse out the given parameters/values.
-        filters = new ArrayList<StringParameterValue>(5);
+        filters = new ArrayList<>(5);
         Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
         while (m.find()) {
             filters.add(new StringParameterValue(m.group(1), m.group(2)));

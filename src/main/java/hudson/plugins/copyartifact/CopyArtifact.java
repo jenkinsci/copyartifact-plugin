@@ -811,7 +811,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private static class EnvAction implements EnvironmentContributingAction {
         // Decided not to record this data in build.xml, so marked transient:
-        private transient Map<String,String> data = new HashMap<String,String>();
+        private transient Map<String,String> data = new HashMap<>();
 
         @Nullable
         private String calculateDefaultSuffix(@Nonnull Run<?,?> build, @Nonnull Run<?,?> src, @Nonnull String projectName) {
