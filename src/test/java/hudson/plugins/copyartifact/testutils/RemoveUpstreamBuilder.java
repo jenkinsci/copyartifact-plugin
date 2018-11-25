@@ -45,7 +45,7 @@ public class RemoveUpstreamBuilder extends Builder {
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener)
             throws InterruptedException, IOException {
         for (Cause.UpstreamCause c: Util.filter(build.getCauses(), Cause.UpstreamCause.class)) {
-            Job<?,?> upstreamProject = Jenkins.getInstance().getItemByFullName(c.getUpstreamProject(), Job.class);
+            Job<?,?> upstreamProject = Jenkins.get().getItemByFullName(c.getUpstreamProject(), Job.class);
             if (upstreamProject == null) {
                 listener.getLogger().println(String.format("Not Found: %s", c.getUpstreamProject()));
                 continue;

@@ -158,7 +158,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
                 // Prevents both invalid values and access to artifacts of projects which this user cannot see.
                 // If value is parameterized, it will be checked when build runs.
-                Jenkins jenkins = Jenkins.getInstance();
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
                 if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
                     projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
             }
@@ -267,7 +267,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (!upgradeNeeded) {
             return;
         }
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             LOGGER.log(Level.SEVERE, "Called for initializing, but Jenkins instance is unavailable.");
             return;
@@ -343,7 +343,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 LOGGER.log(Level.SEVERE, "upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
                 return false;
@@ -375,7 +375,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             throw new AbortException("Jenkins instance is unavailable.");
         }
@@ -698,8 +698,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (anc == null) return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
             // Require CONFIGURE permission on this project
             if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
-            
-            Jenkins jenkins = Jenkins.getInstance();
+
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 // validation is useless if Jenkins is no longer available.
                 return FormValidation.ok();
@@ -760,7 +760,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public void onRenamed(Item item, String oldName, String newName) {
             String oldFullName = Items.getCanonicalName(item.getParent(), oldName);
             String newFullName = Items.getCanonicalName(item.getParent(), newName);
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 LOGGER.log(Level.SEVERE, "Jenkins instance is no longer available.");
                 return;

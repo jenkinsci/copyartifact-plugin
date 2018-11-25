@@ -67,7 +67,7 @@ public class PermalinkBuildSelector extends BuildSelector {
 
         public ComboBoxModel doFillIdItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             Job j = null;
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (projectName != null && jenkins != null) {
                 j = jenkins.getItem(projectName, copyingJob, Job.class);
             }

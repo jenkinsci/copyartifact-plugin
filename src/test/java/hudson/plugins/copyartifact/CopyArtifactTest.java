@@ -1319,7 +1319,7 @@ public class CopyArtifactTest {
     @LocalData
     @Test
     public void testProjectNameSplit() throws Exception {
-        FreeStyleProject copier = Jenkins.getInstance().getItemByFullName("copier", FreeStyleProject.class);
+        FreeStyleProject copier = Jenkins.get().getItemByFullName("copier", FreeStyleProject.class);
         assertNotNull(copier);
         String configXml = copier.getConfigFile().asString();
         assertFalse(configXml, configXml.contains("<projectName>"));
@@ -1328,7 +1328,7 @@ public class CopyArtifactTest {
         assertTrue(configXml, configXml.contains("<parameters>good=true</parameters>"));
         assertTrue(configXml, configXml.contains("<project>matrix/which=two</project>"));
         
-        MatrixProject matrixCopier = Jenkins.getInstance().getItemByFullName("matrix-copier", MatrixProject.class);
+        MatrixProject matrixCopier = Jenkins.get().getItemByFullName("matrix-copier", MatrixProject.class);
         assertNotNull(matrixCopier);
         configXml = matrixCopier.getConfigFile().asString();
         assertFalse(configXml, configXml.contains("<projectName>"));
@@ -1366,7 +1366,7 @@ public class CopyArtifactTest {
         // Project "copier" is configured with CopyArtifact wrapped with WrapBuilder.
         // This causes failure of upgrading on loaded.
         // Upgrading is performed when build is triggered.
-        FreeStyleProject copier = Jenkins.getInstance().getItemByFullName("copier", FreeStyleProject.class);
+        FreeStyleProject copier = Jenkins.get().getItemByFullName("copier", FreeStyleProject.class);
         assertNotNull(copier);
         String configXml = copier.getConfigFile().asString();
         // not upgraded on loaded
@@ -1932,10 +1932,10 @@ public class CopyArtifactTest {
         assertTrue (copier.getACL().hasPermission(Jenkins.ANONYMOUS, Item.BUILD));
         
         // Computer.BUILD is required since Jenkins 1.521.
-        assertTrue (Jenkins.getInstance().getACL().hasPermission(admin.impersonate(), Computer.BUILD));
-        assertTrue (Jenkins.getInstance().getACL().hasPermission(test1.impersonate(), Computer.BUILD));
-        assertTrue (Jenkins.getInstance().getACL().hasPermission(test2.impersonate(), Computer.BUILD));
-        assertTrue (Jenkins.getInstance().getACL().hasPermission(Jenkins.ANONYMOUS, Computer.BUILD));
+        assertTrue (Jenkins.get().getACL().hasPermission(admin.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.get().getACL().hasPermission(test1.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.get().getACL().hasPermission(test2.impersonate(), Computer.BUILD));
+        assertTrue (Jenkins.get().getACL().hasPermission(Jenkins.ANONYMOUS, Computer.BUILD));
         
         // prepare an artifact
         rule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));

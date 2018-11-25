@@ -103,7 +103,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         }
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return DescriptorExtensionList.createDescriptorList((Jenkins)null, BuildSelector.class);
             }
@@ -114,7 +114,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
          * @return {@link BuildSelector}s available for BuildSelectorParameter.
          */
         public List<Descriptor<BuildSelector>> getAvailableBuildSelectorList() {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return Collections.emptyList();
             }
@@ -135,8 +135,8 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                 // for `defaultSelector` ("Default Selector" field) in project configuration pages
                 // and the value of build parameter ("Build selector for Copy Artifact" field)
                 // in "This build requires parameters" pages.
-                Jenkins jenkins = Jenkins.getInstance();
-                Descriptor<?> d = (jenkins == null)?null:jenkins.getDescriptor(CopyArtifact.class);
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
+                Descriptor<?> d = (jenkins == null) ? null : jenkins.getDescriptor(CopyArtifact.class);
                 if (d != null) {
                     return d.getHelpFile("selector");
                 }
@@ -149,7 +149,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     @Initializer(after=InitMilestone.PLUGINS_STARTED)
     public static void initAliases() {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
             return;

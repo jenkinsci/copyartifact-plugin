@@ -98,7 +98,7 @@ public class FingerprintingCopyMethod extends Copier {
             String digest = Util.toHexString(md5.digest());
 
             if (fingerprintArtifacts) {
-                Jenkins jenkins = Jenkins.getInstance();
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
                 if (jenkins == null) {
                     throw new AbortException("Jenkins instance no longer exists.");
                 }

@@ -209,8 +209,8 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
                     // no check for pattern
                     continue;
                 }
-                Jenkins jenkins = Jenkins.getInstance();
-                Job<?,?> proj = (jenkins == null)?null:jenkins.getItem(projectName, (context != null) ? context : jenkins, Job.class);
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
+                Job<?,?> proj = (jenkins == null) ? null : jenkins.getItem(projectName, (context != null) ? context : jenkins, Job.class);
                 if (
                         proj == null
                         || ((proj instanceof AbstractProject) && ((AbstractProject<?, ?>)proj).getRootProject() != proj)
@@ -250,7 +250,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
                 return candidates;
             }
             value = StringUtils.trim(value);
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return candidates;
             }
