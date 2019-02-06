@@ -41,7 +41,7 @@ public class LastBuildWithArtifactSelectorTest {
     public final JenkinsRule j = new JenkinsRule();
 
     @Test
-    public void testMainUseCase() throws Exception {
+    public void testNoArtifactInPreviousBuild() throws Exception {
         // configure project
         FreeStyleProject project = j.createFreeStyleProject();
         String artifactString = "artifact.txt";
