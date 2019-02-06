@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) 2019
+ * Copyright (c) 2019, Chad Gilman
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Run;
-import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 
@@ -39,20 +38,14 @@ public class LastBuildWithArtifactSelector extends BuildSelector {
 
     @Override
     public boolean isSelectable(Run<?, ?> run, EnvVars env) {
-        return run.getArtifacts().isEmpty() ? false : true;
+        return run.getHasArtifacts();
     }
 
-    /**
-     * @deprecated
-     *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
-     */
-    public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
-
     @Extension @Symbol("lastWithArtifacts")
-    public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
-        public DescriptorImpl() {
-            super(LastBuildWithArtifactSelector.class, Messages._LastBuildWithArtifactSelector_DisplayName());
-            DESCRIPTOR = this;
+    public static class DescriptorImpl extends Descriptor<BuildSelector> {
+        @Override
+        public String getDisplayName() {
+            return Messages.LastBuildWithArtifactSelector_DisplayName();
         }
     }
 }
