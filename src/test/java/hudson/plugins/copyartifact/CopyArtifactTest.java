@@ -462,7 +462,7 @@ public class CopyArtifactTest {
     private MavenModuleSet setupMavenJob() throws Exception {
         ToolInstallations.configureDefaultMaven();
         MavenModuleSet mp = createMavenProject();
-        mp.setGoals("clean package");
+        mp.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
         return mp;
     }
