@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.15</version>
+        <version>3.40</version>
         <relativePath />
     </parent>
 
@@ -163,7 +163,6 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>1.9.5</version>
         <scope>test</scope>
         <exclusions>
             <exclusion>
