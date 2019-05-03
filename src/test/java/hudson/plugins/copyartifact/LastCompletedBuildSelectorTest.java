@@ -250,13 +250,13 @@ public class LastCompletedBuildSelectorTest {
         FreeStyleBuild upstreamCompletedBuild = upstream.scheduleBuild2(0).get();
         upstream.getBuildersList().add(new SleepBuilder(60000));
         upstream.scheduleBuild2(0);
-        FreeStyleBuild upstreamIncompletedBuild = waitForBuildStarts(upstream, 5000);
+        FreeStyleBuild upstreamIncompleteBuild = waitForBuildStarts(upstream, 5000);
         
         FreeStyleBuild downstreamLastCompletedBuild = downstreamLastCompleted.scheduleBuild2(0).get();
         FreeStyleBuild downstreamLastBuild = downstreamLast.scheduleBuild2(0).get();
         
-        assertTrue(upstreamIncompletedBuild.isBuilding());
-        upstreamIncompletedBuild.getExecutor().interrupt();
+        assertTrue(upstreamIncompleteBuild.isBuilding());
+        upstreamIncompleteBuild.getExecutor().interrupt();
         
         j.assertBuildStatusSuccess(downstreamLastCompletedBuild);
         j.assertBuildStatus(Result.FAILURE, downstreamLastBuild);   // this fails as upstream have no artifact.
