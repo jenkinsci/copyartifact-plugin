@@ -771,7 +771,7 @@ public class DownstreamBuildSelectorTest {
         WorkflowJob downstream = j.jenkins.createProject(WorkflowJob.class, "downstream");
         downstream.setDefinition(new CpsFlowDefinition(
                 "node {"
-                + "step([$class: 'CopyArtifact', projectName: '" + upstream.getFullName() + "', filter: 'upstream_artifact.txt', fingerprintAritfacts: true]);"
+                + "step([$class: 'CopyArtifact', projectName: '" + upstream.getFullName() + "', filter: 'upstream_artifact.txt', fingerprintArtifacts: true]);"
                 + "writeFile text: \"${env.BUILD_TAG}\", file: 'downstream_artifact.txt'; "
                 + "step([$class: 'ArtifactArchiver', artifacts: 'downstream_artifact.txt'])"
                 + "}",
