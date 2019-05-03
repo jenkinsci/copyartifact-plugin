@@ -394,7 +394,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             // We need expand build parameters manually.
             // See JENKINS-26694, JENKINS-30357 for details.
             for(ParametersAction pa: build.getActions(ParametersAction.class)) {
-                // We have to extract parameters manally as ParametersAction#buildEnvVars
+                // We have to extract parameters manually as ParametersAction#buildEnvVars
                 // (overrides EnvironmentContributingAction#buildEnvVars)
                 // is applicable only for AbstractBuild.
                 for(ParameterValue pv: pa.getParameters()) {
