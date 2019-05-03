@@ -148,7 +148,7 @@ public class CopyArtifactWorkflowTest {
 
     @Test
     public void testDownstreamBuildSelector() throws Exception {
-        // upstream (freestyle) -> copiee (fresstyle)
+        // upstream (freestyle) -> copiee (freestyle)
         // copier (pipeline) copies from copiee, which is downstream of `upstream`.
         // DownstreamBuildSelector support detecting relations between only `AbstractProject`s.
 
