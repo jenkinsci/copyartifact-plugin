@@ -1528,7 +1528,7 @@ public class CopyArtifactTest {
     @Issue("JENKINS-20940")
     @Test
     public void testSameFolderToMatrix() throws Exception {
-        Folder folder = rule.jenkins.createProject(Folder.class, "foler");
+        Folder folder = rule.jenkins.createProject(Folder.class, "folder");
         FreeStyleProject src = folder.createProject(FreeStyleProject.class, "src");
         src.getBuildersList().add(new ArtifactBuilder());
         src.getPublishersList().add(new ArtifactArchiver("**", "", false, false));

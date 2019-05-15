@@ -32,7 +32,7 @@ import hudson.model.BuildListener;
 import hudson.tasks.Builder;
 
 /**
- * A builder wraps another buillder.
+ * A builder wraps another builder.
  */
 public class WrapperBuilder extends Builder {
     private final Builder builder;

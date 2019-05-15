@@ -657,7 +657,7 @@ public class TriggeredBuildSelectorTest {
         //
         //     upstream   |   intermediate   |   downstream
         //
-        // Initital build
+        // Initial build
         // 1     #1 -------.
         // 2               '-----> #1 ---------.
         // 3                                   '-----> #1
