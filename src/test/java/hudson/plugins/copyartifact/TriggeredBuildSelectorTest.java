@@ -925,7 +925,7 @@ public class TriggeredBuildSelectorTest {
         MavenModuleSet upstream = createMavenProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
         
-        upstream.setGoals("clean package");
+        upstream.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         upstream.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         

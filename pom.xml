@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.15</version>
+        <version>3.43</version>
         <relativePath />
     </parent>
 
@@ -28,7 +28,7 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.121.1</jenkins.version>
         <java.level>8</java.level>
-        <workflow-api-plugin.version>2.28</workflow-api-plugin.version>
+        <workflow-api-plugin.version>2.30</workflow-api-plugin.version>
         <useBeta>true</useBeta>
         <workflow-cps-plugin.version>2.32</workflow-cps-plugin.version>
     </properties>
@@ -39,6 +39,13 @@
         <artifactId>maven-plugin</artifactId>
         <version>3.1.2</version>
         <optional>true</optional>
+        <exclusions>
+            <exclusion>
+                <!-- to avoid RequireUpperBoundDeps with jenkins-test-harness -->
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+            </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
@@ -88,6 +95,12 @@
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
+        <artifactId>workflow-support</artifactId>
+        <version>3.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-job</artifactId>
         <version>2.11.2</version>
         <scope>test</scope>
@@ -121,12 +134,6 @@
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-step-api</artifactId>
         <version>2.13</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-support</artifactId>
-        <version>2.14</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -175,7 +182,8 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>scm-api</artifactId>
-        <version>2.0.8</version>
+        <version>2.2.6</version>
+        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
