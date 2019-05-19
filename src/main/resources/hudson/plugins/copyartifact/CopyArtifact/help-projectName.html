@@ -32,8 +32,13 @@
   <dt><strong>Multibranch Pipeline projects:</strong></dt>
   <dd>
     <p>
-      Use an absolute path consisting of the project name followed by the branch name.<br />
+      Use an path consisting of the project name followed by the branch name.<br />
       <strong>Example:</strong> <tt>/MyMultibranchProject/MyBranch</tt>
+    </p>
+    <p>
+      Special letters like '/' in branch names should be escaped.
+      You can see the exact name in "Full project name" in job pages of each branch.<br />
+      <strong>Example:</strong> <tt>../MyMultibranchProject/feature%2Fnavigation</tt>
     </p>
   </dd>
 </ul>
