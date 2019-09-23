@@ -28,14 +28,20 @@ import com.gargoylesoftware.htmlunit.WebClientOptions;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.util.NameValuePair;
-import hudson.cli.CLI;
+import hudson.Launcher;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
 
+import hudson.model.StreamBuildListener;
+import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
@@ -49,6 +55,9 @@ import static org.junit.Assert.*;
 public class BuildSelectorParameterTest {
     @Rule
     public final JenkinsRule rule = new JenkinsRule();
+
+    @Rule
+    public TemporaryFolder tmp = new TemporaryFolder();
 
     /**
      * Verify BuildSelectorParameter works via HTML form, http POST and CLI.
@@ -90,11 +99,26 @@ public class BuildSelectorParameterTest {
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via CLI
-        CLI cli = new CLI(rule.getURL());
-        assertEquals(0, cli.execute(
-                "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"));
-        rule.waitUntilNoActivity();
-        assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
+        final File home = tmp.newFolder();
+        final File jar = tmp.newFile("jenkins-cli.jar");
+        FileUtils.copyURLToFile(rule.jenkins.getJnlpJars("jenkins-cli.jar").getURL(), jar);
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();) {
+            int ret = new Launcher.LocalLauncher(StreamBuildListener.fromStderr())
+                    .launch()
+                    .cmds("java",
+                            "-Duser.home=" + home,
+                            "-jar", jar.getAbsolutePath(),
+                            "-s", rule.getURL().toString(),
+                            "build", job.getFullName(),
+                            "-p", "SELECTOR=<SavedBuildSelector/>")
+                    .stdout(baos)
+                    .stderr(baos)
+                    .join();
+            assertEquals(0, ret);
+            rule.waitUntilNoActivity();
+            assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
+        }
     }
     
     @Test
