@@ -28,9 +28,10 @@ import com.gargoylesoftware.htmlunit.WebClientOptions;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.util.NameValuePair;
-import hudson.cli.CLI;
+import hudson.cli.CLICommandInvoker;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
+
 import java.net.URL;
 import java.util.Arrays;
 
@@ -90,9 +91,8 @@ public class BuildSelectorParameterTest {
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via CLI
-        CLI cli = new CLI(rule.getURL());
-        assertEquals(0, cli.execute(
-                "build", job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"));
+        assertThat(new CLICommandInvoker(rule, "build").invokeWithArgs(job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"),
+                CLICommandInvoker.Matcher.succeeded());
         rule.waitUntilNoActivity();
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
