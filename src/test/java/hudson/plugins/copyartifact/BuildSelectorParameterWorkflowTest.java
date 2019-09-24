@@ -48,7 +48,7 @@ public class BuildSelectorParameterWorkflowTest {
     // No tests for features here as they should be tested in other tests.
 
     @Test
-    public void testDownstreamBuildSelector() throws Exception {
+    public void testBuildSelectorParameter() throws Exception {
         WorkflowJob pipeline = j.createWorkflow(
                 "pipeline",
                 "properties([parameters([buildSelector(name: 'foo', description: 'description', defaultSelector: lastCompleted())])])"
