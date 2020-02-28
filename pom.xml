@@ -13,7 +13,7 @@
     <name>Copy Artifact Plugin</name>
     <description>Adds a build step to copy artifacts from another project.</description>
     <version>${revision}${changelist}</version>
-    <url>https://wiki.jenkins.io/display/JENKINS/Copy+Artifact+Plugin</url>
+    <url>https://github.com/jenkinsci/copyartifact-plugin</url>
 
     <licenses>
       <license>
