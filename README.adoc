@@ -1,4 +1,8 @@
-Adds a build step to copy artifacts from another project. +
+= Copy Artifact plugin
+
+:sectanchors:
+
+Adds a build step to copy artifacts from another project.
 
 The plugin lets you specify which build to copy artifacts from (e.g. the
 last successful/stable build, by build number, or by a build parameter).
@@ -12,7 +16,9 @@ copied are automatically
 https://wiki.jenkins.io/display/JENKINS/Fingerprint[fingerprinted] for
 you.
 
-[.confluence-embedded-file-wrapper]#image:docs/images/screenshot-copy-artefacts.png[image]#
+#image:docs/images/screenshot-copy-artefacts.png[image]#
+
+:toc:
 
 [[CopyArtifactPlugin-Pipelinesyntax]]
 == Pipeline syntax
@@ -21,13 +27,13 @@ Available since copyartifact-1.39
 
 * To copy artifacts from the latest stable build of "sourceproject"
 +
-[source,syntaxhighlighter-pre]
+[source,groovy]
 ----
 copyArtifacts(projectName: 'sourceproject');
 ----
 * To copy artifacts from the specific build of "downstream"
 +
-[source,syntaxhighlighter-pre]
+[source,groovy]
 ----
 def built = build('downstream');  // https://plugins.jenkins.io/pipeline-build-step
 copyArtifacts(projectName: 'downstream', selector: specific("${built.number}"));
@@ -83,8 +89,7 @@ a Windows service, the service should have permission to interact with
 desktop (select "Allow service to interact with desktop" from Jenkins
 Slave service properties). Otherwise you may see errors similar to this:
 +
-[source,syntaxhighlighter-pre]
-----
+....
 ERROR: Failed to copy artifacts from ...
 hudson.util.IOException2: java.lang.IllegalAccessError: class hudson.remoting.Pipe$ConnectCommand cannot
   access its superclass hudson.remoting.Command
@@ -92,7 +97,7 @@ at hudson.FilePath.copyRecursiveTo(FilePath.java:1526)
 at hudson.FilePath.copyRecursiveTo(FilePath.java:1451)
 at hudson.plugins.copyartifact.FilePathCopyMethod.copyAll(FilePathCopyMethod.java:51)
 ...
-----
+....
 
 [[CopyArtifactPlugin-RecommendedusageofCopyartifact]]
 == Recommended usage of Copyartifact
@@ -102,8 +107,8 @@ at hudson.plugins.copyartifact.FilePathCopyMethod.copyAll(FilePathCopyMethod.jav
 permissions and symbolic links. Though, it may fail in some situations
 (like for security issues).
 ** It's highly recommended to pack files to copy into an archive file,
-using `+tar+` command
-or https://jenkins.io/doc/pipeline/steps/pipeline-utility-steps/#zip-create-zip-file[`+zip+`
+using `+tar+` command
+or link:https://jenkins.io/doc/pipeline/steps/pipeline-utility-steps/#zip-create-zip-file[`+zip+`
 pipeline step], especially when it's important for you to preserving
 file attributes or directory structures.
 
@@ -120,23 +125,23 @@ This may be due to incorrect project name or permission settings; see help for p
 Build step 'Copy artifacts from another project' marked build as failure
 ....
 
-[[CopyArtifactPlugin-Specifyingprojectstatically(withoutvariables)]]
+[[CopyArtifactPlugin-Specifyingprojectstatically-withoutvariables]]
 === Specifying project statically (without variables)
 
 * This case: +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_01_static.png[image]#
+#image:docs/images/permissions_01_static.png[image]#
 
 * In this case, you can copy artifacts if you have permission to read
 the project to copy from at configuration time.
 
-[[CopyArtifactPlugin-Specifyingprojectdynamically(withvariables)]]
+[[CopyArtifactPlugin-Specifyingprojectdynamically-withvariables]]
 === Specifying project dynamically (with variables)
 
 * Those cases: +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_02_dynamic01.png[image]# +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_03_dynamic02.png[image]#
+#image:docs/images/permissions_02_dynamic01.png[image]# +
+#image:docs/images/permissions_03_dynamic02.png[image]#
 
-* If https://wiki.jenkins.io/display/JENKINS/Securing+Jenkins[your
+* If https://jenkins.io/doc/book/system-administration/security/[your
 Jenkins is secured], *it fails to copy artifacts without a proper
 configuration*.
 * You need to allow projects copy artifacts in one of following ways:
@@ -151,11 +156,11 @@ from anonymous.
 https://wiki.jenkins.io/display/JENKINS/Matrix-based+security[Matrix-based
 security] for authorization, it can be done as following in Manage
 Jenkins > Global Security Configuration: +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_04_anonymous.png[image]#
+#image:docs/images/permissions_04_anonymous.png[image]#
 * When you use Project-based Matrix Authorization Strategy for
 authorization, it can be done as following in the configuration page of
 the project to copy artifacts from: +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_05_anonymous_project.png[image]#
+#image:docs/images/permissions_05_anonymous_project.png[image]#
 
 [[CopyArtifactPlugin-Specifyprojectswhocancopyartifacts]]
 ==== Specify projects who can copy artifacts
@@ -163,17 +168,14 @@ the project to copy artifacts from: +
 * *Available since Copyartifact 1.30*
 * In the project configuration pages, you can specify projects to allow
 copy artifacts from that project: +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_06_copypermission.png[image]#
+#image:docs/images/permissions_06_copypermission.png[image]#
 * You can specify multiple projects with separating with commas.
 * You can use wildcard character ('*') to specify name patterns.
 
-[.aui-icon .aui-icon-small .aui-iconfont-warning .confluence-information-macro-icon]#
-#
-
-Since Copyartifact 1.30, there is a limitation "Permission to Copy
+WARNING: Since Copyartifact 1.30, there is a limitation "Permission to Copy
 Artifacts" accepts only relative project names. +
 If you use
-https://wiki.jenkins.io/display/JENKINS/CloudBees+Folders+Plugin[CloudBees
+https://plugins.jenkins.io/cloudbees-folder/[CloudBees
 Folders Plugin] and the projects are located in different folders, you
 need to specify project names like "../folder/project". +
 This is fixed in Copyartifact 1.31.
@@ -184,48 +186,43 @@ This is fixed in Copyartifact 1.31.
 * *Available since Jenkins 1.532*
 ** To be exact, the feature of Jenkins to authorize builds are available
 since 1.520, but who cares such details?
-* https://wiki.jenkins.io/display/JENKINS/Authorize+Project+plugin[Authorize
+* https://plugins.jenkins.io/authorize-project/[Authorize
 Project plugin] enables you to run builds of a project as a specific
 user.
 ** Copyartifact plugin treats builds running as an anonymous without
 authorization configurations.
 * You can resolve permission problems by running builds as a user with
 read permission to the project with artifacts +
-[.confluence-embedded-file-wrapper]#image:docs/images/permissions_07_authorizeproject.png[image]#
-
- +
+#image:docs/images/permissions_07_authorizeproject.png[image]#
 
 [[CopyArtifactPlugin-Usewithdeclarativepipelines]]
 == Use with declarative pipelines
 
-One example: 
+One example:
 
-....
+[source,groovy]
+----
 stages {
-     stage('Copy Archive') {
-         steps {
-             script {
-                 step ([$class: 'CopyArtifact',
-                 projectName: 'Create_archive',
-                 filter: "packages/infra*.zip",
-                 target: 'Infra']);
-             }
-         }
-     }
-....
+    stage('Copy Archive') {
+         steps {
+             script {
+                step ([$class: 'CopyArtifact',
+                    projectName: 'Create_archive',
+                    filter: "packages/infra*.zip",
+                    target: 'Infra']);
+            }
+        }
+    }
+...
+}
+----
 
-What that is doing: 
+What that is doing:
 
 * Go to the project/workspace named "Create_archive".
 * Look in the folder "packages" for the file(s) "infra*.zip".
-* Copy that file(s) into the folder "Infra", in the local workspace. 
+* Copy that file(s) into the folder "Infra", in the local workspace. 
 Folder will be created if it doesn't already exist.
-
- +
-
- +
-
-'''''
 
 [[CopyArtifactPlugin-Issues]]
 == Issues
@@ -245,29 +242,5 @@ or propose an improvement of existing feature]
 * https://issues.jenkins-ci.org/secure/CreateIssueDetails!init.jspa?pid=10172&issuetype=2&components=15692&priority=4[Request
 or propose a new feature]
 
-[[refresh-module--2111835938]]
-[[refresh--2111835938]][[jira-issues--2111835938]]
-Key
-
-T
-
-P
-
-Summary
-
-[.refresh-action-group]# #
-
-[[refresh-issues-loading--2111835938]]
-[.aui-icon .aui-icon-wait]#Loading...#
-
-[#refresh-issues-button--2111835938]##
-[#refresh-issues-link--2111835938]#Refresh#
-[#error-message--2111835938 .error-message .hidden]# #
-
-'''''
 
 include::CHANGELOG.adoc[]
-
-'''''
-
- +
