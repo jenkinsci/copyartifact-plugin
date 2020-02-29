@@ -24,15 +24,32 @@
 
 package hudson.plugins.copyartifact.testutils;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.httpclient.HttpStatus;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 
 import com.gargoylesoftware.htmlunit.WebResponse;
+
+import hudson.scm.SCM;
 
 /**
  *
@@ -83,5 +100,54 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
         WorkflowJob job = jenkins.createProject(WorkflowJob.class, name);
         job.setDefinition(new CpsFlowDefinition("node {" + script + "}", true));
         return job;
+    }
+
+    /**
+     * Create SCM from the specified directory in resources.
+     *
+     * @param tempFolder an instance of {@link TemporaryFolder}
+     * @param URL URL for the directory gotten with {@link Class#getResource(String)}
+     * @return SCM
+     * @throws Exception
+     */
+    public SCM getExtractResourceScm(TemporaryFolder tempFolder, URL resource) throws Exception {
+        File scmZip = tempFolder.newFile();
+        final Path scmSource = Paths.get(resource.toURI());
+        URI scmZipUri = new URI("jar", scmZip.toURI().toString(), null);
+        scmZip.delete();
+        Map<String, String> env = new HashMap<>();
+        env.put("create", "true");
+        try(final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env)) {
+            Files.walkFileTree(scmSource, new SimpleFileVisitor<Path>(){
+                @Override
+                public FileVisitResult visitFile(
+                    Path file,
+                    BasicFileAttributes attrs
+                ) throws IOException {
+                    Path dest = zipFile.getPath(
+                        "/",
+                        scmSource.relativize(file).toString()
+                    );
+                    Files.copy(file, dest);
+                    return FileVisitResult.CONTINUE;
+                }
+                @Override
+                public FileVisitResult preVisitDirectory(
+                    Path dir,
+                    BasicFileAttributes attrs
+                ) throws IOException {
+                    Path dest = zipFile.getPath(
+                        "/",
+                        scmSource.relativize(dir).toString()
+                    );
+                    if (Files.notExists(dest)) {
+                        // Creating root directory cause FileAlreadyExistsException
+                        Files.createDirectory(dest);
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            return new ExtractResourceSCM(scmZip.toURI().toURL());
+        }
     }
 }

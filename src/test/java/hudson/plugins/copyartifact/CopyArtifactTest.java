@@ -37,6 +37,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
+import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.WrapperBuilder;
@@ -57,16 +58,7 @@ import hudson.util.VersionNumber;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -125,7 +117,7 @@ public class CopyArtifactTest {
     public static BuildWatcher watcher = new BuildWatcher();
 
     @Rule
-    public final JenkinsRule rule = new JenkinsRule();
+    public final CopyArtifactJenkinsRule rule = new CopyArtifactJenkinsRule();
 
     @Rule
     public TestName name = new TestName();
@@ -473,48 +465,10 @@ public class CopyArtifactTest {
     }
 
     private MavenModuleSet setupMavenJob() throws Exception {
-        File scmZip = tempFolder.newFile();
-        final Path scmSource = Paths.get(getClass().getResource("maven-job/").toURI());
-        URI scmZipUri = new URI("jar", scmZip.toURI().toString(), null);
-        scmZip.delete();
-        Map<String, String> env = new HashMap<>();
-        env.put("create", "true");
-        final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env);
-        Files.walkFileTree(scmSource, new SimpleFileVisitor<Path>(){
-            @Override
-            public FileVisitResult visitFile(
-                Path file,
-                BasicFileAttributes attrs
-            ) throws IOException {
-                Path dest = zipFile.getPath(
-                    "/",
-                    scmSource.relativize(file).toString()
-                );
-                Files.copy(file, dest);
-                return FileVisitResult.CONTINUE;
-            }
-            @Override
-            public FileVisitResult preVisitDirectory(
-                Path dir,
-                BasicFileAttributes attrs
-            ) throws IOException {
-                Path dest = zipFile.getPath(
-                    "/",
-                    scmSource.relativize(dir).toString()
-                );
-                if (Files.notExists(dest)) {
-                    // Creating root directory cause FileAlreadyExistsException
-                    Files.createDirectory(dest);
-                }
-                return FileVisitResult.CONTINUE;
-            }
-        });
-        zipFile.close();
-
         ToolInstallations.configureDefaultMaven();
         MavenModuleSet mp = createMavenProject();
         mp.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
-        mp.setScm(new ExtractResourceSCM(scmZip.toURI().toURL()));
+        mp.setScm(rule.getExtractResourceScm(tempFolder, getClass().getResource("maven-job")));
         return mp;
     }
 
