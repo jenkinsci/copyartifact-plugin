@@ -1,0 +1,16 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.jvnet.hudson.main.test.multimod</groupId>
+  <artifactId>multimod-top</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>multimod-top</name>
+  <description>Multimodule project with three modules, none dependent on each other.</description>
+  <url>http://maven.apache.org</url>
+  <modules>
+    <module>moduleA</module>
+    <module>moduleB</module>
+    <module>moduleC</module>
+  </modules>
+</project>
