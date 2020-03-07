@@ -46,6 +46,7 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
+import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.RemoveUpstreamBuilder;
@@ -54,9 +55,8 @@ import hudson.tasks.BuildTrigger;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.ExtractResourceSCM;
+import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Issue;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.SleepBuilder;
 import org.jvnet.hudson.test.ToolInstallations;
@@ -67,8 +67,11 @@ import org.jvnet.hudson.test.ToolInstallations;
  */
 public class TriggeredBuildSelectorTest {
     @Rule
-    public JenkinsRule j = new JenkinsRule();
+    public final CopyArtifactJenkinsRule j = new CopyArtifactJenkinsRule();
     
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
+
     /**
      * Tests that web configuration page works correct.
      * @throws Exception
@@ -926,7 +929,7 @@ public class TriggeredBuildSelectorTest {
         FreeStyleProject downstream = j.createFreeStyleProject();
         
         upstream.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
-        upstream.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        upstream.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("maven-job")));
         upstream.getPublishersList().add(new BuildTrigger(downstream.getName(), Result.SUCCESS));
         
         downstream.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(

@@ -37,6 +37,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.Cause.UserCause;
+import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.WrapperBuilder;
@@ -76,6 +77,7 @@ import org.apache.commons.lang.StringUtils;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.Issue;
@@ -115,10 +117,13 @@ public class CopyArtifactTest {
     public static BuildWatcher watcher = new BuildWatcher();
 
     @Rule
-    public final JenkinsRule rule = new JenkinsRule();
+    public final CopyArtifactJenkinsRule rule = new CopyArtifactJenkinsRule();
 
     @Rule
     public TestName name = new TestName();
+
+    @Rule
+    public TemporaryFolder tempFolder = new TemporaryFolder();
 
     // Tests using slaves fails with Jenkins < 1.520 on Windows.
     // See https://wiki.jenkins-ci.org/display/JENKINS/Unit+Test+on+Windows
@@ -463,7 +468,7 @@ public class CopyArtifactTest {
         ToolInstallations.configureDefaultMaven();
         MavenModuleSet mp = createMavenProject();
         mp.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
-        mp.setScm(new ExtractResourceSCM(getClass().getResource("maven-job.zip")));
+        mp.setScm(rule.getExtractResourceScm(tempFolder, getClass().getResource("maven-job")));
         return mp;
     }
 
