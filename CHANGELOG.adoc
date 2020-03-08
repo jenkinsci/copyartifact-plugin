@@ -3,6 +3,14 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.43.1]]
+=== 1.43.1
+
+Release date: Mar 8, 2020
+
+* Move the documentation to Github
+(https://github.com/jenkinsci/copyartifact-plugin/pull/116[#116])
+
 [[CopyArtifactPlugin-Version1.43]]
 === 1.43
 
