@@ -29,6 +29,7 @@ import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
+import hudson.Functions;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.console.HyperlinkNote;
@@ -42,6 +43,7 @@ import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
 import hudson.model.*;
 import hudson.model.listeners.ItemListener;
+import hudson.plugins.copyartifact.monitor.LegacyJobConfigMigrationMonitor;
 import hudson.remoting.VirtualChannel;
 import hudson.security.ACL;
 import hudson.security.SecurityRealm;
@@ -66,6 +68,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -106,8 +109,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private static boolean upgradeNeeded = false;
     private static Logger LOGGER = Logger.getLogger(CopyArtifact.class.getName());
     private static final BuildSelector DEFAULT_BUILD_SELECTOR = new StatusBuildSelector(true);
+    private static final Authentication AUTHENTICATED_ANONYMOUS = new UsernamePasswordAuthenticationToken(
+        "authenticated",
+        "",
+        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }
+    );
 
-    @Deprecated private String projectName;
+    @Deprecated private transient String projectName;
     private String project;
     private String parameters;
     private String filter, target;
@@ -149,18 +157,20 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     @DataBoundConstructor
     public CopyArtifact(String projectName) {
-        // check the permissions only if we can
-        StaplerRequest req = Stapler.getCurrentRequest();
-        if (req!=null) {
-            AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
-            if (p != null) {
-                ItemGroup<?> context = p.getParent();
+        if (CopyArtifactConfiguration.isMigrationMode()) {
+            // check the permissions only if we can
+            StaplerRequest req = Stapler.getCurrentRequest();
+            if (req!=null) {
+                AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
+                if (p != null) {
+                    ItemGroup<?> context = p.getParent();
 
-                // Prevents both invalid values and access to artifacts of projects which this user cannot see.
-                // If value is parameterized, it will be checked when build runs.
-                Jenkins jenkins = Jenkins.getInstance();
-                if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
-                    projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+                    // Prevents both invalid values and access to artifacts of projects which this user cannot see.
+                    // If value is parameterized, it will be checked when build runs.
+                    Jenkins jenkins = Jenkins.getInstance();
+                    if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
+                        projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+                }
             }
         }
 
@@ -253,7 +263,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     // get all CopyArtifacts configured to AbstractProject. This works both for Project and MatrixProject.
-    private static List<CopyArtifact> getCopyArtifactsInProject(AbstractProject<?,?> project) throws IOException {
+    private static List<CopyArtifact> getCopyArtifactsInProject(AbstractProject<?,?> project) {
         DescribableList<Builder,Descriptor<Builder>> list =
                 project instanceof Project ? ((Project<?,?>)project).getBuildersList()
                   : (project instanceof MatrixProject ?
@@ -276,18 +286,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         
         boolean isUpgraded = false;
         for (AbstractProject<?,?> project: jenkins.getAllItems(AbstractProject.class)) {
-            try {
-                for (CopyArtifact target: getCopyArtifactsInProject(project)) {
-                    try {
-                        if (target.upgradeIfNecessary(project)) {
-                            isUpgraded = true;
-                        }
-                    } catch(IOException e) {
-                        LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
+            for (CopyArtifact target: getCopyArtifactsInProject(project)) {
+                try {
+                    if (target.upgradeIfNecessary(project)) {
+                        isUpgraded = true;
                     }
+                } catch(IOException e) {
+                    LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
                 }
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, String.format("Failed to upgrade CopyArtifact in %s", project.getFullName()), e);
             }
         }
         
@@ -409,10 +415,38 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
         expandedProject = env.expand(project);
         Job<?, ?> job = jenkins.getItem(expandedProject, getItemGroup(build), Job.class);
-        if (job != null && !expandedProject.equals(project)
-            // If projectName is parameterized, need to do permission check on source project.
-            && !canReadFrom(job, build)) {
-            job = null; // Disallow access
+        if (job != null && !canReadFrom(job, build)) {
+            if (CopyArtifactConfiguration.isMigrationMode()) {
+                if (!expandedProject.equals(project)) {
+                    // Disallow access
+                    job = null;
+                } else {
+                    // will not work in Production mode, so we need to warn the admin about this jobs pair
+                    
+                    Date buildStartedAt = new Date(build.getStartTimeInMillis());
+                    // will be System if there is no QueueItemAuthenticator
+                    String currentUserName = Jenkins.getAuthentication().getName();
+                    LegacyJobConfigMigrationMonitor.get().addLegacyJob(build.getParent(), job, buildStartedAt, currentUserName);
+                    
+                    // but let the process goes on 
+                    console.println(Messages.CopyArtifact_MigrationOnMissingProject(expandedProject));
+                    LOGGER.log(Level.INFO, "But the application is configured to use Migration mode for " +
+                            "Copy Artifact, so the copy was authorized and the information added to the legacy monitor");
+                }
+            } else {
+                // Disallow access
+                job = null;
+            }
+        } else if (job != null && CopyArtifactConfiguration.isMigrationMode()) {
+            // Remove from monitor so that the administrator can ensure
+            // the configuration is fixed.
+            // This is performed only in Migration mode
+            // even though the monitor is activated in Production mode,
+            // to avoid performance issues in Production mode.
+            LegacyJobConfigMigrationMonitor.get().removeLegacyJob(
+                build.getParent(),
+                job
+            );
         }
         if (job == null) {
             throw new AbortException(Messages.CopyArtifact_MissingProject(expandedProject));
@@ -427,6 +461,15 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             } else {
                 // Fail build if copy is not optional
                 throw new AbortException(message);
+            }
+        }
+        if (!CopyArtifactConfiguration.get().isMigrationMode()) {
+            if (!canReadArtifact(src, build)) {
+                throw new AbortException(
+                    Messages.CopyArtifact_NoArtifactsPermission(
+                        src.getFullDisplayName()
+                    )
+                );
             }
         }
         FilePath targetDir = workspace;
@@ -478,38 +521,92 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
     }
 
+    /**
+     * Test the permission to read the source job.
+     *
+     * * If QueueItemAuthenticator is configured, the test passes.
+     * * If CopyArtifactPermissionProperty is configured for the copier build, the test passes.
+     * * If the source job accessible from anonymous-authenticated user, the test passes.
+     * 
+     * @param job the source job to test
+     * @param build the copier build
+     * @return true if the test passes
+     */
     private boolean canReadFrom(Job<?, ?> job, Run<?, ?> build) {
         Job<?, ?> fromJob = job;
         Job<?, ?> toJob = build.getParent();
-
-        if (CopyArtifactPermissionProperty.canCopyArtifact(getRootProject(toJob), getRootProject(fromJob))) {
-            return true;
-        }
 
         Authentication a = Jenkins.getAuthentication();
         if (!ACL.SYSTEM.equals(a)) {
             // if the build does not run on SYSTEM authorization,
             // Jenkins is configured to use QueueItemAuthenticator.
-            // In this case, builds are configured to run with a proper authorization
-            // (for example, builds run with the authorization of the user who triggered the build),
-            // and we should check access permission with that authorization.
-            // QueueItemAuthenticator is available from Jenkins 1.520.
-            // See also JENKINS-14999, JENKINS-16956, JENKINS-18285.
-            boolean b = job.getACL().hasPermission(Item.READ);
-            if (!b)
-                LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because %s lacks Item.READ access",job,build, a));
-            return b;
+            // In this case, the permission is already checked by Jenkins
+            // when retrieving the source job.
+            LOGGER.log(Level.FINE, "The copy-artifact step (of {0}) was accepted because there is a configured " +
+                    "QueueItemAuthenticator and it is the responsible for the check on the target project {1}",
+                    new Object[]{ fromJob.getFullName(), toJob.getFullName() });
+    
+            return true;
         }
-        
-        // for the backward compatibility, 
-        // test the permission as an anonymous authenticated user.
-        boolean b = job.getACL().hasPermission(
-                new UsernamePasswordAuthenticationToken("authenticated", "",
-                        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }),
-                Item.READ);
-        if (!b)
-            LOGGER.fine(String.format("Refusing to copy artifact from %s to %s because 'authenticated' lacks Item.READ access",job,build));
-        return b;
+
+        Job<?, ?> toProject = getRootProject(toJob);
+        Job<?, ?> fromProject = getRootProject(fromJob);
+        if (CopyArtifactPermissionProperty.canCopyArtifact(toProject, fromProject)) {
+            LOGGER.log(Level.FINE, "The copy-artifact step (of {0}) was accepted because the target project {1}" +
+                    " contains the property linking to this project", new Object[]{ toProject.getFullName(), fromProject.getFullName() });
+            return true;
+        }
+
+        // Test the permission as an anonymous authenticated user.
+        if (fromJob.getACL().hasPermission(
+                AUTHENTICATED_ANONYMOUS,
+                Item.READ)) {
+            LOGGER.log(Level.FINE, "The copy-artifact step (of {0}) was accepted because the target project {1}" +
+                    " is visible for authenticated user", new Object[]{ toProject.getFullName(), fromProject.getFullName() });
+            return true;
+        }
+
+        LOGGER.log(Level.FINE, "Refusing to copy artifact from {0} to {1} because 'authenticated' lacks Item.READ access",
+                new Object[]{ fromProject.getFullName(), toProject.getFullName() });
+        return false;
+    }
+
+    /**
+     * Test the permission to read artifacts from the source build.
+     *
+     * @param srcBuild the build to copy artifacts from.
+     * @param destBuild the build copying artifacts
+     * @return true if can read artifacts.
+     */
+    private boolean canReadArtifact(Run<?, ?> srcBuild, Run<?, ?> destBuild) {
+        if (!Functions.isArtifactsPermissionEnabled()) {
+            // Run.ARTIFACTS permission is enabled only when
+            // system property "hudson.security.ArtifactsPermission" is set.
+            // So this method should return soon in this path for most cases.
+            return true;
+        }
+
+        Authentication a = Jenkins.getAuthentication();
+        if (ACL.SYSTEM.equals(a)) {
+            a = AUTHENTICATED_ANONYMOUS;
+        }
+        if (srcBuild.hasPermission(a, Run.ARTIFACTS)) {
+            return true;
+        }
+
+        // Allow to bypass Run.ARTIFACTS permission
+        // when CopyArtifactPermission is set.
+        // This test may already run in `canReadFrom()`
+        // and may be able to be optimized by running only once,
+        // though, I don't do that optimization as
+        // I don't think that overhead is critical and
+        // it's better to keep codes simple.
+        Job<?, ?> toProject = getRootProject(destBuild.getParent());
+        Job<?, ?> fromProject = getRootProject(srcBuild.getParent());
+        return CopyArtifactPermissionProperty.canCopyArtifact(
+            toProject,
+            fromProject
+        );
     }
 
     private static Job<?, ?> getRootProject(Job<?, ?> job) {

@@ -1,0 +1,56 @@
+<div>
+How Copy Artifact checks permissions to access artifacts to copy:
+<dl>
+  <dt>Production</dt>
+    <dd>
+      <strong>RECOMMENDED.</strong>
+      <p>
+      Performs permission checks while running builds.
+      Builds copying artifacts from another builds (source builds)
+      require appropriate permission configurations
+      unless source builds are allowed to read from any users.
+      </p>
+      <p>
+      You can configure "Permission to Copy Artifact" in
+      jobs to copy artifacts from. It configures jobs allowed to
+      copy artifacts from that job.
+      You can configure that with <code>copyArtifactPermission</code>
+      in pipelines.
+      </p>
+      <p>
+      You can configure "Access Control for Builds"
+      in Manage Jenkins > Configure Global Security
+      so that builds run with authentication allowed
+      to access source builds.
+      That configuration is shown only when plugins providing
+      "Access Control for Builds" are installed.
+      See those plugin documentations for details.
+      </p>
+    </dd>
+  <dt>Migration</dt>
+    <dd>
+      <p>
+      Performs permission checks when configuring jobs
+      or when running builds if the name of the source job is
+      configured with variables.
+      This is the behavior compatible to Copy Artifact 1.43.1 or earlier.
+      </p>
+      <p>
+      This may cause security vulnerabilities allowing malicious users
+      to bypass permission checks.
+      This mode is provided only to allow users to upgrade job configurations
+      and migrate to Production mode easily.
+      You should migrate to Production mode as soon as you can.
+      </p>
+      <p>
+      Build executions that would fail in Production mode are
+      recorded and displayed as warnings to administrators.
+      Administrators should check those warnings
+      and update the job configurations to successfully use Production mode.
+      You can see more details about how to update the job configurations
+      in the "Production" section
+      and the page linked from the warning messages.
+      </p>
+    </dd>
+</dl>
+</div>

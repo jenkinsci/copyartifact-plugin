@@ -26,6 +26,7 @@ package hudson.plugins.copyartifact;
 import hudson.FilePath;
 import hudson.Functions;
 import hudson.Launcher;
+import hudson.cli.CLICommandInvoker;
 import hudson.matrix.Axis;
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
@@ -56,6 +57,7 @@ import hudson.tasks.Builder;
 import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -70,6 +72,7 @@ import java.util.concurrent.TimeUnit;
 import jenkins.model.Jenkins;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
 
+import org.acegisecurity.Authentication;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
@@ -84,12 +87,17 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.MockQueueItemAuthenticator;
 import org.jvnet.hudson.test.ToolInstallations;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.jvnet.hudson.test.recipes.WithPlugin;
+
+import com.gargoylesoftware.htmlunit.HttpMethod;
+import com.gargoylesoftware.htmlunit.WebRequest;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
@@ -163,6 +171,7 @@ public class CopyArtifactTest {
         if(Functions.isWindows()) {
             purgeSlaves();
         }
+        System.clearProperty("hudson.security.ArtifactsPermission");
     }
 
     private FreeStyleProject createProject(String otherProject, String parameters, String filter,
@@ -909,8 +918,7 @@ public class CopyArtifactTest {
     }
 
     /**
-     * Test that a user is prevented from bypassing permissions on other jobs when configuring
-     * a copyartifact build step.
+     * Test that a user is prevented from bypassing permissions on other jobs
      */
     @Test
     public void testPermission() throws Exception {
@@ -918,7 +926,11 @@ public class CopyArtifactTest {
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
         ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
         pmas.add(Jenkins.READ, Jenkins.ANONYMOUS.getName());
+        pmas.add(Item.BUILD, Jenkins.ANONYMOUS.getName());
+        pmas.add(Computer.BUILD, Jenkins.ANONYMOUS.getName());
         pmas.add(Jenkins.READ, "joe");
+        pmas.add(Item.BUILD, "joe");
+        pmas.add(Computer.BUILD, "joe");
         rule.jenkins.setAuthorizationStrategy(pmas);
         
         // only joe can access project "src"
@@ -927,7 +939,10 @@ public class CopyArtifactTest {
             Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
             auths.put(Item.READ, Sets.newHashSet("joe"));
             src.addProperty(new AuthorizationMatrixProperty(auths));
+            src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+            src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
         }
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
         
         // test access from anonymous
         {
@@ -959,7 +974,11 @@ public class CopyArtifactTest {
             
             dest = rule.jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
             CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
-            assertEquals("Should ignore/clear value for inaccessible project", "", ca.getProjectName());
+            // Preserves the configuration as-is in Production mode.
+            assertEquals(src.getName(), ca.getProjectName());
+
+            // Instead, the build will fail.
+            rule.assertBuildStatus(Result.FAILURE, dest.scheduleBuild2(0));
         }
         
         // test access from joe
@@ -988,7 +1007,16 @@ public class CopyArtifactTest {
             
             dest = rule.jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
             CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
-            assertEquals("Should ignore/clear value for inaccessible project", src.getName(), ca.getProjectName());
+            assertEquals(src.getName(), ca.getProjectName());
+
+            // Build should succeed when run as joe.
+            Map<String, Authentication> authMap = new HashMap<>();
+            authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                new MockQueueItemAuthenticator(authMap)
+            );
+            rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
         }
     }
 
@@ -1872,6 +1900,167 @@ public class CopyArtifactTest {
         );
     }
     
+    @Issue("JENKINS-23475")
+    @Test
+    public void testRestInterfaceCannotBypassPermission() throws Exception {
+        // This allows any users authenticate name == password
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        
+        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
+        authorization.add(Jenkins.READ, "devel");
+        rule.jenkins.setAuthorizationStrategy(authorization);
+        
+        FreeStyleProject srcProject = rule.createFreeStyleProject();
+        {
+            // devel is not allowed to access srcProject.
+            Map<Permission, Set<String>> auths = new HashMap<>();
+            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        srcProject.getBuildersList().add(new ArtifactBuilder());
+        srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        rule.assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
+        
+        FreeStyleProject destProject = rule.createFreeStyleProject();
+        {
+            // devel is allowed to access and configure destProject.
+            Map<Permission, Set<String>> auths = new HashMap<>();
+            auths.put(Item.READ, Sets.newHashSet("devel"));
+            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
+            destProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        destProject.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("SRC", srcProject.getName())
+        ));
+        destProject.getBuildersList().add(new CopyArtifact(
+                "${SRC}",
+                "",
+                new StatusBuildSelector(true),
+                "**/*",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // destProject fails as runtime access check is performed.
+        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0));
+        
+        WebClient wc = rule.createWebClient();
+        wc.login("devel", "devel");
+        
+        // devel cannot access srcProject
+        wc.getOptions().setThrowExceptionOnFailingStatusCode(false);
+        assertEquals(404, wc.getPage(srcProject).getWebResponse().getStatusCode());
+        wc.getOptions().setThrowExceptionOnFailingStatusCode(true);
+        
+        // GET config.xml of destProject
+        String configXml = wc.goToXml(String.format("%s/config.xml", destProject.getUrl()))
+            .getWebResponse().getContentAsString();
+        
+        // POST config.xml to destProject, replacing ${SRC} to srcProject.
+        // This should success.
+        WebRequest req = new WebRequest(
+                wc.createCrumbedUrl(String.format("%s/config.xml", destProject.getUrl())),
+                HttpMethod.POST
+        );
+
+        req.setAdditionalHeader("Content-Type", "text/xml");
+        req.setRequestBody(configXml.replace("${SRC}", srcProject.getName()));
+        wc.getPage(req);
+        
+        // destProject should fail for permission error.
+        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
+    }
+    
+    @Issue("JENKINS-23475")
+    @Test
+    public void testCliCannotBypassPermission() throws Exception {
+        // This allows any users authenticate name == password
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        
+        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
+        authorization.add(Jenkins.READ, "devel");
+        
+        // This is required for CLI, JENKINS-12543.
+        authorization.add(Jenkins.READ, "anonymous");
+        //authorization.add(Item.READ, "anonymous");
+        
+        rule.jenkins.setAuthorizationStrategy(authorization);
+        
+        FreeStyleProject srcProject = rule.createFreeStyleProject();
+        {
+            // devel is not allowed to access srcProject.
+            Map<Permission, Set<String>> auths = new HashMap<>();
+            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        srcProject.getBuildersList().add(new ArtifactBuilder());
+        srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
+        rule.assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
+        
+        FreeStyleProject destProject = rule.createFreeStyleProject();
+        {
+            // devel is allowed to access and configure destProject.
+            // READ for anonumous is required for CLI, JENKINS-12543.
+            Map<Permission, Set<String>> auths = new HashMap<>();
+            auths.put(Item.READ, Sets.newHashSet("devel", "anonymous"));
+            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
+            destProject.addProperty(new AuthorizationMatrixProperty(auths));
+        }
+        destProject.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("SRC", srcProject.getName())
+        ));
+        destProject.getBuildersList().add(new CopyArtifact(
+                "${SRC}",
+                "",
+                new StatusBuildSelector(true),
+                "**/*",
+                "",
+                false,
+                false,
+                true
+        ));
+        
+        // destProject fails as runtime access check is performed.
+        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0));
+        
+        // devel cannot access srcProject
+        {
+            CLICommandInvoker.Result r = new CLICommandInvoker(rule, "get-job")
+                .asUser("devel")
+                .withArgs(srcProject.getFullName())
+                .invoke();
+            assertNotEquals(0, r.returnCode());
+        }
+        
+        // GET config.xml of destProject
+        String configXml = null;
+        {
+            CLICommandInvoker.Result r = new CLICommandInvoker(rule, "get-job")
+                .asUser("devel")
+                .withArgs(destProject.getFullName())
+                .invoke();
+            assertEquals(r.stderr(), 0, r.returnCode());
+            configXml = r.stdout();
+        }
+        
+        // POST config.xml to destProject, replacing ${SRC} to srcProject.
+        // This should success.
+        {
+            CLICommandInvoker.Result r = new CLICommandInvoker(rule, "update-job")
+                .asUser("devel")
+                .withArgs(destProject.getFullName())
+                .withStdin(new ByteArrayInputStream(configXml.replace(
+                    "${SRC}",
+                    srcProject.getName()
+                ).getBytes()))
+                .invoke();
+            assertEquals(r.stderr(), 0, r.returnCode());
+        }
+        
+        // destProject should fail for permission error.
+        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
+    }
+
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
         private final transient org.acegisecurity.Authentication auth;
         
@@ -2151,4 +2340,136 @@ public class CopyArtifactTest {
         }
     }
 
+    @Test
+    public void artifactsPermissionAnonymousSuccess() throws Exception {
+        System.setProperty("hudson.security.ArtifactsPermission", "true");
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        rule.jenkins.setAuthorizationStrategy(authStrategy);
+
+        FreeStyleProject src = rule.createFreeStyleProject();
+        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        authStrategy.grant(Item.READ).onItems(src).toEveryone();
+        authStrategy.grant(Run.ARTIFACTS).onItems(src).toEveryone();
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
+        FreeStyleProject dest = rule.createFreeStyleProject();
+        dest.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                src.getName(),
+                "",
+                new StatusBuildSelector(),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
+    }
+
+    @Test
+    public void artifactsPermissionAnonymousFailure() throws Exception {
+        System.setProperty("hudson.security.ArtifactsPermission", "true");
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        rule.jenkins.setAuthorizationStrategy(authStrategy);
+
+        FreeStyleProject src = rule.createFreeStyleProject();
+        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        authStrategy.grant(Item.READ).onItems(src).toEveryone();
+        // Watch out: No Run.Artifacts permission.
+        // authStrategy.grant(Run.ARTIFACTS).onItems(src).toEveryone();
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
+        FreeStyleProject dest = rule.createFreeStyleProject();
+        dest.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                src.getName(),
+                "",
+                new StatusBuildSelector(),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+        rule.assertBuildStatus(Result.FAILURE, dest.scheduleBuild2(0));
+    }
+
+    @Test
+    public void artifactsPermissionWithAuthSuccess() throws Exception {
+        System.setProperty("hudson.security.ArtifactsPermission", "true");
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        rule.jenkins.setAuthorizationStrategy(authStrategy);
+        authStrategy.grant(Item.BUILD).onRoot().to("joe");
+        authStrategy.grant(Computer.BUILD).onRoot().to("joe");
+
+        FreeStyleProject src = rule.createFreeStyleProject();
+        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        authStrategy.grant(Item.READ).onItems(src).to("joe");
+        authStrategy.grant(Run.ARTIFACTS).onItems(src).to("joe");
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
+        FreeStyleProject dest = rule.createFreeStyleProject();
+        dest.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                src.getName(),
+                "",
+                new StatusBuildSelector(),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+
+        Map<String, Authentication> authMap = new HashMap<>();
+        authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
+        QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+        QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+            new MockQueueItemAuthenticator(authMap)
+        );
+        rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
+    }
+
+    @Test
+    public void artifactsPermissionWithAuthFailure() throws Exception {
+        System.setProperty("hudson.security.ArtifactsPermission", "true");
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        rule.jenkins.setAuthorizationStrategy(authStrategy);
+        authStrategy.grant(Item.BUILD).onRoot().to("joe");
+        authStrategy.grant(Computer.BUILD).onRoot().to("joe");
+
+        FreeStyleProject src = rule.createFreeStyleProject();
+        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        authStrategy.grant(Item.READ).onItems(src).to("joe");
+        // Watch out: No Run.Artifacts permission.
+        // authStrategy.grant(Run.ARTIFACTS).onItems(src).to("joe");
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
+        FreeStyleProject dest = rule.createFreeStyleProject();
+        dest.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                src.getName(),
+                "",
+                new StatusBuildSelector(),
+                "",
+                "",
+                false,
+                false,
+                true
+        ));
+
+        Map<String, Authentication> authMap = new HashMap<>();
+        authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
+        QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+        QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+            new MockQueueItemAuthenticator(authMap)
+        );
+        rule.assertBuildStatus(Result.FAILURE, dest.scheduleBuild2(0));
+    }
 }

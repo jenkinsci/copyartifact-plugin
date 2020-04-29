@@ -1,0 +1,226 @@
+<!--
+The MIT License
+
+Copyright (c) 2019, CloudBees, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:l="/lib/layout" xmlns:i="jelly:fmt">
+    <l:layout title="${%title}">
+        <st:adjunct includes="hudson.plugins.copyartifact.monitor.LegacyJobConfigMigrationMonitor.resources"/>
+        <st:include page="sidepanel.jelly" it="${app}"/>
+        <l:main-panel>
+            <div class="legacy-copy-artifact">
+                
+                <h1>${%title}</h1>
+                <p>${%contextMessage}</p>
+                <a href="#" id="detailed-steps" data-target="#detailed-steps-body" data-help-url="${rootURL}/${it.url}/helpDetailedSteps">${%DetailedSteps}</a>
+                <div class="help" id="detailed-steps-body">${%Loading}</div>
+                
+                <div class="selection-panel">
+                    ${%Select}
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAll.title}"
+                       onclick="selectAll(this);return false;">${%SelectAll}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllMigratable.title}"
+                       onclick="selectAllMigratable(this);return false;">${%SelectAllMigratable}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllValid.title}"
+                       onclick="selectAllValid(this);return false;">${%SelectAllValid}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllInvalid.title}"
+                       onclick="selectAllInvalid(this);return false;">${%SelectAllInvalid}</a>
+                </div>
+                <div class="action-panel">
+                    <span class="yui-button">
+                        <button class="action-migrate-selected" onclick="confirmAndMigrateAllSelected(this);"
+                                data-url="${rootURL}/${it.url}/migrateAllSelected"
+                                data-confirm-template="${%MigrateAllSelected_confirm}"
+                                data-nothing-selected="${%MigrateAllSelected_nothing}">
+                            ${%MigrateAllSelected}
+                        </button>
+                    </span>
+                    <span class="yui-button">
+                        <button class="action-ignore-selected" onclick="confirmAndIgnoreAllSelected(this);"
+                                data-url="${rootURL}/${it.url}/ignoreAllSelected"
+                                data-confirm-template="${%IgnoreAllSelected_confirm}"
+                                data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
+                            ${%IgnoreAllSelected}
+                        </button>
+                    </span>
+                </div>
+                <j:set var="jobInfoList" value="${it.getAllJobInformation()}"/>
+                <table class="pane bigtable align-th-left">
+                    <tr>
+                        <th width="1%"><!-- warning --></th>
+                        <th width="1%"><!-- auto-migrate --></th>
+                        <th width="1%"><!-- checkbox --></th>
+                        <th title="${%JobFullNameFrom.title}">${%JobFullNameFrom}</th>
+                        <th title="${%JobFullNameTo.title}">${%JobFullNameTo}</th>
+                        <th title="${%Username.title}">${%Username}</th>
+                        <th title="${%LastBuildDate.title}">${%LastBuildDate}</th>
+                        <th>${%NumOfUse}</th>
+                    </tr>
+                    <j:choose>
+                        <j:when test="${!jobInfoList.isEmpty()}">
+                            <j:set var="i" value="${0}" />
+                            <j:forEach var="jobInfo" items="${jobInfoList}">
+                                <j:if test="${jobInfo != null}">
+                                    <j:set var="jobFrom" value="${jobInfo.jobFrom}" />
+                                    <j:forEach var="jobToInfo" items="${jobInfo.jobToList}">
+                                        <j:set var="jobTo" value="${jobToInfo.jobTo}" />
+                                        <j:set var="isValid" value="${jobFrom.validJob != null and jobTo.validJob != null}" />
+                                        <tr>
+                                            <td class="first-column">
+                                                <j:if test="${!isValid}">
+                                                    <img class="first-column-icon" src="${imagesURL}/16x16/warning.png" title="${%InvalidWarning.title}" />
+                                                </j:if>
+                                            </td>
+                                            <td>
+                                                <j:if test="${jobFrom.autoMigratable}">
+                                                    <img src="${imagesURL}/16x16/accept.png" title="${%CanMigrate}" />
+                                                </j:if>
+                                                <j:if test="${!jobFrom.autoMigratable}">
+                                                    <img src="${imagesURL}/16x16/stop.png" title="${%CanNotMigrate}" />
+                                                </j:if>
+                                            </td>
+                                            <td>
+                                                <input type="checkbox" 
+                                                       data-job-from="${jobFrom.jobFullName}"
+                                                       data-job-to="${jobTo.jobFullName}"
+                                                       class="checkbox-line ${isValid ? 'valid-line' : 'invalid-line'} ${jobFrom.autoMigratable ? 'migratable-line' : 'inmigratable-line'}" />
+                                            </td>
+                                            <td>
+                                                <j:choose>
+                                                    <j:when test="${jobFrom.validJob != null}">
+                                                        <a href="${rootURL}/${jobFrom.validJob.url}" target="_blank" class="job-info-job job-info-job-from">
+                                                            ${jobFrom.jobFullName}
+                                                        </a>
+                                                        <j:if test="${!jobFrom.regularAccess}">
+                                                            <span class="warning" title="${%WarningNoAccess.title}" style="margin-left: 5px;">${%WarningNoAccess}</span>
+                                                        </j:if>
+                                                    </j:when>
+                                                    <j:otherwise>
+                                                        <span class="job-info-job job-info-job-from">
+                                                            ${jobFrom.jobFullName}
+                                                            <span class="warning" title="${%WarningNotFound.title}" style="margin-left: 5px;">${%WarningNotFound}</span>
+                                                        </span>
+                                                    </j:otherwise>
+                                                </j:choose>
+                                            </td>
+                                            <td>
+                                                <j:choose>
+                                                    <j:when test="${jobTo.validJob != null}">
+                                                        <a href="${rootURL}/${jobTo.validJob.url}" target="_blank" class="job-info-job job-info-job-to">
+                                                            ${jobTo.jobFullName}
+                                                        </a>
+                                                        <j:if test="${!jobTo.regularAccess}">
+                                                            <span class="warning" title="${%WarningNoAccess.title}" style="margin-left: 5px;">${%WarningNoAccess}</span>
+                                                        </j:if>
+                                                    </j:when>
+                                                    <j:otherwise>
+                                                        <span class="job-info-job job-info-job-to">
+                                                            ${jobTo.jobFullName}
+                                                            <span class="warning" title="${%WarningNotFound.title}" style="margin-left: 5px;">${%WarningNotFound}</span>
+                                                        </span>
+                                                    </j:otherwise>
+                                                </j:choose>
+                                            </td>
+                                            <td>
+                                                <span class="job-info-username">
+                                                    ${jobToInfo.username}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <i:formatDate var="lastBuildDateString" value="${jobToInfo.lastBuildDate}" type="both" dateStyle="medium" timeStyle="medium" />
+                                                <span class="job-info-last-build-date">
+                                                    ${lastBuildDateString}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="job-info-last-num-use">
+                                                    ${jobToInfo.numOfBuild}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </j:forEach>
+                                </j:if>
+                                <!-- else: the user revoked its legacy token between the list computation and the display -->
+                            </j:forEach>
+                        </j:when>
+                        <j:otherwise>
+                            <tr class="no-project-line">
+                                <td colspan="8">
+                                    <div class="no-project">
+                                        ${%NoImpactedProjects}
+                                    </div>
+                                </td>
+                            </tr>
+                        </j:otherwise>
+                    </j:choose>
+                </table>
+                
+                <div class="selection-panel">
+                    ${%Select}
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAll.title}"
+                       onclick="selectAll(this);return false;">${%SelectAll}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllMigratable.title}"
+                       onclick="selectAllMigratable(this);return false;">${%SelectAllMigratable}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllValid.title}"
+                       onclick="selectAllValid(this);return false;">${%SelectAllValid}</a>
+                    <a href="#"
+                       class="action"
+                       title="${%SelectAllInvalid.title}"
+                       onclick="selectAllInvalid(this);return false;">${%SelectAllInvalid}</a>
+                </div>
+                
+                <div class="action-panel">
+                    <span class="yui-button">
+                        <button class="action-migrate-selected" onclick="confirmAndMigrateAllSelected(this);"
+                                data-url="${rootURL}/${it.url}/migrateAllSelected"
+                                data-confirm-template="${%MigrateAllSelected_confirm}"
+                                data-nothing-selected="${%MigrateAllSelected_nothing}">
+                            ${%MigrateAllSelected}
+                        </button>
+                    </span>
+                    <span class="yui-button">
+                        <button class="action-ignore-selected" onclick="confirmAndIgnoreAllSelected(this);"
+                                data-url="${rootURL}/${it.url}/ignoreAllSelected"
+                                data-confirm-template="${%IgnoreAllSelected_confirm}"
+                                data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
+                            ${%IgnoreAllSelected}
+                        </button>
+                    </span>
+                </div>
+            </div>
+        </l:main-panel>
+    </l:layout>
+</j:jelly>

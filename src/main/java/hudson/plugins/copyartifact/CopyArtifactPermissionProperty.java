@@ -56,7 +56,7 @@ import hudson.util.FormValidation;
 import org.jenkinsci.Symbol;
 
 /**
- *　Job Property to define projects that can copy artifacts of this project.
+ * Job Property to define projects that can copy artifacts of this project.
  */
 public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
     public static final String PROPERTY_NAME = "copy-artifact-permission-property";

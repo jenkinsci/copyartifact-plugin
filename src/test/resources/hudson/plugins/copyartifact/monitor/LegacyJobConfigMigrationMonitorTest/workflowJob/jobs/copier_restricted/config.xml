@@ -1,0 +1,23 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions class="java.util.Arrays$ArrayList">
+        <a class="hudson.model.ParameterDefinition-array">
+          <hudson.model.StringParameterDefinition>
+            <name>sourceProject</name>
+            <defaultValue></defaultValue>
+            <trim>false</trim>
+          </hudson.model.StringParameterDefinition>
+        </a>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition">
+    <script>node {copyArtifacts(projectName: &apos;to-be-copied_restricted&apos;);}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

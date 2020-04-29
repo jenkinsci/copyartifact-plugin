@@ -31,24 +31,31 @@ import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
 import hudson.model.FreeStyleProject;
+import hudson.model.Item;
 import hudson.model.JobProperty;
-import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
-import hudson.model.StringParameterDefinition;
+import hudson.model.User;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import jenkins.model.Jenkins;
+import java.util.HashMap;
+import java.util.Map;
 
+import jenkins.model.Jenkins;
+import jenkins.security.QueueItemAuthenticatorConfiguration;
+
+import org.acegisecurity.Authentication;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.MockFolder;
-
+import org.jvnet.hudson.test.MockQueueItemAuthenticator;
 import org.jenkinsci.plugins.workflow.cps.SnippetizerTester;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.multibranch.JobPropertyStep;
@@ -61,6 +68,16 @@ public class CopyArtifactPermissionPropertyTest {
     @Rule
     public JenkinsRule j = new JenkinsRule();
     
+    @Before
+    public void setupProductionMode() {
+        CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
+    }
+    
+    @After
+    public void tearDown() throws Exception {
+        System.clearProperty("hudson.security.ArtifactsPermission");
+    }
+
     @Test
     public void testCopyArtifactPermissionProperty() throws Exception {
         // single
@@ -290,8 +307,7 @@ public class CopyArtifactPermissionPropertyTest {
         j.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
             grant(Jenkins.READ).everywhere().toAuthenticated());
         upstream.setDefinition(new CpsFlowDefinition("node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}", true));
-        downstream.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("UPSTREAM", "upstream")));
-        downstream.setDefinition(new CpsFlowDefinition("node {copyArtifacts '${UPSTREAM}'}", true));
+        downstream.setDefinition(new CpsFlowDefinition("node {copyArtifacts 'upstream'}", true));
         j.buildAndAssertSuccess(upstream);
         j.assertLogContains(Messages.CopyArtifact_MissingProject("upstream"), j.assertBuildStatus(Result.FAILURE, downstream.scheduleBuild2(0)));
         upstream.setDefinition(new CpsFlowDefinition("properties([copyArtifactPermission('downstream')]); node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}", true));
@@ -300,10 +316,75 @@ public class CopyArtifactPermissionPropertyTest {
     }
 
     @Test public void configProps() throws Exception {
-        JobProperty property = new CopyArtifactPermissionProperty("project1,project2");
+        JobProperty<?> property = new CopyArtifactPermissionProperty("project1,project2");
         SnippetizerTester tester = new SnippetizerTester(j);
         tester.assertRoundTrip(new JobPropertyStep(Collections.singletonList(property)),
                 "properties([copyArtifactPermission('project1,project2')])" );
+    }
+
+    @Test
+    public void testNotWorkWithQueueItemAuthenticator() throws Exception {
+        WorkflowJob upstream = j.createProject(WorkflowJob.class, "upstream");
+        WorkflowJob downstream = j.createProject(WorkflowJob.class, "downstream");
+        upstream.setDefinition(new CpsFlowDefinition("properties([copyArtifactPermission('downstream')]); node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}", true));
+        downstream.setDefinition(new CpsFlowDefinition("node {copyArtifacts 'upstream'}", true));
+        j.buildAndAssertSuccess(upstream);
+        j.buildAndAssertSuccess(downstream);
+
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        authStrategy.grant(Item.READ).onItems(upstream).to("alice");
+        j.jenkins.setAuthorizationStrategy(authStrategy);
+
+        // Fails to copy even if copyArtifactPermission is configured
+        // if the permission is configured with QueueItemAuthenticator.
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            Map<String, Authentication> authMap = new HashMap<>();
+            authMap.put(downstream.getFullName(), User.getById("bob", true).impersonate());
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                new MockQueueItemAuthenticator(authMap)
+            );
+            j.assertBuildStatus(Result.FAILURE, downstream.scheduleBuild2(0));
+        }
+
+        // Copy succeeds only when running build with appropriate permission
+        // when QueueItemAuthenticator is used.
+        // (actually, you don't need to configure copyArtifactPermission)
+        {
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
+            Map<String, Authentication> authMap = new HashMap<>();
+            authMap.put(downstream.getFullName(), User.getById("alice", true).impersonate());
+            QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
+                new MockQueueItemAuthenticator(authMap)
+            );
+            j.buildAndAssertSuccess(downstream);
+        }
+
+    }
+
+    @Test
+    public void alsoByPassRunArtifracts() throws Exception {
+        System.setProperty("hudson.security.ArtifactsPermission", "true");
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        j.jenkins.setAuthorizationStrategy(authStrategy);
+
+        WorkflowJob upstream = j.createProject(WorkflowJob.class, "upstream");
+        upstream.setDefinition(new CpsFlowDefinition(
+            "properties([copyArtifactPermission('downstream')]);"
+            + "node {writeFile file: 'f', text: '.'; archiveArtifacts 'f'}",
+            true
+        ));
+
+        WorkflowJob downstream = j.createProject(WorkflowJob.class, "downstream");
+        downstream.setDefinition(new CpsFlowDefinition(
+            "node {copyArtifacts 'upstream'}",
+            true
+        ));
+
+        j.buildAndAssertSuccess(upstream);
+        j.buildAndAssertSuccess(downstream);
     }
 
     /**

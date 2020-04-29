@@ -1,0 +1,96 @@
+<div>
+<p>You can update configurations in one of following ways:</p>
+<dl>
+  <dt>Automatic migration</dt>
+    <dd>
+      <p>
+      Checking projects and clicking "Migrate the selected project(s)"
+      updates configurations adding appropriate
+      "Permission to Copy Artifact" configurations
+      to the projects listed in "Project with the artifacts".
+      </p>
+      <p>
+      Automatic migration is not applicable to some kind of projects
+      that generate configurations automatically, such as multibranch.
+      Please apply manual migrations to those projects.
+      </p>
+    </dd>
+  <dt>Manual migration</dt>
+    <dd>
+      <p>
+      You can migrate projects updating configurations manually.
+      </p>
+      <p>
+      The updated project will be removed from the list automatically
+      when the project is built again and it wouldn't fail
+      in Production mode. 
+      You can see whether the project is built again
+      after updating the configuration with checking "Last time" field.
+      Auto removal is performed only in Migration mode,
+      and you have to remove it manually after you switch Copy Artifact
+      to Production mode.
+      </p>
+      <p>
+      You can configure appropriate permissions for Copy Artifact
+      in one of following ways:
+      </p>
+      <dl>
+        <dt>Configure "Permission to Copy Artifact"</dt>
+        <dd>
+          <p>
+          You can configure "Permission to Copy Artifact" to the project
+          with artifacts to define which projects are allowed to
+          copy artifacts from that project.
+          "Migrate the selected project(s)" button does this configuration
+          automatically.
+          </p>
+          <p>
+          In pipelines, you can define <code>copyArtifactPermission</code> like this:
+          </p>
+          <dl>
+            <dt>Declarative pipeline</dt>
+            <dd>
+<code><pre>pipeline {
+  agent any;
+  options {
+    // specify projects to allow to copy artifacts with a comma-separated list.
+    copyArtifactPermission('job1,job2,...');
+  }
+  stages{...}
+}
+</pre></code>
+            </dd>
+            <dt>Scripted pipeline</dt>
+            <dd>
+<code><pre>properties([
+  // specify projects to allow to copy artifacts with a comma-separated list.
+  copyArtifactPermission('job1,job2,...'),
+]);
+node {
+  ...
+}
+</pre></code>
+            </dd>
+          </dl>
+        </dd>
+        <dt>Configure  "Access Control for Builds"</dt>
+        <dd>
+          <p>
+          You can configure "Access Control for Builds"
+          in Manage Jenkins > Configure Global Security
+          so that builds run with authentication allowed
+          to access builds with artifacts.
+          </p>
+          <p>
+          That configuration is shown only when plugins providing
+          "Access Control for Builds" features are installed.
+          </p>
+          <p>See following pages for more details about "Access Control for Builds":</p>
+          <ul>
+            <li><a href="https://jenkins.io/doc/book/system-administration/security/build-authorization/">Access Control for Builds (Jenkins User Documentation)</li>
+            <li><a href="https://support.cloudbees.com/hc/articles/209641937">How to configure Access Control for Builds? (CloudBees Support)</a></li>
+          </ul>
+        </dd>
+      </dl>
+    </dd>
+</div>
