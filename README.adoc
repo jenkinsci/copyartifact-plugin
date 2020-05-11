@@ -115,8 +115,10 @@ file attributes or directory structures.
 [[CopyArtifactPlugin-Permissionstocopyartifact]]
 == Permissions to copy artifact
 
+NOTE: Since version 1.44, Copy Artifact checks permissions more thoroughly in its default Production mode. If you have permission issues when upgrading from copyartifact 1.43.1 or earlier you can use <<CopyArtifactPlugin-MigrationMode,Migration Mode>>. You should convert to Production mode as soon as possible.
+
 When you face a following message and fail to copy artifacts, this may
-be caused by permission to the project with artifacts. Please read this
+be caused by permission to the job with artifacts. Please read this
 section once.
 
 ....
@@ -125,75 +127,80 @@ This may be due to incorrect project name or permission settings; see help for p
 Build step 'Copy artifacts from another project' marked build as failure
 ....
 
-[[CopyArtifactPlugin-Specifyingprojectstatically-withoutvariables]]
-=== Specifying project statically (without variables)
+You can configure to allow Copy Artifact to access source jobs in the following ways.
 
-* This case: +
-#image:docs/images/permissions_01_static.png[image]#
-
-* In this case, you can copy artifacts if you have permission to read
-the project to copy from at configuration time.
-
-[[CopyArtifactPlugin-Specifyingprojectdynamically-withvariables]]
-=== Specifying project dynamically (with variables)
-
-* Those cases: +
-#image:docs/images/permissions_02_dynamic01.png[image]# +
-#image:docs/images/permissions_03_dynamic02.png[image]#
-
-* If https://jenkins.io/doc/book/system-administration/security/[your
-Jenkins is secured], *it fails to copy artifacts without a proper
-configuration*.
-* You need to allow projects copy artifacts in one of following ways:
-
-[[CopyArtifactPlugin-Allowreadfromanonymous]]
-==== Allow read from anonymous
-
-* Copyartifact plugin treats builds running as an anonymous.
-* Copying artifacts is allowed if the project with artifacts is readable
-from anonymous.
-* When you use
-https://wiki.jenkins.io/display/JENKINS/Matrix-based+security[Matrix-based
-security] for authorization, it can be done as following in Manage
-Jenkins > Global Security Configuration: +
-#image:docs/images/permissions_04_anonymous.png[image]#
-* When you use Project-based Matrix Authorization Strategy for
-authorization, it can be done as following in the configuration page of
-the project to copy artifacts from: +
-#image:docs/images/permissions_05_anonymous_project.png[image]#
+* <<CopyArtifactPlugin-Specifyprojectswhocancopyartifacts,Configure source jobs specifying jobs who can copy artifacts.>>
+* <<CopyArtifactPlugin-Authorizebuildsasauser,Authorize builds as a user.>>
 
 [[CopyArtifactPlugin-Specifyprojectswhocancopyartifacts]]
 ==== Specify projects who can copy artifacts
 
-* *Available since Copyartifact 1.30*
-* In the project configuration pages, you can specify projects to allow
+* In the job configuration pages, you can specify jobs to allow
 copy artifacts from that project: +
 #image:docs/images/permissions_06_copypermission.png[image]#
-* You can specify multiple projects with separating with commas.
+* Use `+copyArtifactPermission+` in pipelines:
+** Declarative pipeline:
++
+[source,groovy]
+----
+pipeline {
+    agent any;
+    options {
+        copyArtifactPermission('job1,job2,...');
+    }
+    stages{...}
+}
+----
+** Scripted pipeline
++
+[source,groovy]
+----
+properties([
+    copyArtifactPermission('job1,job2,...'),
+]);
+node {
+    ...
+}
+----
+* You can specify multiple jobs separated by commas.
 * You can use wildcard character ('*') to specify name patterns.
-
-WARNING: Since Copyartifact 1.30, there is a limitation "Permission to Copy
-Artifacts" accepts only relative project names. +
-If you use
-https://plugins.jenkins.io/cloudbees-folder/[CloudBees
-Folders Plugin] and the projects are located in different folders, you
-need to specify project names like "../folder/project". +
-This is fixed in Copyartifact 1.31.
 
 [[CopyArtifactPlugin-Authorizebuildsasauser]]
 ==== Authorize builds as a user
 
-* *Available since Jenkins 1.532*
-** To be exact, the feature of Jenkins to authorize builds are available
-since 1.520, but who cares such details?
 * https://plugins.jenkins.io/authorize-project/[Authorize
 Project plugin] enables you to run builds of a project as a specific
 user.
-** Copyartifact plugin treats builds running as an anonymous without
+** Copy Artifact treats builds running as anonymous without
 authorization configurations.
 * You can resolve permission problems by running builds as a user with
 read permission to the project with artifacts +
 #image:docs/images/permissions_07_authorizeproject.png[image]#
+
+[[CopyArtifactPlugin-MigrationMode]]
+=== Migration Mode
+
+Migration mode is available and automatically enabled for users upgrading Copy Artifact from 1.43.1 or earlier.
+
+Migration mode performs permission checks when configuring jobs
+or when running builds if the name of the source job is
+configured with variables.
+This is the behavior compatible to Copy Artifact 1.43.1 or earlier.
+
+This may cause security vulnerabilities allowing malicious users
+to bypass permission checks. 
+This mode is provided only to allow users to upgrade job configurations
+and migrate to Production mode easily. You should migrate to Production mode as soon as you can.
+
+Build executions that would fail in Production mode are
+recorded and displayed as warnings to administrators.
+
+#image:docs/images/migrationmode-monitor.png[Warnings for the migration mode]#
+
+Administrators should check those warnings
+and update the job configurations to successfully use Production mode.
+
+#image:docs/images/migrationmode-helper.png[Migration helper]#
 
 [[CopyArtifactPlugin-Usewithdeclarativepipelines]]
 == Use with declarative pipelines

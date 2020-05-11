@@ -3,6 +3,18 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.44]]
+=== 1.44
+
+Release date: Apr (TBD), 2020
+
+* *SECURITY FIX / BREAKING CHANGE*: (SECURITY-988, SECURITY-1312, SECURITY-1313)
+* Introduce a compatibility mode.
+** **Production mode**: Performs permission checks for source jobs when copying artifacts.
+** **Migration mode**: Performs checks in the same way as copyartifact-1.43.1 or earlier. This is a reduced set of checks and may allow data leakage. You should migrate to Production mode as soon as possible.
+    This is provided for users upgrading copyartifact from 1.43.1 or earlier to update their configurations easily.
+** See <<README.adoc#CopyArtifactPlugin-MigrationMode,Migration Mode>> for more details.
+
 [[CopyArtifactPlugin-Version1.43.1]]
 === 1.43.1
 
