@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.43</version>
+        <version>4.2</version>
         <relativePath />
     </parent>
 
@@ -26,14 +26,8 @@
     <properties>
         <revision>1.45</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.121.1</jenkins.version>
+        <jenkins.version>2.164.1</jenkins.version>
         <java.level>8</java.level>
-        <workflow-api-plugin.version>2.30</workflow-api-plugin.version>
-        <useBeta>true</useBeta>
-        <workflow-cps-plugin.version>2.32</workflow-cps-plugin.version>
-        <git-plugin.version>3.0.5</git-plugin.version>
-        <workflow-scm-step.version>2.4</workflow-scm-step.version>
-        <workflow-multibranch.version>2.10</workflow-multibranch.version>
     </properties>
 
     <build>
@@ -53,48 +47,34 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <version>3.1.2</version>
         <optional>true</optional>
-        <exclusions>
-            <exclusion>
-                <!-- to avoid RequireUpperBoundDeps with jenkins-test-harness -->
-                <groupId>commons-net</groupId>
-                <artifactId>commons-net</artifactId>
-            </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>structs</artifactId>
-          <version>1.14</version>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
           <artifactId>apache-httpcomponents-client-4-api</artifactId>
-          <version>4.5.5-3.0</version>
       </dependency>
       <!-- Used for UI test -->
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>jenkins-test-harness-tools</artifactId>
-        <version>2.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>cloudbees-folder</artifactId>
-        <version>6.1.0</version>
         <optional>true</optional>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>matrix-project</artifactId>
-        <version>1.7.1</version>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-support</artifactId>
-        <version>3.0</version>
         <scope>test</scope>
       </dependency>
       <!-- 
@@ -112,144 +92,99 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-job</artifactId>
-        <version>2.11.2</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-basic-steps</artifactId>
-        <version>2.6</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-cps</artifactId>
-        <version>${workflow-cps-plugin.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for SnippetizerTester -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-cps</artifactId>
-        <version>${workflow-cps-plugin.version}</version>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-durable-task-step</artifactId>
-        <version>2.18</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-step-api</artifactId>
-        <version>2.13</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-api</artifactId>
-        <version>${workflow-api-plugin.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>pipeline-build-step</artifactId>
-        <version>2.5.1</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>compress-artifacts</artifactId>
-        <version>1.10</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for DirectArtifactManagerFactory -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-api</artifactId>
-        <version>${workflow-api-plugin.version}</version>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>branch-api</artifactId>
-        <version>2.0.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-multibranch</artifactId>
-        <version>${workflow-multibranch.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for WorkflowMultiBranchProjectTest -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-multibranch</artifactId>
-        <version>${workflow-multibranch.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>git</artifactId>
-        <version>${git-plugin.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for GitSampleRepoRule -->
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>git</artifactId>
-        <version>${git-plugin.version}</version>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-scm-step</artifactId>
-        <version>${workflow-scm-step.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for dependency of GitSampleRepoRule -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-scm-step</artifactId>
-        <version>${workflow-scm-step.version}</version>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
     </dependencies>
-    <dependencyManagement>
-      <!-- To resolve RequireUpperBoundDeps errors -->
-      <dependencies>
-        <dependency>
-          <groupId>org.jenkins-ci.plugins</groupId>
-          <artifactId>mailer</artifactId>
-          <version>1.18</version>
-        </dependency>
-        <dependency>
-          <groupId>org.jenkins-ci.plugins</groupId>
-          <artifactId>script-security</artifactId>
-          <version>1.39</version>
-        </dependency>
-        <!--to meet plugin dependencies-->
-        <dependency>
-          <!-- required by folders plugin -->
-          <groupId>org.jenkins-ci.plugins</groupId>
-          <artifactId>credentials</artifactId>
-          <version>2.1.11</version>
-        </dependency>
-        <dependency>
-          <!-- required by jsch plugin, required by maven-plugin -->
-          <groupId>org.jenkins-ci.plugins</groupId>
-          <artifactId>ssh-credentials</artifactId>
-          <version>1.12</version>
-        </dependency>
-      </dependencies>
-    </dependencyManagement>
     <reporting>
       <plugins>
         <plugin>
