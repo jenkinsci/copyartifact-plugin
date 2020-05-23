@@ -28,6 +28,7 @@
         <changelist>-SNAPSHOT</changelist>
         <jenkins.version>2.164.1</jenkins.version>
         <java.level>8</java.level>
+        <workflow-multibranch.version>2.10</workflow-multibranch.version>
     </properties>
 
     <build>
@@ -47,6 +48,7 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
+        <version>3.1.2</version>
         <optional>true</optional>
       </dependency>
       <dependency>
@@ -61,6 +63,7 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>jenkins-test-harness-tools</artifactId>
+        <version>2.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -134,6 +137,7 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>compress-artifacts</artifactId>
+        <version>1.10</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -151,12 +155,14 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-multibranch</artifactId>
+        <version>${workflow-multibranch.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <!-- for WorkflowMultiBranchProjectTest -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-multibranch</artifactId>
+        <version>${workflow-multibranch.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>
       </dependency>
@@ -181,10 +187,23 @@
         <!-- for dependency of GitSampleRepoRule -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-scm-step</artifactId>
+        <!-- Not defined in bom for classifier=tests -->
+        <version>2.4</version>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
     </dependencies>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>io.jenkins.tools.bom</groupId>
+          <artifactId>bom-2.164.x</artifactId>
+          <version>9</version>
+          <scope>import</scope>
+          <type>pom</type>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
     <reporting>
       <plugins>
         <plugin>
