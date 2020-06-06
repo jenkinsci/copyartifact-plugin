@@ -27,8 +27,6 @@ package hudson.plugins.copyartifact;
 import static org.junit.Assert.*;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -47,9 +45,6 @@ import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import jenkins.model.Jenkins;
 import hudson.FilePath;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
-import hudson.security.Permission;
-import hudson.security.AuthorizationMatrixProperty;
-import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildTrigger;
 import hudson.tasks.Fingerprinter;
@@ -63,9 +58,8 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.MockFolder;
-
-import com.google.common.collect.Sets;
 
 /**
  *
@@ -511,11 +505,11 @@ public class DownstreamBuildSelectorTest {
     public void testCheckUpstreamProjectName() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
         
-        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
-        pmas.add(Jenkins.READ, "devel");
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        auth.grant(Jenkins.READ).onRoot().to("devel");
         
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
-        j.jenkins.setAuthorizationStrategy(pmas);
+        j.jenkins.setAuthorizationStrategy(auth);
         
         // project1
         // folder1/project2
@@ -523,18 +517,11 @@ public class DownstreamBuildSelectorTest {
         MockFolder folder1 = j.jenkins.createProject(MockFolder.class, "folder1");
         
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
-        {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
-            map.put(Item.READ, Sets.newHashSet("devel"));
-            project1.addProperty(new AuthorizationMatrixProperty(map));
-        }
+        auth.grant(Item.READ).onItems(project1).to("devel");
         
         FreeStyleProject project2 = folder1.createProject(FreeStyleProject.class, "project2");
-        {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
-            map.put(Item.READ, Sets.newHashSet("devel"));
-            project2.addProperty(new AuthorizationMatrixProperty(map));
-        }
+        auth.grant(Item.READ).onItems(project2).to("devel");
+
         FreeStyleProject project3 = folder1.createProject(FreeStyleProject.class, "project3");
         
         assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(project1, null).kind);
@@ -582,29 +569,21 @@ public class DownstreamBuildSelectorTest {
     public void testCheckUpstreamBuildNumber() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl)j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
         
-        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
-        pmas.add(Jenkins.READ, "devel");
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().to("devel");
         
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
-        j.jenkins.setAuthorizationStrategy(pmas);
+        j.jenkins.setAuthorizationStrategy(auth);
         
         // project1
         // project2
         //   build1
         // project3  cannot read from devel
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
-        {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
-            map.put(Item.READ, Sets.newHashSet("devel"));
-            project1.addProperty(new AuthorizationMatrixProperty(map));
-        }
+        auth.grant(Item.READ).onItems(project1).to("devel");
         
         FreeStyleProject project2 = j.createFreeStyleProject("project2");
-        {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
-            map.put(Item.READ, Sets.newHashSet("devel"));
-            project2.addProperty(new AuthorizationMatrixProperty(map));
-        }
+        auth.grant(Item.READ).onItems(project2).to("devel");
         FreeStyleBuild build1 = project2.scheduleBuild2(0).get();
         
         FreeStyleProject project3 = j.createFreeStyleProject("project3");
@@ -659,20 +638,16 @@ public class DownstreamBuildSelectorTest {
     public void testAutoCompleteUpstreamProjectName() throws Exception {
         DownstreamBuildSelector.DescriptorImpl d = (DownstreamBuildSelector.DescriptorImpl) j.jenkins.getDescriptorOrDie(DownstreamBuildSelector.class);
 
-        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
-        pmas.add(Jenkins.READ, "devel");
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        auth.grant(Jenkins.READ).onRoot().to("devel");
 
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
-        j.jenkins.setAuthorizationStrategy(pmas);
+        j.jenkins.setAuthorizationStrategy(auth);
 
         // project1
         // project2  cannot read from devel
         FreeStyleProject project1 = j.createFreeStyleProject("project1");
-        {
-            Map<Permission, Set<String>> map = new HashMap<Permission, Set<String>>();
-            map.put(Item.READ, Sets.newHashSet("devel"));
-            project1.addProperty(new AuthorizationMatrixProperty(map));
-        }
+        auth.grant(Item.READ).onItems(project1).to("devel");
 
         FreeStyleProject project2 = j.createFreeStyleProject("project2");
 
