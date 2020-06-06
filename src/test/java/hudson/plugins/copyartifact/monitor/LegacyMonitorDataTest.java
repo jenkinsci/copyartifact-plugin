@@ -37,6 +37,8 @@ import hudson.security.Permission;
 import hudson.security.ProjectMatrixAuthorizationStrategy;
 import jenkins.model.Jenkins;
 import org.acegisecurity.AccessDeniedException;
+import org.jenkinsci.plugins.matrixauth.inheritance.InheritanceStrategy;
+import org.jenkinsci.plugins.matrixauth.inheritance.NonInheritingStrategy;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -275,9 +277,9 @@ public class LegacyMonitorDataTest {
                     put(Item.READ, new HashSet<>(Arrays.asList("manager")));
                 }}
         ) {
-            @Override
-            public boolean isBlocksInheritance() {
-                return true;
+            @Override 
+            public InheritanceStrategy getInheritanceStrategy() {
+                return new NonInheritingStrategy();
             }
         });
         

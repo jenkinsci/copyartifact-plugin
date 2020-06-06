@@ -30,6 +30,7 @@ import hudson.matrix.Combination;
 import hudson.matrix.MatrixConfiguration;
 import hudson.matrix.MatrixProject;
 import hudson.matrix.TextAxis;
+import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
 import hudson.model.JobProperty;
@@ -333,6 +334,7 @@ public class CopyArtifactPermissionPropertyTest {
 
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
         MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
+        authStrategy.grant(Computer.BUILD).onRoot().toEveryone();
         authStrategy.grant(Item.READ).onItems(upstream).to("alice");
         j.jenkins.setAuthorizationStrategy(authStrategy);
 
