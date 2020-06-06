@@ -378,7 +378,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
         src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
-        src.setGoals("clean package");
+        src.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
@@ -405,7 +405,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
         src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
-        src.setGoals("clean package");
+        src.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
@@ -442,7 +442,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MavenModuleSet dst = j.createProject(MavenModuleSet.class);
         dst.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         dst.setRunHeadless(true);
-        dst.setGoals("clean package");
+        dst.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         dst.getPrebuilders().add(
             new CopyArtifact(src.getFullName())
         );
