@@ -1002,9 +1002,26 @@ public class CopyArtifactTest {
      * the project is accessible.  In this case, permission check is done when the build runs.
      * Only jobs accessible to all authenticated users are allowed.
      */
-    @LocalData
     @Test
     public void testPermissionWhenParameterized() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject testJob = rule.createFreeStyleProject("testJob");
+        auth.grant(Item.READ).onItems(testJob).to("joe");
+        testJob.getBuildersList().add(new FileWriteBuilder("foo.txt", "bar"));
+        testJob.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(testJob.scheduleBuild2(0));
+
+        FreeStyleProject testJob2 = rule.createFreeStyleProject("testJob2");
+        auth.grant(Item.READ).onItems(testJob2).toAuthenticated();
+        testJob2.getBuildersList().add(new FileWriteBuilder("foo2.txt", "bar"));
+        testJob2.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(testJob2.scheduleBuild2(0));
+
         FreeStyleProject p = createProject("test$JOB", null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("JOB", "job1");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
@@ -1030,9 +1047,24 @@ public class CopyArtifactTest {
         }
     }
 
-    @LocalData
     @Test
     public void testPermissionWhenParameterizedForMatrixConfig() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
+
+        MatrixProject src = rule.jenkins.createProject(MatrixProject.class, "testMatrix");
+        AxisList axisList = new AxisList(new Axis("FOO", "foo", "bar"));
+        src.setAxes(axisList);
+        auth.grant(Item.READ).onItems(src).toEveryone();
+        auth.grant(Item.READ).onItems(src.getItem(new Combination(axisList, "foo"))).toEveryone();
+        auth.grant(Item.READ).onItems(src.getItem(new Combination(axisList, "bar"))).toEveryone();
+        src.getBuildersList().add(new FileWriteBuilder("foo.txt", "foo"));
+        src.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
         FreeStyleProject p = createProject("testMatrix/FOO=$FOO", null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "FOO");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
@@ -1568,9 +1600,15 @@ public class CopyArtifactTest {
         assertTrue(trigger.isFingerprintArtifacts());
     }
 
-    @LocalData // enable Jenkins security
     @Test
     public void testCopyArtifactPermissionProperty() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().to("test1")
+            .grant(Computer.BUILD).everywhere().to("test1");
+        rule.jenkins.setAuthorizationStrategy(auth);
+
         // invalid permission configuration can hang builds.
         final int TIMEOUT = 60;
         
@@ -2045,9 +2083,10 @@ public class CopyArtifactTest {
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
         MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
         rule.jenkins.setAuthorizationStrategy(auth);
-        auth.grant(Jenkins.ADMINISTER).onRoot().to(admin)
+        auth.grant(Jenkins.ADMINISTER).everywhere().to(admin)
             .grant(Jenkins.READ).onRoot().toEveryone()
-            .grant(Computer.BUILD).everywhere().toEveryone();
+            .grant(Computer.BUILD).everywhere().toEveryone()
+            .grant(Item.BUILD).everywhere().toEveryone();
 
         // Prepare projects:
         //   copiee: a project creates an artifact.

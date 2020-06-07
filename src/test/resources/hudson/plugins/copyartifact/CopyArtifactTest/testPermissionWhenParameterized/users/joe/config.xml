@@ -1,9 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<user>
-  <fullName>Joe</fullName>
-  <properties>
-    <hudson.security.HudsonPrivateSecurityRealm_-Details>
-      <passwordHash>EMXnkE:1434127ddaef0d8cc56535303b644ae94d874c40bce4ee0b53a76c2a58bd4d4a</passwordHash>
-    </hudson.security.HudsonPrivateSecurityRealm_-Details>
-  </properties>
-</user>
