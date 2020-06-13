@@ -23,18 +23,26 @@
  */
 package hudson.plugins.copyartifact.monitor;
 
+import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.model.User;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.plugins.copyartifact.CopyArtifact;
 import hudson.plugins.copyartifact.CopyArtifactCompatibilityMode;
 import hudson.plugins.copyartifact.CopyArtifactConfiguration;
 import hudson.plugins.copyartifact.CopyArtifactPermissionProperty;
+import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
+import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
+import hudson.tasks.ArtifactArchiver;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.security.QueueItemAuthenticator;
@@ -46,7 +54,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -64,7 +71,7 @@ import static org.junit.Assert.assertTrue;
 public class LegacyJobConfigMigrationMonitorTest {
     
     @Rule
-    public JenkinsRule j = new JenkinsRule();
+    public CopyArtifactJenkinsRule j = new CopyArtifactJenkinsRule();
     
     @Before
     public void setupMigrationMode() {
@@ -76,6 +83,135 @@ public class LegacyJobConfigMigrationMonitorTest {
         QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
                 new SimpleQueueItemAuthenticator(authentication)
         );
+    }
+
+    private void setupAnonymousJob() throws Exception {
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        j.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject toBeCopied = j.createFreeStyleProject("to-be-copied");
+        auth.grant(Item.READ).onItems(toBeCopied).toEveryone();
+        toBeCopied.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopied.getPublishersList().add(new ArtifactArchiver("**"));
+
+        FreeStyleProject copier = j.createFreeStyleProject("copier");
+        copier.getBuildersList().add(new CopyArtifact(toBeCopied.getFullName()));
+    }
+
+    private void setupAuthJob() throws Exception {
+        setupParamJob();
+        MockAuthorizationStrategy auth = (MockAuthorizationStrategy)j.jenkins.getAuthorizationStrategy();
+        auth.grant(Computer.BUILD).everywhere().toEveryone();
+    }
+
+    private void setupParamJob() throws Exception {
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        j.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject toBeCopiedAnonymous = j.createFreeStyleProject("to-be-copied_anonymous");
+        auth.grant(Item.READ, Item.CONFIGURE).onItems(toBeCopiedAnonymous).toEveryone();
+        toBeCopiedAnonymous.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedAnonymous.getPublishersList().add(new ArtifactArchiver("**"));
+
+        // Originally this is configured without AuthorizationMatrixProperty,
+        // which results inheriting the global configuration,
+        // in contract to that other jobs doesn't inherit the global configuration
+        // MockAuthorizationStrategy doesn't provide feature to refuse inheriting
+        // in a specific job, so this job is configured to grant Item.READ to everyone,
+        // which was originally configured in the global configuration.
+        FreeStyleProject toBeCopiedNoauth = j.createFreeStyleProject("to-be-copied_noauth");
+        auth.grant(Item.READ).onItems(toBeCopiedNoauth).toEveryone();
+        toBeCopiedNoauth.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedNoauth.getPublishersList().add(new ArtifactArchiver("**"));
+
+        FreeStyleProject toBeCopiedRestricted = j.createFreeStyleProject("to-be-copied_restricted");
+        auth.grant(Item.READ).onItems(toBeCopiedRestricted).to("leader", "admin");
+        toBeCopiedRestricted.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedRestricted.getPublishersList().add(new ArtifactArchiver("**"));
+
+        FreeStyleProject copier = j.createFreeStyleProject("copier");
+        copier.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("sourceProject", "")
+        ));
+        copier.getBuildersList().add(new CopyArtifact("${sourceProject}"));
+    }
+
+    private void setupRestrictedJob() throws Exception {
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        j.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject toBeCopied = j.createFreeStyleProject("to-be-copied");
+        auth.grant(Item.READ).onItems(toBeCopied).to("admin");
+        toBeCopied.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopied.getPublishersList().add(new ArtifactArchiver("**"));
+
+        FreeStyleProject copier = j.createFreeStyleProject("copier");
+        copier.getBuildersList().add(new CopyArtifact(toBeCopied.getFullName()));
+    }
+
+    private void setupWorkflowJob() throws Exception {
+        j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy()
+            .grant(Jenkins.ADMINISTER).everywhere().to("admin")
+            .grant(Jenkins.READ).onRoot().toEveryone()
+            .grant(Computer.BUILD).everywhere().toEveryone();
+        j.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject toBeCopiedAnonymous = j.createFreeStyleProject("to-be-copied_anonymous");
+        auth.grant(Item.READ, Item.CONFIGURE).onItems(toBeCopiedAnonymous).toEveryone();
+        toBeCopiedAnonymous.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedAnonymous.getPublishersList().add(new ArtifactArchiver("**"));
+
+        // Originally this is configured without AuthorizationMatrixProperty,
+        // which results inheriting the global configuration,
+        // in contract to that other jobs doesn't inherit the global configuration
+        // MockAuthorizationStrategy doesn't provide feature to refuse inheriting
+        // in a specific job, so this job is configured to grant Item.READ to everyone,
+        // which was originally configured in the global configuration.
+        FreeStyleProject toBeCopiedNoauth = j.createFreeStyleProject("to-be-copied_noauth");
+        auth.grant(Item.READ).onItems(toBeCopiedNoauth).toEveryone();
+        toBeCopiedNoauth.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedNoauth.getPublishersList().add(new ArtifactArchiver("**"));
+
+        FreeStyleProject toBeCopiedRestricted = j.createFreeStyleProject("to-be-copied_restricted");
+        auth.grant(Item.READ).onItems(toBeCopiedRestricted).to("leader", "admin");
+        toBeCopiedRestricted.getBuildersList().add(new FileWriteBuilder("test.txt", "test"));
+        toBeCopiedRestricted.getPublishersList().add(new ArtifactArchiver("**"));
+
+        WorkflowJob copierAnonymous = j.createWorkflow(
+            "copier_anonymous",
+            "copyArtifacts(projectName: 'to-be-copied_anonymous');"
+        );
+        copierAnonymous.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("sourceProject", "")
+        ));
+
+        WorkflowJob copierNoauth = j.createWorkflow(
+            "copier_noauth",
+            "copyArtifacts(projectName: 'to-be-copied_noauth');"
+        );
+        copierNoauth.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("sourceProject", "")
+        ));
+
+        WorkflowJob copierParam = j.createWorkflow(
+            "copier_param",
+            "copyArtifacts(projectName: '${sourceProject}');"
+        );
+        copierParam.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("sourceProject", "")
+        ));
+
+        WorkflowJob copierRestricted = j.createWorkflow(
+            "copier_restricted",
+            "copyArtifacts(projectName: 'to-be-copied_restricted');"
+        );
+        copierRestricted.addProperty(new ParametersDefinitionProperty(
+            new StringParameterDefinition("sourceProject", "")
+        ));
     }
     
     @Test
@@ -101,8 +237,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("anonymousJob")
     public void anonymousJob_copy_legacy_migration() throws Exception {
+        setupAnonymousJob();
+
         String fileNameToCreate = "test.txt";
         
         assertNoLegacyMonitor();
@@ -123,8 +260,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("restrictedJob")
     public void restrictedJob_copy_legacy_migration() throws Exception {
+        setupRestrictedJob();
+
         String fileNameToCreate = "test.txt";
         
         assertNoLegacyMonitor();
@@ -145,8 +283,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("restrictedJob")
     public void restrictedJob_copy_legacy_production() throws Exception {
+        setupRestrictedJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         String fileNameToCreate = "test.txt";
@@ -168,15 +307,17 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("paramJob")
     public void paramJob_copy_legacy_migration() throws Exception {
+        setupParamJob();
+
         // Migration mode
         paramJob_copy_legacy();
     }
     
     @Test
-    @LocalData("paramJob")
     public void paramJob_copy_legacy_production() throws Exception {
+        setupParamJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         // Production mode does not change because it's a parameterized target
@@ -211,8 +352,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     
     // no migration because the project target that are composed of variables were already dynamically checked before
     @Test
-    @LocalData("authJob")
     public void authJob_copy_legacy_migration() throws Exception {
+        setupAuthJob();
+
         assertNoLegacyMonitor();
         
         FreeStyleProject projectToBeCopied_noAuth = j.jenkins.getItem("to-be-copied_noauth", j.jenkins, FreeStyleProject.class);
@@ -278,8 +420,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("authJob")
     public void authJob_copy_legacy_production() throws Exception {
+        setupAuthJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         assertNoLegacyMonitor();
@@ -334,8 +477,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("authJob")
     public void authJob_copy_legacy_production_property() throws Exception {
+        setupAuthJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         assertNoLegacyMonitor();
@@ -370,8 +514,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     
     // param used, so no migration as it was already checked at runtime before
     @Test
-    @LocalData("workflowJob")
     public void workflowJob_param_copy_legacy_migration() throws Exception {
+        setupWorkflowJob();
+
         assertNoLegacyMonitor();
         
         FreeStyleProject projectToBeCopied_noAuth = j.jenkins.getItem("to-be-copied_noauth", j.jenkins, FreeStyleProject.class);
@@ -437,8 +582,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     
     // param used, so no migration as it was already checked at runtime before
     @Test
-    @LocalData("workflowJob")
     public void workflowJob_param_copy_legacy_production() throws Exception {
+        setupWorkflowJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         assertNoLegacyMonitor();
@@ -492,8 +638,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("workflowJob")
     public void workflowJob_param_copy_legacy_production_property() throws Exception {
+        setupWorkflowJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         assertNoLegacyMonitor();
@@ -529,8 +676,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("workflowJob")
     public void workflowJob_direct_copy_legacy_migration() throws Exception {
+        setupWorkflowJob();
+
         assertNoLegacyMonitor();
         
         FreeStyleProject projectToBeCopied_noAuth = j.jenkins.getItem("to-be-copied_noauth", j.jenkins, FreeStyleProject.class);
@@ -597,8 +745,9 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     @Test
-    @LocalData("workflowJob")
     public void workflowJob_direct_copy_legacy_production() throws Exception {
+        setupWorkflowJob();
+
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         
         assertNoLegacyMonitor();
@@ -729,7 +878,8 @@ public class LegacyJobConfigMigrationMonitorTest {
     }
     
     private static class SimpleQueueItemAuthenticator extends QueueItemAuthenticator {
-        private final Authentication authentication;
+        // transient is to avoid `Failed to serialize ...` logs in the test console.
+        private final transient Authentication authentication;
         
         public SimpleQueueItemAuthenticator(Authentication authentication) {
             this.authentication = authentication;

@@ -44,10 +44,6 @@ import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.plugins.copyartifact.testutils.WrapperBuilder;
 import hudson.remoting.VirtualChannel;
 import hudson.security.ACL;
-import hudson.security.Permission;
-import hudson.security.AuthorizationMatrixProperty;
-import hudson.security.GlobalMatrixAuthorizationStrategy;
-import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.tasks.ArtifactArchiver;
@@ -66,7 +62,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import jenkins.model.Jenkins;
@@ -82,11 +77,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FailureBuilder;
-import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
 import org.jvnet.hudson.test.MockFolder;
@@ -101,7 +94,6 @@ import com.gargoylesoftware.htmlunit.WebRequest;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
-import com.google.common.collect.Sets;
 import hudson.tasks.Fingerprinter;
 import jenkins.model.ArtifactManagerConfiguration;
 import static org.hamcrest.Matchers.*;
@@ -924,24 +916,15 @@ public class CopyArtifactTest {
     public void testPermission() throws Exception {
         // any users can be authenticated with the password same to the user id.
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
-        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
-        pmas.add(Jenkins.READ, Jenkins.ANONYMOUS.getName());
-        pmas.add(Item.BUILD, Jenkins.ANONYMOUS.getName());
-        pmas.add(Computer.BUILD, Jenkins.ANONYMOUS.getName());
-        pmas.add(Jenkins.READ, "joe");
-        pmas.add(Item.BUILD, "joe");
-        pmas.add(Computer.BUILD, "joe");
-        rule.jenkins.setAuthorizationStrategy(pmas);
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy()
+            .grant(Jenkins.READ, Item.BUILD, Computer.BUILD).everywhere().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
         
         // only joe can access project "src"
         FreeStyleProject src = rule.createFreeStyleProject();
-        {
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
-            auths.put(Item.READ, Sets.newHashSet("joe"));
-            src.addProperty(new AuthorizationMatrixProperty(auths));
-            src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
-            src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
-        }
+        src.getPublishersList().add(new ArtifactArchiver("artifact.txt"));
+        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "foobar"));
+        auth.grant(Item.READ).onItems(src).to("joe");
         rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
         
         // test access from anonymous
@@ -957,11 +940,8 @@ public class CopyArtifactTest {
                     false,
                     true
             ));
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
-            auths.put(Item.READ, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
-            auths.put(Item.CONFIGURE, Sets.newHashSet(Jenkins.ANONYMOUS.getName()));
-            dest.addProperty(new AuthorizationMatrixProperty(auths));
-            
+            auth.grant(Item.READ, Item.CONFIGURE).onItems(dest).toEveryone();
+
             WebClient wc = rule.createWebClient();
             try {
                 wc.getPage(src);
@@ -994,10 +974,7 @@ public class CopyArtifactTest {
                     false,
                     true
             ));
-            Map<Permission, Set<String>> auths = new HashMap<Permission, Set<String>>();
-            auths.put(Item.READ, Sets.newHashSet("joe"));
-            auths.put(Item.CONFIGURE, Sets.newHashSet("joe"));
-            dest.addProperty(new AuthorizationMatrixProperty(auths));
+            auth.grant(Item.READ, Item.CONFIGURE).onItems(dest).to("joe");
             
             WebClient wc = rule.createWebClient();
             wc.login("joe", "joe");
@@ -1025,9 +1002,26 @@ public class CopyArtifactTest {
      * the project is accessible.  In this case, permission check is done when the build runs.
      * Only jobs accessible to all authenticated users are allowed.
      */
-    @LocalData
     @Test
     public void testPermissionWhenParameterized() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
+
+        FreeStyleProject testJob = rule.createFreeStyleProject("testJob");
+        auth.grant(Item.READ).onItems(testJob).to("joe");
+        testJob.getBuildersList().add(new FileWriteBuilder("foo.txt", "bar"));
+        testJob.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(testJob.scheduleBuild2(0));
+
+        FreeStyleProject testJob2 = rule.createFreeStyleProject("testJob2");
+        auth.grant(Item.READ).onItems(testJob2).toAuthenticated();
+        testJob2.getBuildersList().add(new FileWriteBuilder("foo2.txt", "bar"));
+        testJob2.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(testJob2.scheduleBuild2(0));
+
         FreeStyleProject p = createProject("test$JOB", null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("JOB", "job1");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
@@ -1053,9 +1047,24 @@ public class CopyArtifactTest {
         }
     }
 
-    @LocalData
     @Test
     public void testPermissionWhenParameterizedForMatrixConfig() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
+
+        MatrixProject src = rule.jenkins.createProject(MatrixProject.class, "testMatrix");
+        AxisList axisList = new AxisList(new Axis("FOO", "foo", "bar"));
+        src.setAxes(axisList);
+        auth.grant(Item.READ).onItems(src).toEveryone();
+        auth.grant(Item.READ).onItems(src.getItem(new Combination(axisList, "foo"))).toEveryone();
+        auth.grant(Item.READ).onItems(src.getItem(new Combination(axisList, "bar"))).toEveryone();
+        src.getBuildersList().add(new FileWriteBuilder("foo.txt", "foo"));
+        src.getPublishersList().add(new ArtifactArchiver("*.txt"));
+        rule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
         FreeStyleProject p = createProject("testMatrix/FOO=$FOO", null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "FOO");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef);
@@ -1071,8 +1080,6 @@ public class CopyArtifactTest {
     @Test
     public void testPermissionWhenParameterizedForMavenModule() throws Exception {
         MavenModuleSet mp = setupMavenJob();
-        mp.addProperty(new AuthorizationMatrixProperty(
-                Collections.singletonMap(Item.READ, Collections.singleton("authenticated"))));
         rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new UserCause()).get());
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$FOO",
                                            null, "", "", false, false, false, true);
@@ -1340,7 +1347,7 @@ public class CopyArtifactTest {
         assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, "$FOO").kind);
 
         // Just returns OK if no permission
-        rule.jenkins.setAuthorizationStrategy(new GlobalMatrixAuthorizationStrategy());
+        rule.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy());
         SecurityContextHolder.clearContext();
         assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(p, "").kind);
         assertSame(FormValidation.Kind.OK, descriptor.doCheckProjectName(null, "").kind);
@@ -1593,9 +1600,15 @@ public class CopyArtifactTest {
         assertTrue(trigger.isFingerprintArtifacts());
     }
 
-    @LocalData // enable Jenkins security
     @Test
     public void testCopyArtifactPermissionProperty() throws Exception {
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().to("test1")
+            .grant(Computer.BUILD).everywhere().to("test1");
+        rule.jenkins.setAuthorizationStrategy(auth);
+
         // invalid permission configuration can hang builds.
         final int TIMEOUT = 60;
         
@@ -1906,28 +1919,19 @@ public class CopyArtifactTest {
         // This allows any users authenticate name == password
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
         
-        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
-        authorization.add(Jenkins.READ, "devel");
-        rule.jenkins.setAuthorizationStrategy(authorization);
+        MockAuthorizationStrategy auth =new MockAuthorizationStrategy();
+        auth.grant(Jenkins.READ).onRoot().to("devel");
+        rule.jenkins.setAuthorizationStrategy(auth);
         
         FreeStyleProject srcProject = rule.createFreeStyleProject();
-        {
-            // devel is not allowed to access srcProject.
-            Map<Permission, Set<String>> auths = new HashMap<>();
-            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
-        }
+        // devel is not allowed to access srcProject.
+        // auth.grant(Item.READ).onItems(srcProject).to("devel");
         srcProject.getBuildersList().add(new ArtifactBuilder());
         srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
         rule.assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
         
         FreeStyleProject destProject = rule.createFreeStyleProject();
-        {
-            // devel is allowed to access and configure destProject.
-            Map<Permission, Set<String>> auths = new HashMap<>();
-            auths.put(Item.READ, Sets.newHashSet("devel"));
-            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
-            destProject.addProperty(new AuthorizationMatrixProperty(auths));
-        }
+        auth.grant(Item.READ, Item.CONFIGURE).onItems(destProject).to("devel");
         destProject.addProperty(new ParametersDefinitionProperty(
             new StringParameterDefinition("SRC", srcProject.getName())
         ));
@@ -1977,35 +1981,21 @@ public class CopyArtifactTest {
     public void testCliCannotBypassPermission() throws Exception {
         // This allows any users authenticate name == password
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
-        
-        ProjectMatrixAuthorizationStrategy authorization = new ProjectMatrixAuthorizationStrategy();
-        authorization.add(Jenkins.READ, "devel");
-        
-        // This is required for CLI, JENKINS-12543.
-        authorization.add(Jenkins.READ, "anonymous");
-        //authorization.add(Item.READ, "anonymous");
-        
-        rule.jenkins.setAuthorizationStrategy(authorization);
+        // Jenkins.READ for everyone is required for CLI, JENKINS-12543.
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().toEveryone();
+        rule.jenkins.setAuthorizationStrategy(auth);
         
         FreeStyleProject srcProject = rule.createFreeStyleProject();
-        {
-            // devel is not allowed to access srcProject.
-            Map<Permission, Set<String>> auths = new HashMap<>();
-            srcProject.addProperty(new AuthorizationMatrixProperty(auths));
-        }
+        // devel is not allowed to access srcProject.
+        // auth.grant(Item.READ).onItems(srcProject).to("devel");
         srcProject.getBuildersList().add(new ArtifactBuilder());
         srcProject.getPublishersList().add(new ArtifactArchiver("**/*", "", false, false));
         rule.assertBuildStatusSuccess(srcProject.scheduleBuild2(0));
         
         FreeStyleProject destProject = rule.createFreeStyleProject();
-        {
-            // devel is allowed to access and configure destProject.
-            // READ for anonumous is required for CLI, JENKINS-12543.
-            Map<Permission, Set<String>> auths = new HashMap<>();
-            auths.put(Item.READ, Sets.newHashSet("devel", "anonymous"));
-            auths.put(Item.CONFIGURE, Sets.newHashSet("devel"));
-            destProject.addProperty(new AuthorizationMatrixProperty(auths));
-        }
+        auth.grant(Item.READ).onItems(destProject).toEveryone()
+            .grant(Item.CONFIGURE).onItems(destProject).to("devel");
         destProject.addProperty(new ParametersDefinitionProperty(
             new StringParameterDefinition("SRC", srcProject.getName())
         ));
@@ -2076,22 +2066,28 @@ public class CopyArtifactTest {
         
     }
     
-    @LocalData
     @Test
     public void testQueueItemAuthenticator() throws Exception {
         
         // This test may hang without timeout with improper authorization configuration.
         int TIMEOUT = 60;
         
-        // LocalData provides following user/password pairs:
-        //  admin/admin : have all privileges
-        //  test1/test1 : have all privileges except accessing jobs.
-        //  test2/test2 : have all privileges except accessing jobs.
+        //  admin: have all privileges
+        //  test1: have all privileges except accessing jobs.
+        //  test2: have all privileges except accessing jobs.
         
         User admin = User.get("admin");
         User test1 = User.get("test1");
         User test2 = User.get("test2");
         
+        rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy();
+        rule.jenkins.setAuthorizationStrategy(auth);
+        auth.grant(Jenkins.ADMINISTER).everywhere().to(admin)
+            .grant(Jenkins.READ).onRoot().toEveryone()
+            .grant(Computer.BUILD).everywhere().toEveryone()
+            .grant(Item.BUILD).everywhere().toEveryone();
+
         // Prepare projects:
         //   copiee: a project creates an artifact.
         //   copier: a project copies an artifact from copiee.
@@ -2100,20 +2096,13 @@ public class CopyArtifactTest {
         //   test2 can access copier
         //
         FreeStyleProject copiee = createArtifactProject();
-        Map<Permission, Set<String>> copieePermissions
-                = new HashMap<Permission, Set<String>>();
-        copieePermissions.put(Item.READ, Sets.newHashSet(test1.getId()));
-        copiee.addProperty(new AuthorizationMatrixProperty(copieePermissions));
+        auth.grant(Item.READ).onItems(copiee).to(test1);
         
         FreeStyleProject copier = createProject("${copyfrom}", null, "foo.txt", "", false, false, false);
         copier.addProperty(new ParametersDefinitionProperty(
                 new StringParameterDefinition("copyfrom",  copiee.getFullName())
         ));
-        Map<Permission, Set<String>> copierPermissions
-                = new HashMap<Permission, Set<String>>();
-        copierPermissions.put(Item.READ, Sets.newHashSet(test1.getId(), test2.getId()));
-        copierPermissions.put(Item.BUILD, Sets.newHashSet(test1.getId(), test2.getId(), Jenkins.ANONYMOUS.getName()));
-        copier.addProperty(new AuthorizationMatrixProperty(copierPermissions));
+        auth.grant(Item.READ).onItems(copier).to(test1,test2);
         
         // test permissions
         assertTrue (copiee.getACL().hasPermission(admin.impersonate(), Item.READ));
@@ -2401,7 +2390,6 @@ public class CopyArtifactTest {
     public void artifactsPermissionWithAuthSuccess() throws Exception {
         System.setProperty("hudson.security.ArtifactsPermission", "true");
         rule.jenkins.setSecurityRealm(rule.createDummySecurityRealm());
-        ProjectMatrixAuthorizationStrategy pmas = new ProjectMatrixAuthorizationStrategy();
         MockAuthorizationStrategy authStrategy = new MockAuthorizationStrategy();
         rule.jenkins.setAuthorizationStrategy(authStrategy);
         authStrategy.grant(Item.BUILD).onRoot().to("joe");

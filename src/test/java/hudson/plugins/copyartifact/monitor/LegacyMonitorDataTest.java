@@ -32,16 +32,13 @@ import hudson.model.TopLevelItemDescriptor;
 import hudson.model.User;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
-import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.Permission;
-import hudson.security.ProjectMatrixAuthorizationStrategy;
 import jenkins.model.Jenkins;
 import org.acegisecurity.AccessDeniedException;
-import org.jenkinsci.plugins.matrixauth.inheritance.InheritanceStrategy;
-import org.jenkinsci.plugins.matrixauth.inheritance.NonInheritingStrategy;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.WithoutJenkins;
 
 import javax.annotation.CheckForNull;
@@ -254,12 +251,9 @@ public class LegacyMonitorDataTest {
     @Test
     public void buildForCurrentUser_noAccessAndNonExistent() throws Exception {
         j.jenkins.setSecurityRealm(j.createDummySecurityRealm());
-        j.jenkins.setAuthorizationStrategy(new ProjectMatrixAuthorizationStrategy() {{
-            add(Jenkins.READ, "user");
-            add(Jenkins.READ, "manager");
-            add(Item.READ, "user");
-            add(Item.READ, "manager");
-        }});
+        MockAuthorizationStrategy auth = new MockAuthorizationStrategy()
+            .grant(Jenkins.READ).onRoot().to("manager", "user");
+        j.jenkins.setAuthorizationStrategy(auth);
         
         LegacyMonitorData data = new LegacyMonitorData();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd");
@@ -270,18 +264,9 @@ public class LegacyMonitorDataTest {
         SimpleJob copier1 = new SimpleJob(j.jenkins, "copier1");
         SimpleJob copier2 = new SimpleJob(j.jenkins, "copier2");
         
+        auth.grant(Item.READ).onItems(copier1).to("manager", "user");
         // only SYSTEM has access to it
-        copier2.addProperty(new AuthorizationMatrixProperty(
-                new HashMap<Permission, Set<String>>() {{
-                    put(Jenkins.READ, new HashSet<>(Arrays.asList("manager")));
-                    put(Item.READ, new HashSet<>(Arrays.asList("manager")));
-                }}
-        ) {
-            @Override 
-            public InheritanceStrategy getInheritanceStrategy() {
-                return new NonInheritingStrategy();
-            }
-        });
+        auth.grant(Item.READ).onItems(copier2).to("manager");
         
         SimpleJob copiee1 = new SimpleJob(j.jenkins, "copiee1");
         SimpleJob copiee2 = new SimpleJob(j.jenkins, "copiee2");
