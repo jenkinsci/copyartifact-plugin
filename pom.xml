@@ -26,8 +26,13 @@
     <properties>
         <revision>1.45</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.164.1</jenkins.version>
+        <jenkins.version>2.164.3</jenkins.version>
         <java.level>8</java.level>
+        <useBeta>true</useBeta>
+        <maven-plugin.version>3.1.2</maven-plugin.version>
+        <!-- versions for test dependencies -->
+        <compress-artifacts.version>1.10</compress-artifacts.version>
+        <jenkins-test-harness-tools.version>2.0</jenkins-test-harness-tools.version>
         <workflow-multibranch.version>2.10</workflow-multibranch.version>
     </properties>
 
@@ -48,8 +53,15 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <version>3.1.2</version>
+        <version>${maven-plugin.version}</version>
         <optional>true</optional>
+        <exclusions>
+            <exclusion>
+                <!-- to avoid RequireUpperBoundDeps with jenkins-test-harness -->
+                <groupId>commons-net</groupId>
+                <artifactId>commons-net</artifactId>
+            </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
@@ -63,7 +75,7 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>jenkins-test-harness-tools</artifactId>
-        <version>2.0</version>
+        <version>${jenkins-test-harness-tools.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -78,18 +90,6 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-support</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <!-- 
-        To fix an issue in PCT with scm-api, this plugin is included by workflow-support
-        Otherwise LegacyJobConfigMigrationMonitorMigrationTest refuses to compile due to lack of
-        jenkins/scm/impl/mock/AbstractSampleDVCSRepoRule
-       -->
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>scm-api</artifactId>
-        <version>2.2.6</version>
-        <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -137,8 +137,15 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>compress-artifacts</artifactId>
-        <version>1.10</version>
+        <version>${compress-artifacts.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <!-- to avoid RequireUpperBoundDeps with git plugin -->
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk15on</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <!-- for DirectArtifactManagerFactory -->
@@ -185,10 +192,8 @@
       </dependency>
       <dependency>
         <!-- for dependency of GitSampleRepoRule -->
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-scm-step</artifactId>
-        <!-- Not defined in bom for classifier=tests -->
-        <version>2.4</version>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
         <classifier>tests</classifier>
         <scope>test</scope>
       </dependency>
@@ -198,7 +203,7 @@
         <dependency>
           <groupId>io.jenkins.tools.bom</groupId>
           <artifactId>bom-2.164.x</artifactId>
-          <version>9</version>
+          <version>10</version>
           <scope>import</scope>
           <type>pom</type>
         </dependency>
