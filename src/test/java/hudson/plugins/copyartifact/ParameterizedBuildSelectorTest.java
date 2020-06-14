@@ -27,6 +27,7 @@ package hudson.plugins.copyartifact;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import jenkins.util.VirtualFile;
 import hudson.model.FreeStyleBuild;
@@ -39,8 +40,8 @@ import hudson.model.StringParameterValue;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
-import hudson.util.IOUtils;
 
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -131,7 +132,9 @@ public class ParameterizedBuildSelectorTest {
         ));
         
         VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
-        assertEquals("foobar", IOUtils.toString(vf.open()));
+        try(InputStream in = vf.open()) {
+            assertEquals("foobar", IOUtils.toString(in, "UTF-8"));
+        }
     }
     
     /**
@@ -267,7 +270,9 @@ public class ParameterizedBuildSelectorTest {
         ));
         
         VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
-        assertEquals("foobar", IOUtils.toString(vf.open()));
+        try(InputStream in = vf.open()) {
+            assertEquals("foobar", IOUtils.toString(in, "UTF-8"));
+        }
     }
     
     
