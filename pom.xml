@@ -29,10 +29,6 @@
         <jenkins.version>2.164.3</jenkins.version>
         <java.level>8</java.level>
         <useBeta>true</useBeta>
-        <maven-plugin.version>3.1.2</maven-plugin.version>
-        <!-- versions for test dependencies -->
-        <compress-artifacts.version>1.10</compress-artifacts.version>
-        <jenkins-test-harness-tools.version>2.0</jenkins-test-harness-tools.version>
         <workflow-multibranch.version>2.10</workflow-multibranch.version>
     </properties>
 
@@ -53,7 +49,7 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <version>${maven-plugin.version}</version>
+        <version>3.1.2</version>
         <optional>true</optional>
         <exclusions>
             <exclusion>
@@ -75,7 +71,7 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>jenkins-test-harness-tools</artifactId>
-        <version>${jenkins-test-harness-tools.version}</version>
+        <version>2.0</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -89,22 +85,12 @@
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-support</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-job</artifactId>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-basic-steps</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-cps</artifactId>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -115,21 +101,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-durable-task-step</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-step-api</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-api</artifactId>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>pipeline-build-step</artifactId>
         <scope>test</scope>
@@ -137,7 +108,7 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>compress-artifacts</artifactId>
-        <version>${compress-artifacts.version}</version>
+        <version>1.10</version>
         <scope>test</scope>
         <exclusions>
           <exclusion>
@@ -152,11 +123,6 @@
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-api</artifactId>
         <classifier>tests</classifier>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>branch-api</artifactId>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -183,11 +149,6 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>git</artifactId>
         <classifier>tests</classifier>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jenkins-ci.plugins.workflow</groupId>
-        <artifactId>workflow-scm-step</artifactId>
         <scope>test</scope>
       </dependency>
       <dependency>
