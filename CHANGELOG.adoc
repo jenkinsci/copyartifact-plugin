@@ -3,6 +3,17 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.45]]
+=== 1.45
+
+Release date: Jun 27, 2020
+
+* *Targets Jenkins 2.164.3 and later*
+* No new features. Improved plugin maintenanceability:
+** Fix test failures with Java11 (https://issues.jenkins-ci.org/browse/JENKINS-62586[JENKINS-62586])
+** Fix PCT failures (https://github.com/jenkinsci/copyartifact-plugin/pull/119[#119])
+** Intoroduce plugin-pom 4.x and Jenkins BOM (https://issues.jenkins-ci.org/browse/JENKINS-62586[JENKINS-62586])
+
 [[CopyArtifactPlugin-Version1.44]]
 === 1.44
 
