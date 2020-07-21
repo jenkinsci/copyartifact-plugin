@@ -23,15 +23,18 @@
  */
 package hudson.plugins.copyartifact;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 import org.hamcrest.Matchers;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 /**
  * Tests for {@link CopyArtifactConfiguration}
@@ -88,5 +91,13 @@ public class CopyArtifactConfigurationTest {
         config.setToFirstLoad();
         config.load();
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
+    }
+
+    @Ignore("Currently fails with circular dependency error")
+    @Issue("JENKINS-62267")
+    @LocalData
+    @Test
+    public void circularDependencyTest() throws Exception {
+        assertNotNull(CopyArtifactConfiguration.get());
     }
 }

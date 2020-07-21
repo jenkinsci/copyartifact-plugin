@@ -1,0 +1,11 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<org.datadog.jenkins.plugins.datadog.DatadogGlobalConfiguration>
+  <reportWith>DSD</reportWith>
+  <targetApiURL>https://api.datadoghq.com/api/</targetApiURL>
+  <targetLogIntakeURL>https://http-intake.logs.datadoghq.com/v1/input/</targetLogIntakeURL>
+  <targetHost>localhost</targetHost>
+  <targetPort>8125</targetPort>
+  <emitSecurityEvents>true</emitSecurityEvents>
+  <emitSystemEvents>true</emitSystemEvents>
+  <collectBuildLogs>false</collectBuildLogs>
+</org.datadog.jenkins.plugins.datadog.DatadogGlobalConfiguration>
