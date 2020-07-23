@@ -24,6 +24,8 @@
 package hudson.plugins.copyartifact;
 
 import hudson.Extension;
+import hudson.init.InitMilestone;
+import hudson.init.Initializer;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.GlobalConfigurationCategory;
 import jenkins.model.Jenkins;
@@ -65,7 +67,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      */
     @Override
     public synchronized void load() {
-        boolean firstLoadOfConfiguration = !getConfigFile().exists();
+        boolean firstLoadOfConfiguration = isFirstLoad();
         
         super.load();
         
@@ -86,17 +88,41 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
                 LOGGER.info("CopyArtifact is set to Production mode.");
                 // Set it explicitly to save the configuration
                 // though it should be already Production mode.
-                setMode(CopyArtifactCompatibilityMode.PRODUCTION);
+                setModeWithoutSave(CopyArtifactCompatibilityMode.PRODUCTION);
             } else {
                 LOGGER.info(
                     "CopyArtifact is set to Migration mode"
                     + " as the older version of copyartifact is detected."
                 );
-                setMode(CopyArtifactCompatibilityMode.MIGRATION);
+                setModeWithoutSave(CopyArtifactCompatibilityMode.MIGRATION);
             }
         }
     }
     
+    @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.JOB_LOADED)
+    public static void syncToDiskForFirstLoad() {
+        // save the default configuration to the disk in the first load.
+        // This should be performed AFTER all extensoins are resolved.
+        CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
+        if (config == null) {
+            LOGGER.severe(
+                "Could not get CopyArtifactConfiguration." +
+                " It looks failed to initialized for some reason"
+            );
+            return;
+        }
+        if (config.isFirstLoad()) {
+            config.save();
+        }
+    }
+
+    /**
+     * @return true if the configuration is not stored to the disk
+     */
+    protected boolean isFirstLoad() {
+        return !getConfigFile().exists();
+    }
+
     /**
      * Set the the first load status. Use only for testing purpose.
      */
@@ -114,10 +140,18 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     }
     
     /**
+     * Set the compatibility mode without storing to the disk. Use only for testing purpose.
+     */
+    @Restricted(NoExternalUse.class)
+    protected void setModeWithoutSave(@Nonnull CopyArtifactCompatibilityMode mode) {
+        this.mode = mode;
+    }
+
+    /**
      * @param mode the compatibility mode.
      */
     public void setMode(@Nonnull CopyArtifactCompatibilityMode mode) {
-        this.mode = mode;
+        setModeWithoutSave(mode);
         save();
     }
     

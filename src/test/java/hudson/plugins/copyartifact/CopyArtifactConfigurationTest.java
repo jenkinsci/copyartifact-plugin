@@ -23,6 +23,7 @@
  */
 package hudson.plugins.copyartifact;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
@@ -80,6 +81,13 @@ public class CopyArtifactConfigurationTest {
     @Test
     public void productionMode_forFresh() throws Exception {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
+        // autoconfigured to production, and stored to the disk.
+        assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
+        assertFalse(config.isFirstLoad());
+        config.load();
+        assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
+        assertFalse(config.isFirstLoad());
+
         config.setMode(CopyArtifactCompatibilityMode.MIGRATION);
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
         config.setToFirstLoad();
@@ -99,6 +107,17 @@ public class CopyArtifactConfigurationTest {
         config.setToFirstLoad();
         config.load();
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
+    }
+
+    @Test
+    public void productionMode_storedToTheDisk() throws Exception {
+        CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
+        assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
+        assertFalse(config.isFirstLoad());
+
+        config.setModeWithoutSave(CopyArtifactCompatibilityMode.MIGRATION);
+        assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
+        config.load();
     }
 
     @Issue("JENKINS-62267")
