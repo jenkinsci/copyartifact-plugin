@@ -23,15 +23,26 @@
  */
 package hudson.plugins.copyartifact;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.hamcrest.Matchers;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestExtension;
 
 import com.gargoylesoftware.htmlunit.html.HtmlForm;
+
+import hudson.XmlFile;
+import hudson.model.Saveable;
+import hudson.model.User;
+import hudson.model.listeners.SaveableListener;
 
 /**
  * Tests for {@link CopyArtifactConfiguration}
@@ -88,5 +99,29 @@ public class CopyArtifactConfigurationTest {
         config.setToFirstLoad();
         config.load();
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
+    }
+
+    @Issue("JENKINS-62267")
+    @Test
+    public void circularDependencyTestWithSavableListener() throws Exception {
+        assertNotNull(CopyArtifactConfiguration.get());
+    }
+
+    @TestExtension("circularDependencyTestWithSavableListener")
+    public static class LoadingExtensionFinderSavableListener extends SaveableListener {
+        Logger LOG = Logger.getLogger(LoadingExtensionFinderSavableListener.class.getName());
+
+        @Override
+        public void onChange(Saveable config, XmlFile file) {
+            // Initialization of CopyArtifactConfiguration triggers me.
+
+            // An operation to call ExtensionFinder to verify JENKINS-62267 is fixed.
+            User user = User.current();
+            LOG.log(
+                Level.INFO,
+                "LoadingExtensionFinderSavableListener#onChange with: {0}",
+                (user != null) ? user.getId() : "NULL"
+            );
+        }
     }
 }
