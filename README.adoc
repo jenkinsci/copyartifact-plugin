@@ -63,7 +63,8 @@ If not specified, latest stable build is used.
 found.
 
 |fingerprintArtifacts |boolean |fingerprint artifacts to track builds
-using those artifacts. true for default
+using those artifacts. false for default if the parameter isn't specified
+(Snippet Generator defaults this to true and specifies the parameter).
 
 |resultVariableSuffix |boolean |useless for pipelines
 |===
