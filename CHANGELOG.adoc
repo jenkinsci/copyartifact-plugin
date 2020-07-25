@@ -4,7 +4,7 @@
 :sectanchors:
 
 [[CopyArtifactPlugin-Version1.45.1]]
-=== 1.45
+=== 1.45.1
 
 Release date: Jul 25 2020
 
