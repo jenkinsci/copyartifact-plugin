@@ -26,12 +26,13 @@ THE SOFTWARE.
   <j:scope>
   <j:set var="descriptor" value="${it.descriptor}" /> <!-- this enables displaying the help file. -->
   <f:dropdownDescriptorSelector field="parameter"
-      title="${it.name}" description="${it.description}"
+      title="${it.name}"
       default="${it.defaultSelector}"
       descriptors="${it.descriptor.availableBuildSelectorList}">
     <j:if test="${dropdownListMode=='generateEntries'}">
       <tr><td><input type="hidden" name="name" value="${it.name}"/></td></tr>
     </j:if>
   </f:dropdownDescriptorSelector>
+  <f:description>${it.description}</f:description>
   </j:scope>
 </j:jelly>
