@@ -3,6 +3,15 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.45.1]]
+=== 1.45
+
+Release date: Jul 25 2020
+
+* Fix the circular dependency issue while startup (https://issues.jenkins-ci.org/browse/JENKINS-62267[JENKINS-62267])
+** Copyartifact fails to be initlalized on Jenkins with some other plugins (e.g. scm-sync-configuration-plugin, datadog-plugin).
+
+
 [[CopyArtifactPlugin-Version1.45]]
 === 1.45
 
