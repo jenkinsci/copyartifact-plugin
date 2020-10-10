@@ -6,7 +6,7 @@
 [[CopyArtifactPlugin-Version1.45.2]]
 === 1.45.2
 
-Release date: Oct 10 2020
+Release date: Oct 10, 2020
 
 * FIXED: Descriptions of build selector parameters are not displayed (https://issues.jenkins-ci.org/browse/JENKINS-63185[JENKINS-63185]).
 * Internal changes:
@@ -15,7 +15,7 @@ Release date: Oct 10 2020
 [[CopyArtifactPlugin-Version1.45.1]]
 === 1.45.1
 
-Release date: Jul 25 2020
+Release date: Jul 25, 2020
 
 * Fix the circular dependency issue while startup (https://issues.jenkins-ci.org/browse/JENKINS-62267[JENKINS-62267])
 ** Copyartifact fails to be initlalized on Jenkins with some other plugins (e.g. scm-sync-configuration-plugin, datadog-plugin).
