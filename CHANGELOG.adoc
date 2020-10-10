@@ -3,6 +3,15 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.45.2]]
+=== 1.45.2
+
+Release date: Oct 10 2020
+
+* FIXED: Descriptions of build selector parameters are not displayed (https://issues.jenkins-ci.org/browse/JENKINS-63185[JENKINS-63185]).
+* Internal changes:
+** Use the latest version for the plugin parant pom (https://github.com/jenkinsci/copyartifact-plugin/pull/131[#131])
+
 [[CopyArtifactPlugin-Version1.45.1]]
 === 1.45.1
 
