@@ -33,6 +33,7 @@ import hudson.model.Job;
 import hudson.model.Run;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Serializable;
 import javax.annotation.CheckForNull;
 import jenkins.util.VirtualFile;
 
@@ -43,7 +44,7 @@ import jenkins.util.VirtualFile;
  * different build selection logic.
  * @author Alan Harder
  */
-public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint {
+public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint, Serializable {
 
     /**
      * Find a build to copy artifacts from.
