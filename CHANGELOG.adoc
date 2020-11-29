@@ -3,6 +3,13 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.45.3]]
+=== 1.45.3
+
+Release date: Nov 29, 2020
+
+* FIXED: Fail to submit build selector parameter on Jenkins 2.264 and later. (https://issues.jenkins.io/browse/JENKINS-64189[JENKINS-64189])
+
 [[CopyArtifactPlugin-Version1.45.2]]
 === 1.45.2
 
