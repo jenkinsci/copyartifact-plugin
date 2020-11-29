@@ -30,7 +30,7 @@ THE SOFTWARE.
       default="${it.defaultSelector}"
       descriptors="${it.descriptor.availableBuildSelectorList}">
     <j:if test="${dropdownListMode=='generateEntries'}">
-      <tr><td><input type="hidden" name="name" value="${it.name}"/></td></tr>
+      <f:invisibleEntry><input type="hidden" name="name" value="${it.name}"/></f:invisibleEntry>
     </j:if>
   </f:dropdownDescriptorSelector>
   <f:description>${it.description}</f:description>
