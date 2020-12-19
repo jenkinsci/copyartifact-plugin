@@ -338,4 +338,34 @@ public class CopyArtifactWorkflowTest {
         );
         jenkinsRule.assertLogContains("foobar", jenkinsRule.assertBuildStatusSuccess(copier.scheduleBuild2(0)));
     }
+
+    @Issue("JENKINS-61811")
+    @Test
+    public void testBuildSelectorParameter() throws Exception {
+        WorkflowJob src = jenkinsRule.createWorkflow(
+            "TEST",
+            "writeFile text: 'foobar', file: 'artifact.txt';"
+            + "archive includes: 'artifact.txt';"
+        );
+        jenkinsRule.assertBuildStatusSuccess(src.scheduleBuild2(0));
+
+        WorkflowJob dest = jenkinsRule.jenkins.createProject(WorkflowJob.class, "dest");
+        dest.setDefinition(new CpsFlowDefinition(
+            "pipeline {\n"
+            + "  agent any\n"
+            + "  parameters {\n"
+            + "    buildSelector(defaultSelector: lastSuccessful(), description: 'Build Selector', name: 'BUILD_SELECTOR')\n"
+            + "  }\n"
+            + "  stages {\n"
+            + "    stage('Test') {\n"
+            + "      steps {\n"
+            + "        copyArtifacts fingerprintArtifacts: true, projectName: 'TEST', selector: buildParameter(params.BUILD_SELECTOR)\n"
+            + "      }\n"
+            + "    }\n"
+            + " }\n"
+            + "}",
+            true
+        ));
+        jenkinsRule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
+    }
 }
