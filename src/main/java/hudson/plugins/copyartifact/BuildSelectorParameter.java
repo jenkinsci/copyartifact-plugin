@@ -52,6 +52,7 @@ import com.google.common.collect.Lists;
  * @author Alan Harder
  */
 public class BuildSelectorParameter extends SimpleParameterDefinition {
+    private static final long serialVersionUID = 1;
     // Serialize defaultSelector into XML as ParameterDefinition must be a Serializable
     // but BuildSelector is not. (since version 1.46)
     private transient BuildSelector defaultSelector;
@@ -74,7 +75,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         defaultSelector = selector;
     }
 
-    private BuildSelectorParameter readResolve() {
+    private Object readResolve() {
         if (defaultSelector == null) {
             // Restore from the serialized value.
             if (defaultSelectorXml != null) {
