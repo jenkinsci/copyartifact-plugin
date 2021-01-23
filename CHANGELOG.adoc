@@ -3,6 +3,13 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.46]]
+=== 1.46
+
+Release date: Jan 23, 2021
+
+* FIXED: NotSerializableException using declarative parameter buildSelector. (https://issues.jenkins.io/browse/JENKINS-61811[JENKINS-61811])
+
 [[CopyArtifactPlugin-Version1.45.3]]
 === 1.45.3
 
