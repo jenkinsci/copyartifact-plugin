@@ -52,17 +52,43 @@ import com.google.common.collect.Lists;
  * @author Alan Harder
  */
 public class BuildSelectorParameter extends SimpleParameterDefinition {
-    private BuildSelector defaultSelector;
+    private static final long serialVersionUID = 1;
+    // Serialize defaultSelector into XML as ParameterDefinition must be a Serializable
+    // but BuildSelector is not. (since version 1.46)
+    private transient BuildSelector defaultSelector;
+    private String defaultSelectorXml;
+
     private static final Logger LOGGER = Logger.getLogger(BuildSelectorParameter.class.getName());
 
     @DataBoundConstructor
     public BuildSelectorParameter(String name, BuildSelector defaultSelector, String description) {
         super(name, description);
-        this.defaultSelector = defaultSelector;
+        setDefaultSelector(defaultSelector);
     }
 
     public BuildSelector getDefaultSelector() {
         return defaultSelector;
+    }
+
+    private void setDefaultSelector(BuildSelector selector) {
+        defaultSelectorXml = toXML(selector);
+        defaultSelector = selector;
+    }
+
+    private Object readResolve() {
+        if (defaultSelector == null) {
+            // Restore from the serialized value.
+            if (defaultSelectorXml != null) {
+                defaultSelector = getSelectorFromXml(defaultSelectorXml);
+            } else {
+                // Both defaultSelector and defaultSelectorXml is null. Strange!
+                LOGGER.warning("Broken BuildSelectorParameter: defaultSelector is not configured.");
+            }
+        } else {
+            // upgrade from older than 1.46.
+            defaultSelectorXml = toXML(defaultSelector);
+        }
+        return this;
     }
 
     @Override
@@ -83,7 +109,11 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     private StringParameterValue toStringValue(BuildSelector selector) {
         return new StringParameterValue(
-                getName(), XSTREAM.toXML(selector).replaceAll("[\n\r]+", ""), getDescription());
+                getName(), toXML(selector), getDescription());
+    }
+
+    private static String toXML(BuildSelector selector) {
+        return XSTREAM.toXML(selector).replaceAll("[\n\r]+", "");
     }
 
     /**
