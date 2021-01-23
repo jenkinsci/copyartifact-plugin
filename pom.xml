@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
     <description>Adds a build step to copy artifacts from another project.</description>
-    <version>1.46</version>
+    <version>${revision}${changelist}</version>
     <url>https://github.com/jenkinsci/copyartifact-plugin</url>
 
     <licenses>
@@ -24,7 +24,7 @@
     </licenses>
 
     <properties>
-        <revision>1.46</revision>
+        <revision>1.47</revision>
         <changelist>-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/copyartifact-plugin</gitHubRepo>
         <jenkins.version>2.164.3</jenkins.version>
@@ -197,7 +197,7 @@
       <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
       <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
       <url>https://github.com/${gitHubRepo}</url>
-      <tag>copyartifact-1.46</tag>
+      <tag>${scmTag}</tag>
   </scm>
 
   <repositories>
