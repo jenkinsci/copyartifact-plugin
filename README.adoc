@@ -85,10 +85,10 @@ using those artifacts. false for default if the parameter isn't specified
 [[CopyArtifactPlugin-ConfigurationNotes]]
 == Configuration Notes
 
-* When using this plugin with a Windows slave node that is configured as
+* When using this plugin with a Windows agent node that is configured as
 a Windows service, the service should have permission to interact with
 desktop (select "Allow service to interact with desktop" from Jenkins
-Slave service properties). Otherwise you may see errors similar to this:
+Agent service properties). Otherwise you may see errors similar to this:
 +
 ....
 ERROR: Failed to copy artifacts from ...

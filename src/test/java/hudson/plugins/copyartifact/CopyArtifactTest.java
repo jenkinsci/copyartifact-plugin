@@ -125,16 +125,16 @@ public class CopyArtifactTest {
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
-    // Tests using slaves fails with Jenkins < 1.520 on Windows.
+    // Tests using agents fails with Jenkins < 1.520 on Windows.
     // See https://wiki.jenkins-ci.org/display/JENKINS/Unit+Test+on+Windows
-    private void purgeSlaves() {
+    private void purgeAgents() {
         List<Computer> disconnectingComputers = new ArrayList<Computer>();
         List<VirtualChannel> closingChannels = new ArrayList<VirtualChannel>();
         for (Computer computer: rule.jenkins.getComputers()) {
             if (!(computer instanceof SlaveComputer)) {
                 continue;
             }
-            // disconnect slaves.
+            // disconnect agents.
             // retrieve the channel before disconnecting.
             // even a computer gets offline, channel delays to close.
             if (!computer.isOffline()) {
@@ -161,7 +161,7 @@ public class CopyArtifactTest {
     @After
     public void tearDown() throws Exception {
         if(Functions.isWindows()) {
-            purgeSlaves();
+            purgeAgents();
         }
         System.clearProperty("hudson.security.ArtifactsPermission");
     }
@@ -351,7 +351,7 @@ public class CopyArtifactTest {
         SlaveComputer c = node.getComputer();
         c.connect(false).get(); // wait until it's connected
         if(c.isOffline())
-            fail("Slave failed to go online: " + c.getLog());
+            fail("Agent failed to go online: " + c.getLog());
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false, true);
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new UserCause()).get());
@@ -1751,7 +1751,7 @@ public class CopyArtifactTest {
         assertEquals(0644, artifactDir.child("subdir/artifactInSubdir.txt").mode() & 0777);
         assertEquals(0755, artifactDir.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         
-        // on master, without flatten
+        // on built-in node, without flatten
         {
             FreeStyleProject p = rule.createFreeStyleProject();
             p.setAssignedNode(rule.jenkins);
@@ -1778,7 +1778,7 @@ public class CopyArtifactTest {
             assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
         
-        // on master, with flatten
+        // on built-in node, with flatten
         {
             FreeStyleProject p = rule.createFreeStyleProject();
             p.setAssignedNode(rule.jenkins);
@@ -1807,7 +1807,7 @@ public class CopyArtifactTest {
         
         DumbSlave node = rule.createOnlineSlave();
         
-        // on slave, without flatten
+        // on agent, without flatten
         {
             FreeStyleProject p = rule.createFreeStyleProject();
             p.setAssignedNode(node);
@@ -1834,7 +1834,7 @@ public class CopyArtifactTest {
             assertEquals(0755, w.child("subdir/artifactWithExecuteInSubdir.txt").mode() & 0777);
         }
         
-        // on slave, with flatten
+        // on agent, with flatten
         {
             FreeStyleProject p = rule.createFreeStyleProject();
             p.setAssignedNode(node);

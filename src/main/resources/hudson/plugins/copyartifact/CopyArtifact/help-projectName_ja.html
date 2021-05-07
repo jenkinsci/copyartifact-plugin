@@ -11,8 +11,8 @@
   </p>
   <p>
   マルチ構成プロジェクトの場合、そのすべての設定の成果物を、Jenkinsで設定を参照する際のURLと同様のサブディレクトリにコピーします。<br/>
-  例: コピー先が<tt>fromMatrix</tt>であれば、成果物は<tt>$WORKSPACE/fromMatrix/label=slaveA/dist/mybuild.jar</tt>や
-  <tt>$WORKSPACE/fromMatrix/label=slaveB/dist/mybuild.jar</tt>にコピーします。 <br/>
+  例: コピー先が<tt>fromMatrix</tt>であれば、成果物は<tt>$WORKSPACE/fromMatrix/label=agentA/dist/mybuild.jar</tt>や
+  <tt>$WORKSPACE/fromMatrix/label=agentB/dist/mybuild.jar</tt>にコピーします。 <br/>
   特定の設定からコピーするには、その設定のURLと同様に、<tt>ジョブ名/軸=値,,,</tt>を設定します。<br/>
   例: <tt>MyMatrixJob/jdk=Java6u17</tt><br/>
   マルチ構成プロジェクトから他のマルチ構成プロジェクトにコピーするには、コピー元のプロジェクトでの条件としてパラメータを設定します。<br/>
