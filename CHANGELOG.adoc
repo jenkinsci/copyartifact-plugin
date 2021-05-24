@@ -631,7 +631,7 @@ Release date: Oct 10, 2010
 * Add option to copy from workspace of latest completed build.
 (https://issues.jenkins-ci.org/browse/JENKINS-7130[JENKINS-7130]) +
 Note: source and target jobs cannot both run on agent nodes; at least
-one must be on the controller node.
+one must be on the built-in node.
 * Strip newlines in XML form of build selector parameters, to avoid
 breaking ant execution on windows.
 (https://issues.jenkins-ci.org/browse/JENKINS-7680[JENKINS-7680])
