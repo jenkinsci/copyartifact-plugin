@@ -462,7 +462,7 @@ https://issues.jenkins-ci.org/browse/JENKINS-15726[JENKINS-15726])
 
 Release date: Oct 03, 2012
 
-* Continued fix for the case of a Windows slave with Unix master.
+* Continued fix for the case of a Windows agent with Unix controller.
 (https://issues.jenkins-ci.org/browse/JENKINS-13515[JENKINS-13515])
 
 [[CopyArtifactPlugin-Version1.23]]
@@ -630,8 +630,8 @@ Release date: Oct 10, 2010
 
 * Add option to copy from workspace of latest completed build.
 (https://issues.jenkins-ci.org/browse/JENKINS-7130[JENKINS-7130]) +
-Note: source and target jobs cannot both run on slave nodes; at least
-one must be on the master node.
+Note: source and target jobs cannot both run on agent nodes; at least
+one must be on the built-in node.
 * Strip newlines in XML form of build selector parameters, to avoid
 breaking ant execution on windows.
 (https://issues.jenkins-ci.org/browse/JENKINS-7680[JENKINS-7680])
@@ -709,7 +709,7 @@ Builds Simple Plugin]
 
 Release date: Mar 18, 2010
 
-* Add workaround for hanging-slave issue to avoid problem until
+* Add workaround for hanging-agent issue to avoid problem until
 https://issues.jenkins-ci.org/browse/JENKINS-5977[JENKINS-5977] is fixed
 in core.
 (https://issues.jenkins-ci.org/browse/JENKINS-5934[JENKINS-5934])
