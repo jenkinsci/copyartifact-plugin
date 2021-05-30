@@ -3,6 +3,13 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.46.1]]
+=== 1.46.1
+
+Release date: May 30, 2021
+
+* Replaced text references to "slave" with "agent" in various log entries, help pages, and documentations. (https://issues.jenkins.io/browse/JENKINS-65398[JENKINS-65398])
+
 [[CopyArtifactPlugin-Version1.46]]
 === 1.46
 
