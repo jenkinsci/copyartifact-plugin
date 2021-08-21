@@ -26,6 +26,7 @@ package hudson.plugins.copyartifact;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import com.thoughtworks.xstream.XStreamException;
 import jenkins.model.Jenkins;
@@ -43,10 +44,6 @@ import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 
 /**
  * @author Alan Harder
@@ -150,14 +147,9 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
             if (jenkins == null) {
                 return Collections.emptyList();
             }
-            return Lists.newArrayList(Collections2.filter(
-                    jenkins.getDescriptorList(BuildSelector.class),
-                    new Predicate<Descriptor<BuildSelector>>() {
-                        public boolean apply(Descriptor<BuildSelector> input) {
-                            return !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName());
-                        };
-                    }
-            ));
+            return jenkins.getDescriptorList(BuildSelector.class).stream()
+                    .filter(input -> !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName()))
+                    .collect(Collectors.toList());
         }
         
         @Override

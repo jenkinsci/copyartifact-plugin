@@ -24,7 +24,6 @@
 package hudson.plugins.copyartifact.monitor;
 
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
-import com.google.common.annotations.VisibleForTesting;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
@@ -126,7 +125,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     /**
      * @return data holding the list of jobs to warn.
      */
-    @VisibleForTesting LegacyMonitorData getData() {
+    /* Visible for testing */ LegacyMonitorData getData() {
         return data;
     }
     
@@ -325,7 +324,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         }
     }
 
-    @VisibleForTesting
+    /* Visible for testing */
     @Restricted(NoExternalUse.class)
     boolean applyAutoMigration(@Nonnull String jobFromName, @Nonnull String jobToName) throws IOException {
         Jenkins jenkins = Jenkins.get();
