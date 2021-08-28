@@ -23,7 +23,6 @@
  */
 package hudson.plugins.copyartifact.monitor;
 
-import com.google.common.annotations.VisibleForTesting;
 import hudson.model.Job;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
@@ -156,7 +155,7 @@ public class LegacyMonitorData {
      * @return map map from the pair of jobs to the possible failure build.
      */
     @Restricted(NoExternalUse.class)
-    @VisibleForTesting @Nonnull Map<JobKey, LegacyBuildStorage> getLegacyJobInfos() {
+    /* Visible for testing */ @Nonnull Map<JobKey, LegacyBuildStorage> getLegacyJobInfos() {
         return new HashMap<>(legacyJobInfos);
     }
     
@@ -166,7 +165,7 @@ public class LegacyMonitorData {
      * @return map map from the job name to all existing pair of jobs.
      */
     @Restricted(NoExternalUse.class)
-    @VisibleForTesting @Nonnull Map<String, List<JobKey>> getFullNameToKey() {
+    /* Visible for testing */ @Nonnull Map<String, List<JobKey>> getFullNameToKey() {
         Map<String, List<JobKey>> result = new HashMap<>();
         
         fullNameToKey.forEach((key, value) -> result.put(key, new ArrayList<>(value)));
@@ -180,7 +179,7 @@ public class LegacyMonitorData {
      * Clear all.
      */
     @Restricted(NoExternalUse.class)
-    @VisibleForTesting void clear() {
+    /* Visible for testing */ void clear() {
         this.fullNameToKey.clear();
         this.legacyJobInfos.clear();
     }
@@ -327,7 +326,7 @@ public class LegacyMonitorData {
      */
     @Restricted(NoExternalUse.class)
     @Nonnull
-    @VisibleForTesting static JobKey buildKey(@Nonnull String jobFrom, @Nonnull String jobTo) {
+    /* Visible for testing */ static JobKey buildKey(@Nonnull String jobFrom, @Nonnull String jobTo) {
         return new JobKey(jobFrom, jobTo);
     }
     

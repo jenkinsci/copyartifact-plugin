@@ -43,6 +43,8 @@ import hudson.plugins.copyartifact.CopyArtifactPermissionProperty;
 import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
+import java.util.Arrays;
+import java.util.HashSet;
 import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.security.QueueItemAuthenticator;
@@ -56,8 +58,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.recipes.LocalData;
-
-import com.google.common.collect.Sets;
 
 import javax.annotation.CheckForNull;
 
@@ -831,7 +831,7 @@ public class LegacyJobConfigMigrationMonitorTest {
         LegacyJobConfigMigrationMonitor monitor = LegacyJobConfigMigrationMonitor.get();
         assertThat(
             monitor.getData().getFullNameToKey().keySet(),
-            Matchers.is(Sets.newHashSet("dest", "src"))
+            Matchers.is(new HashSet<>(Arrays.asList("dest", "src")))
         );
 
         src.addProperty(new CopyArtifactPermissionProperty("dest"));
