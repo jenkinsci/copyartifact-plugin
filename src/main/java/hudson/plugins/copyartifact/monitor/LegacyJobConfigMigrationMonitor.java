@@ -125,6 +125,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     /**
      * @return data holding the list of jobs to warn.
      */
+    @Restricted(NoExternalUse.class)
     /* Visible for testing */ LegacyMonitorData getData() {
         return data;
     }
