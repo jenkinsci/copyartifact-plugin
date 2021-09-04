@@ -3,6 +3,14 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.46.2]]
+=== 1.46.2
+
+Release date: Sep 4, 2021
+
+* Remove usages of Guava. (https://issues.jenkins.io/browse/JENKINS-65988[JENKINS-65988])
+    * Fix for incompatibilities with forthcoming versions of Jenkins. No changes in plugin behaviors.
+
 [[CopyArtifactPlugin-Version1.46.1]]
 === 1.46.1
 
