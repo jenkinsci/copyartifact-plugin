@@ -374,7 +374,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
 
     @Test
     public void migrate_maven_to_pipeline() throws Exception {
-        ToolInstallations.configureDefaultMaven();
+        ToolInstallations.configureMaven3();
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
         src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
@@ -401,7 +401,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
 
     @Test
     public void migrate_mavenmodule_to_pipeline() throws Exception {
-        ToolInstallations.configureDefaultMaven();
+        ToolInstallations.configureMaven3();
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
         src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
@@ -438,7 +438,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
-        ToolInstallations.configureDefaultMaven();
+        ToolInstallations.configureMaven3();
         MavenModuleSet dst = j.createProject(MavenModuleSet.class);
         dst.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         dst.setRunHeadless(true);

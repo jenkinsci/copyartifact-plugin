@@ -924,7 +924,7 @@ public class TriggeredBuildSelectorTest {
     @Issue("JENKINS-14653")
     @Test
     public void testMavenModule() throws Exception {
-        ToolInstallations.configureDefaultMaven();
+        ToolInstallations.configureMaven3();
         MavenModuleSet upstream = createMavenProject();
         FreeStyleProject downstream = j.createFreeStyleProject();
         
