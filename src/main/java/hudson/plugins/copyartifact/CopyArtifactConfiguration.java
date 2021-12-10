@@ -33,6 +33,7 @@ import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
+import java.io.IOException;
 import java.util.logging.Logger;
 
 import javax.annotation.CheckForNull;
@@ -127,7 +128,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      * Set the the first load status. Use only for testing purpose.
      */
     @Restricted(NoExternalUse.class)
-    public void setToFirstLoad() {
+    public void setToFirstLoad() throws IOException {
         getConfigFile().delete();
     }
     
