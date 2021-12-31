@@ -30,8 +30,8 @@ import jenkins.model.Jenkins;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
@@ -60,7 +60,7 @@ public class LegacyMonitorData {
      *
      * buildKey() is used to create the key of this map
      */
-    @Nonnull
+    @NonNull
     private Map<JobKey, LegacyBuildStorage> legacyJobInfos;
     
     /**
@@ -68,7 +68,7 @@ public class LegacyMonitorData {
      * considering both as source jobs and destination jobs.
      * This is used for the rename part.
      */
-    @Nonnull
+    @NonNull
     private Map<String, List<JobKey>> fullNameToKey;
     
     /**
@@ -92,7 +92,7 @@ public class LegacyMonitorData {
      * @param jobFullName the job name to check
      * @return {@code true} if that job is already listed.
      */
-    public boolean hasJobFullName(@Nonnull String jobFullName) {
+    public boolean hasJobFullName(@NonNull String jobFullName) {
         return fullNameToKey.containsKey(jobFullName);
     }
     
@@ -102,7 +102,7 @@ public class LegacyMonitorData {
      * @param previousFullName the previous name of the job.
      * @param newFullName the new name of the job.
      */
-    public void onJobRename(@Nonnull String previousFullName, @Nonnull String newFullName) {
+    public void onJobRename(@NonNull String previousFullName, @NonNull String newFullName) {
         List<JobKey> keys = fullNameToKey.get(previousFullName);
         if (keys == null) {
             return;
@@ -155,7 +155,7 @@ public class LegacyMonitorData {
      * @return map map from the pair of jobs to the possible failure build.
      */
     @Restricted(NoExternalUse.class)
-    /* Visible for testing */ @Nonnull Map<JobKey, LegacyBuildStorage> getLegacyJobInfos() {
+    /* Visible for testing */ @NonNull Map<JobKey, LegacyBuildStorage> getLegacyJobInfos() {
         return new HashMap<>(legacyJobInfos);
     }
     
@@ -165,7 +165,7 @@ public class LegacyMonitorData {
      * @return map map from the job name to all existing pair of jobs.
      */
     @Restricted(NoExternalUse.class)
-    /* Visible for testing */ @Nonnull Map<String, List<JobKey>> getFullNameToKey() {
+    /* Visible for testing */ @NonNull Map<String, List<JobKey>> getFullNameToKey() {
         Map<String, List<JobKey>> result = new HashMap<>();
         
         fullNameToKey.forEach((key, value) -> result.put(key, new ArrayList<>(value)));
@@ -190,7 +190,7 @@ public class LegacyMonitorData {
      * @return the list of pairs of source and destination jobs
      *     to show warnings for that user.
      */
-    @Nonnull
+    @NonNull
     public List<LegacyBuildInfoModel> buildDataForCurrentUser() {
         Map<String, JobInfoModel> jobCache = new HashMap<>();
         
@@ -221,10 +221,10 @@ public class LegacyMonitorData {
         return result;
     }
     
-    @Nonnull
+    @NonNull
     private JobInfoModel retrieveOrBuildJobInfoForCurrentUser(
-            @Nonnull Map<String, JobInfoModel> jobCache,
-            @Nonnull String jobFullName
+            @NonNull Map<String, JobInfoModel> jobCache,
+            @NonNull String jobFullName
     ) {
         if (jobCache.containsKey(jobFullName)) {
             return jobCache.get(jobFullName);
@@ -254,10 +254,10 @@ public class LegacyMonitorData {
      * @param lastBuildDate the build timestamp.
      * @param username the user name that the destination job ran as.
      */
-    public void addLegacyJob(@Nonnull Job<?, ?> jobTryingToCopy,
-                             @Nonnull Job<?, ?> jobToBeCopiedFrom,
-                             @Nonnull Date lastBuildDate,
-                             @Nonnull String username) {
+    public void addLegacyJob(@NonNull Job<?, ?> jobTryingToCopy,
+                             @NonNull Job<?, ?> jobToBeCopiedFrom,
+                             @NonNull Date lastBuildDate,
+                             @NonNull String username) {
         String jobFullNameTo = jobTryingToCopy.getFullName();
         String jobFullNameFrom = jobToBeCopiedFrom.getFullName();
         JobKey key = buildKey(jobFullNameFrom, jobFullNameTo);
@@ -283,7 +283,7 @@ public class LegacyMonitorData {
      *
      * @return {@code true} if removed (the pair was registered).
      */
-    public boolean removeLegacyJob(@Nonnull String jobFullNameFrom, @Nonnull String jobFullNameTo) {
+    public boolean removeLegacyJob(@NonNull String jobFullNameFrom, @NonNull String jobFullNameTo) {
         JobKey key = buildKey(jobFullNameFrom, jobFullNameTo);
         if (legacyJobInfos.remove(key) == null) {
             return false;
@@ -294,7 +294,7 @@ public class LegacyMonitorData {
         return true;
     }
     
-    private void addEntryToKeyMap(@Nonnull String fullName, @Nonnull JobKey key) {
+    private void addEntryToKeyMap(@NonNull String fullName, @NonNull JobKey key) {
         List<JobKey> fromList = fullNameToKey.get(fullName);
         if (fromList == null) {
             fromList = new ArrayList<>();
@@ -307,7 +307,7 @@ public class LegacyMonitorData {
         }
     }
     
-    private void removeEntryFromKeyMap(@Nonnull String fullName, @Nonnull JobKey key) {
+    private void removeEntryFromKeyMap(@NonNull String fullName, @NonNull JobKey key) {
         List<JobKey> fromList = fullNameToKey.get(fullName);
         if (fromList != null) {
             fromList.remove(key);
@@ -325,8 +325,8 @@ public class LegacyMonitorData {
      * @return the pair of the source job and the destination job.
      */
     @Restricted(NoExternalUse.class)
-    @Nonnull
-    /* Visible for testing */ static JobKey buildKey(@Nonnull String jobFrom, @Nonnull String jobTo) {
+    @NonNull
+    /* Visible for testing */ static JobKey buildKey(@NonNull String jobFrom, @NonNull String jobTo) {
         return new JobKey(jobFrom, jobTo);
     }
     
@@ -343,7 +343,7 @@ public class LegacyMonitorData {
          * @param from the name of the source job.
          * @param to the name of the destination job.
          */
-        public JobKey(@Nonnull String from, @Nonnull String to) {
+        public JobKey(@NonNull String from, @NonNull String to) {
             this.from = from;
             this.to = to;
         }
@@ -388,11 +388,11 @@ public class LegacyMonitorData {
          * @param username the user name that the destination job ran as.
          * @param lastBuildDate the build timestamp.
          */
-        public LegacyBuildStorage(@Nonnull String jobFullNameFrom, @Nonnull String jobFullNameTo, @Nonnull String username, @Nonnull Date lastBuildDate) {
+        public LegacyBuildStorage(@NonNull String jobFullNameFrom, @NonNull String jobFullNameTo, @NonNull String username, @NonNull Date lastBuildDate) {
             this(jobFullNameFrom, jobFullNameTo, username, lastBuildDate, 1);
         }
         
-        private LegacyBuildStorage(@Nonnull String jobFullNameFrom, @Nonnull String jobFullNameTo, @Nonnull String username, @Nonnull Date lastBuildDate, int numOfBuild) {
+        private LegacyBuildStorage(@NonNull String jobFullNameFrom, @NonNull String jobFullNameTo, @NonNull String username, @NonNull Date lastBuildDate, int numOfBuild) {
             this.jobFullNameFrom = jobFullNameFrom;
             this.jobFullNameTo = jobFullNameTo;
             this.username = username;
@@ -403,28 +403,28 @@ public class LegacyMonitorData {
         /**
          * @return the name of the source job.
          */
-        public @Nonnull String getJobFullNameFrom() {
+        public @NonNull String getJobFullNameFrom() {
             return jobFullNameFrom;
         }
         
         /**
          * @return the name of the destination job.
          */
-        public @Nonnull String getJobFullNameTo() {
+        public @NonNull String getJobFullNameTo() {
             return jobFullNameTo;
         }
         
         /**
          * @return the user name that the destination job ran as.
          */
-        public @Nonnull String getUsername() {
+        public @NonNull String getUsername() {
             return username;
         }
         
         /**
          * @return the build timestamp.
          */
-        public @Nonnull Date getLastBuildDate() {
+        public @NonNull Date getLastBuildDate() {
             return new Date(lastBuildDate.getTime());
         }
         
@@ -442,7 +442,7 @@ public class LegacyMonitorData {
          * @param lastBuildDate the build timestamp.
          * @return data to store in the monitor.
          */
-        @Nonnull
+        @NonNull
         public LegacyBuildStorage addNewBuild(String username, Date lastBuildDate) {
             return new LegacyBuildStorage(this.jobFullNameFrom, this.jobFullNameTo, username, lastBuildDate, numOfBuild + 1);
         }
@@ -488,7 +488,7 @@ public class LegacyMonitorData {
         /**
          * @param jobFrom the source job.
          */
-        public LegacyBuildInfoModel(@Nonnull JobInfoModel jobFrom) {
+        public LegacyBuildInfoModel(@NonNull JobInfoModel jobFrom) {
             this.jobFrom = jobFrom;
             this.jobToList = new ArrayList<>();
         }
@@ -496,7 +496,7 @@ public class LegacyMonitorData {
         /**
          * @return the source job.
          */
-        public @Nonnull JobInfoModel getJobFrom() {
+        public @NonNull JobInfoModel getJobFrom() {
             return jobFrom;
         }
         
@@ -535,9 +535,9 @@ public class LegacyMonitorData {
          * @param lastBuildDate the build timestamp.
          * @param numOfBuild the number of builds that would fail in Production mode.
          */
-        public LegacyJobInfoItemModel(@Nonnull JobInfoModel jobTo,
-                                      @Nonnull String username,
-                                      @Nonnull Date lastBuildDate,
+        public LegacyJobInfoItemModel(@NonNull JobInfoModel jobTo,
+                                      @NonNull String username,
+                                      @NonNull Date lastBuildDate,
                                       int numOfBuild) {
             this.jobTo = jobTo;
             this.username = username;
@@ -548,21 +548,21 @@ public class LegacyMonitorData {
         /**
          * @return the information of the destination job.
          */
-        public @Nonnull JobInfoModel getJobTo() {
+        public @NonNull JobInfoModel getJobTo() {
             return jobTo;
         }
         
         /**
          * @return the user name the destination job ran as.
          */
-        public @Nonnull String getUsername() {
+        public @NonNull String getUsername() {
             return username;
         }
         
         /**
          * @return the build timestamp.
          */
-        public @Nonnull Date getLastBuildDate() {
+        public @NonNull Date getLastBuildDate() {
             return new Date(lastBuildDate.getTime());
         }
         
@@ -595,7 +595,7 @@ public class LegacyMonitorData {
          * @param regularAccess {@code true} if the current user can access.
          * @param jobFullName the full name of the job.
          */
-        public JobInfoModel(@CheckForNull Job<?, ?> validJob, boolean regularAccess, @Nonnull String jobFullName) {
+        public JobInfoModel(@CheckForNull Job<?, ?> validJob, boolean regularAccess, @NonNull String jobFullName) {
             this.validJob = validJob;
             this.regularAccess = regularAccess;
             this.jobFullName = jobFullName;
@@ -623,7 +623,7 @@ public class LegacyMonitorData {
         /**
          * @return the full name of the job.
          */
-        public @Nonnull String getJobFullName() {
+        public @NonNull String getJobFullName() {
             return jobFullName;
         }
 

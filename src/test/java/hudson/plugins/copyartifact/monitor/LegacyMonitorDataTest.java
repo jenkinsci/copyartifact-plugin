@@ -41,8 +41,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.WithoutJenkins;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -359,7 +359,7 @@ public class LegacyMonitorDataTest {
     }
     
     private class SimpleRun extends Run<SimpleJob, SimpleRun> {
-        protected SimpleRun(@Nonnull SimpleJob job) throws IOException {
+        protected SimpleRun(@NonNull SimpleJob job) throws IOException {
             super(job);
         }
     }

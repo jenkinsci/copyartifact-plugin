@@ -56,9 +56,9 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.kohsuke.stapler.json.JsonBody;
 import org.kohsuke.stapler.lang.Klass;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.concurrent.GuardedBy;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import net.jcip.annotations.GuardedBy;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
@@ -177,7 +177,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     /**
      * @return the path of the xml file to save warnings.
      */
-    @Nonnull
+    @NonNull
     public static XmlFile getConfigXml() {
         return new XmlFile(new File(Jenkins.get().getRootDir(), LegacyJobConfigMigrationMonitor.class.getName() + ".xml"));
     }
@@ -187,7 +187,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      *
      * @return the list of the source and destination jobs to warn.
      */
-    @Nonnull
+    @NonNull
     @Restricted(DoNotUse.class)
     public List<LegacyMonitorData.LegacyBuildInfoModel> getAllJobInformation() {
         Lock readLock = lock.readLock();
@@ -207,10 +207,10 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @param lastBuildDate the build timestamp.
      * @param username the user name the destination job ran as.
      */
-    public void addLegacyJob(@Nonnull Job<?, ?> jobTryingToCopy,
-                             @Nonnull Job<?, ?> jobToBeCopiedFrom,
-                             @Nonnull Date lastBuildDate,
-                             @Nonnull String username) {
+    public void addLegacyJob(@NonNull Job<?, ?> jobTryingToCopy,
+                             @NonNull Job<?, ?> jobToBeCopiedFrom,
+                             @NonNull Date lastBuildDate,
+                             @NonNull String username) {
         LOGGER.log(Level.FINE, "Adding a legacy job to the monitor: from {0} to {1}",
                 new Object[]{jobToBeCopiedFrom.getFullName(), jobTryingToCopy.getFullName()});
         
@@ -231,8 +231,8 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @param jobToBeCopiedFrom the source job.
      */
     public void removeLegacyJob(
-        @Nonnull Job<?, ?> jobTryingToCopy,
-        @Nonnull Job<?, ?> jobToBeCopiedFrom
+        @NonNull Job<?, ?> jobTryingToCopy,
+        @NonNull Job<?, ?> jobToBeCopiedFrom
     ){
         String jobToBeCopiedFromName = jobToBeCopiedFrom.getFullName();
         String jobTryingToCopyName = jobTryingToCopy.getFullName();
@@ -327,7 +327,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
 
     /* Visible for testing */
     @Restricted(NoExternalUse.class)
-    boolean applyAutoMigration(@Nonnull String jobFromName, @Nonnull String jobToName) throws IOException {
+    boolean applyAutoMigration(@NonNull String jobFromName, @NonNull String jobToName) throws IOException {
         Jenkins jenkins = Jenkins.get();
         Job<?, ?> jobFrom = getRootProject(jenkins.getItemByFullName(jobFromName, Job.class));
         Job<?, ?> jobTo = getRootProject(jenkins.getItemByFullName(jobToName, Job.class));
@@ -422,7 +422,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     /**
      * @return the singleton instance.
      */
-    @Nonnull
+    @NonNull
     public static LegacyJobConfigMigrationMonitor get() {
         AdministrativeMonitor monitor = Jenkins.get().getAdministrativeMonitor(ID);
         if (monitor instanceof LegacyJobConfigMigrationMonitor) {
