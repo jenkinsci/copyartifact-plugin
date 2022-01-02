@@ -75,7 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 
 import jenkins.model.Jenkins;
 
@@ -92,8 +92,8 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import jenkins.MasterToSlaveFileCallable;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.IOUtils;
@@ -209,7 +209,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @DataBoundSetter
-    public void setSelector(@Nonnull BuildSelector selector) {
+    public void setSelector(@NonNull BuildSelector selector) {
         this.selector = selector;
     }
 
@@ -380,7 +380,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     @Override
-    public void perform(@Nonnull Run<?, ?> build, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
+    public void perform(@NonNull Run<?, ?> build, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
         Jenkins jenkins = Jenkins.getInstance();
         if (jenkins == null) {
             throw new AbortException("Jenkins instance is unavailable.");
@@ -911,7 +911,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         private transient Map<String,String> data = new HashMap<String,String>();
 
         @Nullable
-        private String calculateDefaultSuffix(@Nonnull Run<?,?> build, @Nonnull Run<?,?> src, @Nonnull String projectName) {
+        private String calculateDefaultSuffix(@NonNull Run<?,?> build, @NonNull Run<?,?> src, @NonNull String projectName) {
             ItemGroup<?> ctx = getItemGroup(build);
             Job<?,?> item = src.getParent();
             // Use full name if configured with absolute path
@@ -935,9 +935,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
         
         private void add(
-                @Nonnull Run<?,?> build,
-                @Nonnull Run<?,?> src,
-                @Nonnull String projectName,
+                @NonNull Run<?,?> build,
+                @NonNull Run<?,?> src,
+                @NonNull String projectName,
                 @Nullable String resultVariableSuffix
         ) {
             if (data==null) return;

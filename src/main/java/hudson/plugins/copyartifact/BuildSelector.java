@@ -33,7 +33,7 @@ import hudson.model.Job;
 import hudson.model.Run;
 import java.io.IOException;
 import java.io.PrintStream;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.util.VirtualFile;
 
 /**

@@ -36,8 +36,8 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Provide the configuration about the compatibility mode (either production or migration)
@@ -52,7 +52,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     /**
      * @see CopyArtifactCompatibilityMode
      */
-    @Nonnull
+    @NonNull
     private CopyArtifactCompatibilityMode mode = CopyArtifactCompatibilityMode.PRODUCTION;
     
     /**
@@ -135,7 +135,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     /**
      * @return the compatibility mode
      */
-    @Nonnull
+    @NonNull
     public CopyArtifactCompatibilityMode getMode() {
         return mode;
     }
@@ -144,14 +144,14 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      * Set the compatibility mode without storing to the disk. Use only for testing purpose.
      */
     @Restricted(NoExternalUse.class)
-    protected void setModeWithoutSave(@Nonnull CopyArtifactCompatibilityMode mode) {
+    protected void setModeWithoutSave(@NonNull CopyArtifactCompatibilityMode mode) {
         this.mode = mode;
     }
 
     /**
      * @param mode the compatibility mode.
      */
-    public void setMode(@Nonnull CopyArtifactCompatibilityMode mode) {
+    public void setMode(@NonNull CopyArtifactCompatibilityMode mode) {
         setModeWithoutSave(mode);
         save();
     }
@@ -172,7 +172,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      * {@inheritDoc}
      */
     @Override
-    public @Nonnull GlobalConfigurationCategory getCategory() {
+    public @NonNull GlobalConfigurationCategory getCategory() {
         return GlobalConfigurationCategory.get(GlobalConfigurationCategory.Security.class);
     }
     

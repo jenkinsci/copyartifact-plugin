@@ -2059,7 +2059,7 @@ public class CopyArtifactTest {
         }
         
         @Override
-        @javax.annotation.CheckForNull
+        @edu.umd.cs.findbugs.annotations.CheckForNull
         public org.acegisecurity.Authentication authenticate(Queue.Item item) {
             return auth;
         }
