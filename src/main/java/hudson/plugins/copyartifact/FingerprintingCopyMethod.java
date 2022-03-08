@@ -89,7 +89,7 @@ public class FingerprintingCopyMethod extends Copier {
             }
             try {
                 d.chmod(s.mode());
-            } catch (PosixException x) {
+            } catch (IOException | PosixException x) {
                 LOGGER.log(Level.WARNING, "could not check mode of " + s, x);
             }
             // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
