@@ -3,13 +3,24 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.46.3]]
+=== 1.46.3
+
+Release date: Mar 13, 2022
+
+* Compatibility with jenkins-2.339 and later. (https://github.com/jenkinsci/copyartifact-plugin/pull/145[#145]).
+* Internal changes:
+** Use Maven3 for tests. (https://github.com/jenkinsci/copyartifact-plugin/pull/142[#142])
+** Compile time compatibility with jenkins-2.325 and later. (https://github.com/jenkinsci/copyartifact-plugin/pull/143[#143])
+** Use findbugs annotations instead of jsr-305 annotations. (https://github.com/jenkinsci/copyartifact-plugin/pull/144[#144])
+
 [[CopyArtifactPlugin-Version1.46.2]]
 === 1.46.2
 
 Release date: Sep 4, 2021
 
 * Remove usages of Guava. (https://issues.jenkins.io/browse/JENKINS-65988[JENKINS-65988])
-    * Fix for incompatibilities with forthcoming versions of Jenkins. No changes in plugin behaviors.
+** Fix for incompatibilities with forthcoming versions of Jenkins. No changes in plugin behaviors.
 
 [[CopyArtifactPlugin-Version1.46.1]]
 === 1.46.1
