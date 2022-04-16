@@ -95,7 +95,7 @@ THE SOFTWARE.
                                         <tr>
                                             <td class="first-column">
                                                 <j:if test="${!isValid}">
-                                                    <l:icon style="padding: 0 0 0 4px" class="icon-warning icon-sm" title="${%InvalidWarning.title}" />
+                                                    <l:icon class="icon-warning icon-sm" title="${%InvalidWarning.title}" />
                                                 </j:if>
                                             </td>
                                             <td>
