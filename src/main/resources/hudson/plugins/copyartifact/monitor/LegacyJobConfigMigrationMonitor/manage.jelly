@@ -95,15 +95,15 @@ THE SOFTWARE.
                                         <tr>
                                             <td class="first-column">
                                                 <j:if test="${!isValid}">
-                                                    <img class="first-column-icon" src="${imagesURL}/16x16/warning.png" title="${%InvalidWarning.title}" />
+                                                    <l:icon class="icon-warning icon-sm" title="${%InvalidWarning.title}" />
                                                 </j:if>
                                             </td>
                                             <td>
                                                 <j:if test="${jobFrom.autoMigratable}">
-                                                    <img src="${imagesURL}/16x16/accept.png" title="${%CanMigrate}" />
+                                                    <l:icon class="icon-accept icon-sm" title="${%CanMigrate}" />
                                                 </j:if>
                                                 <j:if test="${!jobFrom.autoMigratable}">
-                                                    <img src="${imagesURL}/16x16/stop.png" title="${%CanNotMigrate}" />
+                                                    <l:icon class="icon-stop icon-sm" title="${%CanNotMigrate}" />
                                                 </j:if>
                                             </td>
                                             <td>

@@ -27,9 +27,8 @@
 .legacy-copy-artifact table tr td.first-column {
     padding: 0;
 }
-.legacy-copy-artifact table tr td img.first-column-icon {
-    padding: 0;
-    padding-left: 4px;
+.legacy-copy-artifact table tr td.first-column .icon-warning {
+    margin-left: 4px;
 }
 
 .legacy-copy-artifact table .no-project {
