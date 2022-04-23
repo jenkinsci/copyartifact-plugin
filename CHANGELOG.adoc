@@ -3,6 +3,13 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.46.4]]
+=== 1.46.4
+
+Release date: Apr 23, 2022
+
+* Support icon images with jenkins-2.333 and later. (https://github.com/jenkinsci/copyartifact-plugin/pull/147[#147])
+
 [[CopyArtifactPlugin-Version1.46.3]]
 === 1.46.3
 
