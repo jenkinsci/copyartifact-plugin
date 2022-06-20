@@ -30,7 +30,7 @@
         <jenkins.version>2.164.3</jenkins.version>
         <java.level>8</java.level>
         <useBeta>true</useBeta>
-        <workflow-multibranch.version>2.10</workflow-multibranch.version>
+        <workflow-multibranch.version>707.v71c3f0a_6ccdb_</workflow-multibranch.version>
     </properties>
 
     <build>
