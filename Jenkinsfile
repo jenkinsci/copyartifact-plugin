@@ -1,11 +1,8 @@
 // Specify configurations explicitly to test against newer LTS.
 // See also https://github.com/jenkins-infra/pipeline-library/pull/145
 
-// This should be updated manually.
-def recentLts = '2.222.4'
-
-buildPlugin(configurations: [
+buildPlugin(useContainerAgent: true, configurations: [
   [ platform: 'linux', jdk: '8' ],
-  [ platform: 'windows', jdk: '8', jenkins: recentLts ],
-  [ platform: 'linux', jdk: '11', jenkins: recentLts ],
+  [ platform: 'linux', jdk: '11' ],
+  [ platform: 'windows', jdk: '11' ],
 ])
