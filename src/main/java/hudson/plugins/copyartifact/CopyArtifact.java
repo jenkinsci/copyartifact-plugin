@@ -688,7 +688,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private static String copyOne(VirtualFile s, FilePath d, boolean fingerprint, TaskListener listener) throws IOException, InterruptedException {
         String link = s.readLink();
         if (link != null) {
-            d.getParent().mkdirs();
+            FilePath parent = d.getParent();
+            if (parent != null) {
+                parent.mkdirs();
+            }
             d.symlinkTo(link, listener);
             return null;
         }
