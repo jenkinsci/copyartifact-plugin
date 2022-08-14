@@ -8,7 +8,7 @@
 
 Release date: Aug 14, 2022
 
-* Targets Jenkins 2.319.3 and later (was 2.164.3 and later)
+* Targets Jenkins 2.319.3 and later (was 2.164.3 and later) (https://github.com/jenkinsci/copyartifact-plugin/pull/150[#150])
 
 [[CopyArtifactPlugin-Version1.46.4]]
 === 1.46.4
