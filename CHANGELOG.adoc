@@ -3,6 +3,13 @@
 
 :sectanchors:
 
+[[CopyArtifactPlugin-Version1.47]]
+=== 1.47
+
+Release date: Aug 14, 2022
+
+* Targets Jenkins 2.319.3 and later (was 2.164.3 and later)
+
 [[CopyArtifactPlugin-Version1.46.4]]
 === 1.46.4
 
