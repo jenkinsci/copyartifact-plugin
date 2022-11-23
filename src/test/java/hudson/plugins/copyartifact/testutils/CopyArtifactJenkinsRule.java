@@ -39,7 +39,6 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.httpclient.HttpStatus;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.rules.TemporaryFolder;
@@ -55,6 +54,8 @@ import hudson.scm.SCM;
  *
  */
 public class CopyArtifactJenkinsRule extends JenkinsRule {
+    private static final int SC_METHOD_NOT_ALLOWED = 405;
+    
     /**
      * Get Web Client that allows 405 Method Not Allowed.
      * This happens when accessing build page of a project with parameters.
@@ -69,7 +70,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
             public void throwFailingHttpStatusCodeExceptionIfNecessary(
                     WebResponse webResponse
             ) {
-                if(webResponse.getStatusCode() == HttpStatus.SC_METHOD_NOT_ALLOWED) {
+                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED) {
                     // allow 405.
                     return;
                 }
@@ -78,7 +79,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
 
             @Override
             public void printContentIfNecessary(WebResponse webResponse) {
-                if(webResponse.getStatusCode() == HttpStatus.SC_METHOD_NOT_ALLOWED)
+                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED)
                 {
                     // allow 405.
                     return;
