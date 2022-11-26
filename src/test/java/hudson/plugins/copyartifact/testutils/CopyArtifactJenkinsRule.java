@@ -44,7 +44,6 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.JenkinsRule.WebClient;
 
 import com.gargoylesoftware.htmlunit.WebResponse;
 
@@ -59,11 +58,9 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
     /**
      * Get Web Client that allows 405 Method Not Allowed.
      * This happens when accessing build page of a project with parameters.
-     *
-     * @return WebClient
      */
-    public WebClient createAllow405WebClient() {
-        return new WebClient() {
+    public JenkinsRule.WebClient createAllow405WebClient() {
+        return new JenkinsRule.WebClient() {
             private static final long serialVersionUID = 2209855651713458482L;
 
             @Override
@@ -107,7 +104,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
      * Create SCM from the specified directory in resources.
      *
      * @param tempFolder an instance of {@link TemporaryFolder}
-     * @param URL URL for the directory gotten with {@link Class#getResource(String)}
+     * @param resource URL for the directory gotten with {@link Class#getResource(String)}
      * @return SCM
      * @throws Exception
      */
@@ -115,7 +112,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
         File scmZip = tempFolder.newFile();
         final Path scmSource = Paths.get(resource.toURI());
         URI scmZipUri = new URI("jar", scmZip.toURI().toString(), null);
-        scmZip.delete();
+        Files.deleteIfExists(scmZip.toPath());
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
         try(final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env)) {

@@ -41,7 +41,21 @@ import hudson.matrix.MatrixProject;
 import hudson.maven.MavenBuild;
 import hudson.maven.MavenModuleSet;
 import hudson.maven.MavenModuleSetBuild;
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Descriptor;
+import hudson.model.EnvironmentContributingAction;
+import hudson.model.Fingerprint;
+import hudson.model.FingerprintMap;
+import hudson.model.Item;
+import hudson.model.ItemGroup;
+import hudson.model.Items;
+import hudson.model.Job;
+import hudson.model.ParameterValue;
+import hudson.model.ParametersAction;
+import hudson.model.Project;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.model.listeners.ItemListener;
 import hudson.plugins.copyartifact.monitor.LegacyJobConfigMigrationMonitor;
 import hudson.remoting.VirtualChannel;
@@ -167,9 +181,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
                     // Prevents both invalid values and access to artifacts of projects which this user cannot see.
                     // If value is parameterized, it will be checked when build runs.
-                    Jenkins jenkins = Jenkins.getInstance();
-                    if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null))
+                    Jenkins jenkins = Jenkins.getInstanceOrNull();
+                    if (projectName.indexOf('$') < 0 && (jenkins == null || jenkins.getItem(projectName, context, Job.class) == null)) {
                         projectName = ""; // Ignore/clear bad value to avoid ugly 500 page
+                    }
                 }
             }
         }
@@ -268,7 +283,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 project instanceof Project ? ((Project<?,?>)project).getBuildersList()
                   : (project instanceof MatrixProject ?
                       ((MatrixProject)project).getBuildersList() : null);
-        if (list == null) return Collections.emptyList();
+        if (list == null) {
+            return Collections.emptyList();
+        }
         return list.getAll(CopyArtifact.class);
     }
 
@@ -277,7 +294,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (!upgradeNeeded) {
             return;
         }
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             LOGGER.log(Level.SEVERE, "Called for initializing, but Jenkins instance is unavailable.");
             return;
@@ -349,7 +366,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
         if (isUpgradeNeeded()) {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 LOGGER.log(Level.SEVERE, "upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
                 return false;
@@ -372,7 +389,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     private boolean isUpgradeNeeded() {
-        return (projectName != null);
+        return projectName != null;
     }
 
     public boolean isFingerprintArtifacts() {
@@ -381,7 +398,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     @Override
     public void perform(@NonNull Run<?, ?> build, @NonNull FilePath workspace, @NonNull Launcher launcher, @NonNull TaskListener listener) throws InterruptedException, IOException {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             throw new AbortException("Jenkins instance is unavailable.");
         }
@@ -481,9 +498,13 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             build.addAction(envData);
         }
         envData.add(build, src, expandedProject, getResultVariableSuffix());
-        if (target.length() > 0) targetDir = new FilePath(targetDir, env.expand(target));
+        if (target.length() > 0) {
+            targetDir = new FilePath(targetDir, env.expand(target));
+        }
         expandedFilter = env.expand(filter);
-        if (expandedFilter.trim().length() == 0) expandedFilter = "**";
+        if (expandedFilter.trim().length() == 0) {
+            expandedFilter = "**";
+        }
         expandedExcludes = env.expand(expandedExcludes);
         if (StringUtils.isBlank(expandedExcludes)) {
             expandedExcludes = null;
@@ -507,9 +528,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             boolean ok = false;
             // Copy artifacts from all configurations of this matrix build
             // Use MatrixBuild.getExactRuns if available
-            for (Run r : ((MatrixBuild) src).getExactRuns())
+            for (Run r : ((MatrixBuild) src).getExactRuns()) {
                 // Use subdir of targetDir with configuration name (like "jdk=java6u20")
                 ok |= perform(r, build, expandedFilter, expandedExcludes, targetDir.child(r.getParent().getName()), listener);
+            }
 
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
@@ -795,18 +817,22 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public FormValidation doCheckProjectName(
                 @AncestorInPath Job<?,?> anc, @QueryParameter String value) {
             // JENKINS-32526: Check that it behaves gracefully for an unknown context
-            if (anc == null) return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            if (anc == null) {
+                return FormValidation.ok(Messages.CopyArtifact_AncestorIsNull());
+            }
             // Require CONFIGURE permission on this project
-            if (!anc.hasPermission(Item.CONFIGURE)) return FormValidation.ok();
+            if (!anc.hasPermission(Item.CONFIGURE)) {
+                return FormValidation.ok();
+            }
             
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 // validation is useless if Jenkins is no longer available.
                 return FormValidation.ok();
             }
             FormValidation result;
             Item item = jenkins.getItem(value, anc.getParent());
-            if (item != null)
+            if (item != null) {
                 if (jenkins.getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
                     result = FormValidation.warning(Messages.CopyArtifact_MavenProject());
                 } else {
@@ -814,9 +840,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                           ? FormValidation.warning(Messages.CopyArtifact_MatrixProject())
                           : FormValidation.ok();
                 }
-            else if (value.indexOf('$') >= 0)
+            } else if (value.indexOf('$') >= 0) {
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
-            else {
+            } else {
                 Job<?,?> nearest = Items.findNearest(Job.class, value, anc.getParent());
                 if (nearest != null) {
                 result = FormValidation.error(
@@ -843,10 +869,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return FormValidation.ok();
         }
 
+        @Override
         public boolean isApplicable(Class<? extends AbstractProject> clazz) {
             return true;
         }
 
+        @Override
         public String getDisplayName() {
             return Messages.CopyArtifact_DisplayName();
         }
@@ -860,7 +888,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         public void onRenamed(Item item, String oldName, String newName) {
             String oldFullName = Items.getCanonicalName(item.getParent(), oldName);
             String newFullName = Items.getCanonicalName(item.getParent(), newName);
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 LOGGER.log(Level.SEVERE, "Jenkins instance is no longer available.");
                 return;
@@ -911,7 +939,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     private static class EnvAction implements EnvironmentContributingAction {
         // Decided not to record this data in build.xml, so marked transient:
-        private transient Map<String,String> data = new HashMap<String,String>();
+        private transient Map<String,String> data = new HashMap<>();
 
         @Nullable
         private String calculateDefaultSuffix(@NonNull Run<?,?> build, @NonNull Run<?,?> src, @NonNull String projectName) {
@@ -943,7 +971,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 @NonNull String projectName,
                 @Nullable String resultVariableSuffix
         ) {
-            if (data==null) return;
+            if (data == null) {
+                return;
+            }
             
             if (!isValidVariableName(resultVariableSuffix)) {
                 resultVariableSuffix = calculateDefaultSuffix(build, src, projectName);
@@ -957,12 +987,18 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             );
         }
 
+        @Override
         public void buildEnvVars(AbstractBuild<?,?> build, EnvVars env) {
-            if (data!=null) env.putAll(data);
+            if (data != null) {
+                env.putAll(data);
+            }
         }
 
+        @Override
         public String getIconFileName() { return null; }
+        @Override
         public String getDisplayName() { return null; }
+        @Override
         public String getUrlName() { return null; }
     }
 }

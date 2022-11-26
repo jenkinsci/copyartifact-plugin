@@ -23,15 +23,15 @@
  */
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
+import hudson.model.Cause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
-import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
-import hudson.model.Cause.UserCause;
 import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.CopyArtifactUtil;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
@@ -117,7 +117,7 @@ public class CopyArtifactWorkflowTest {
                 new StringParameterValue("PARAM", "bar")
         )));
         
-        FreeStyleBuild build = copier.scheduleBuild2(0, new UserCause(), new ParametersAction(
+        FreeStyleBuild build = copier.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                 new StringParameterValue("PARAM_TO_COPY", "foo")
         )).get();
         jenkinsRule.assertBuildStatusSuccess(build);
@@ -136,7 +136,7 @@ public class CopyArtifactWorkflowTest {
         jenkinsRule.assertLogContains("jenkins-ds-1", jenkinsRule.assertBuildStatusSuccess(us.scheduleBuild2(0)));
     }
 
-    private void assertArtifactInArchive(Run b) {
+    private void assertArtifactInArchive(WorkflowRun b) {
         List<WorkflowRun.Artifact> artifacts = b.getArtifacts();
         Assert.assertEquals(1, artifacts.size());
         Assert.assertEquals("hello.txt", artifacts.get(0).relativePath);

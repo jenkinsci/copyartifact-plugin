@@ -26,7 +26,6 @@ package hudson.plugins.copyartifact;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
-import hudson.model.Result;
 import hudson.model.Run;
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
@@ -50,6 +49,7 @@ public class LastCompletedBuildSelector extends BuildSelector {
      * @deprecated
      *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
      */
+    @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
     @Extension @Symbol("lastCompleted")

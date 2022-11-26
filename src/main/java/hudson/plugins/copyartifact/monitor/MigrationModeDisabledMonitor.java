@@ -25,12 +25,10 @@ package hudson.plugins.copyartifact.monitor;
 
 import hudson.Extension;
 import hudson.model.AdministrativeMonitor;
-import hudson.plugins.copyartifact.CopyArtifactCompatibilityMode;
 import hudson.plugins.copyartifact.CopyArtifactConfiguration;
-import hudson.util.HttpResponses;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
 import java.io.IOException;

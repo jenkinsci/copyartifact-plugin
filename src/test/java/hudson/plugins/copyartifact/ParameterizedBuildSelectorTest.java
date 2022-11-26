@@ -28,6 +28,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 import jenkins.util.VirtualFile;
 import hudson.model.FreeStyleBuild;
@@ -133,7 +134,7 @@ public class ParameterizedBuildSelectorTest {
         
         VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
         try(InputStream in = vf.open()) {
-            assertEquals("foobar", IOUtils.toString(in, "UTF-8"));
+            assertEquals("foobar", IOUtils.toString(in, StandardCharsets.UTF_8));
         }
     }
     
@@ -158,7 +159,7 @@ public class ParameterizedBuildSelectorTest {
                 true,   // optional
                 false   // fingerprintArtifacts
         ));
-        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+        FreeStyleBuild b = copier.scheduleBuild2(
                 0,
                 new ParametersAction(
                     new StringParameterValue("SELECTOR", "<SomeBrokenSelector")
@@ -188,7 +189,7 @@ public class ParameterizedBuildSelectorTest {
                 true,   // optional
                 false   // fingerprintArtifacts
         ));
-        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+        FreeStyleBuild b = copier.scheduleBuild2(
                 0,
                 new ParametersAction(
                     new StringParameterValue("SELECTOR", "<NoSuchSelector />")
@@ -219,7 +220,7 @@ public class ParameterizedBuildSelectorTest {
                 true,   // optional
                 false   // fingerprintArtifacts
         ));
-        FreeStyleBuild b = (FreeStyleBuild) copier.scheduleBuild2(
+        FreeStyleBuild b = copier.scheduleBuild2(
                 0,
                 new ParametersAction(
                     new StringParameterValue("SELECTOR", "")
@@ -271,7 +272,7 @@ public class ParameterizedBuildSelectorTest {
         
         VirtualFile vf = b.getArtifactManager().root().child("artifact.txt");
         try(InputStream in = vf.open()) {
-            assertEquals("foobar", IOUtils.toString(in, "UTF-8"));
+            assertEquals("foobar", IOUtils.toString(in, StandardCharsets.UTF_8));
         }
     }
     
@@ -304,7 +305,7 @@ public class ParameterizedBuildSelectorTest {
                 false,  // optional
                 false   // fingerprintArtifacts
         ));
-        FreeStyleBuild b = j.assertBuildStatusSuccess((FreeStyleBuild)copier.scheduleBuild2(
+        FreeStyleBuild b = j.assertBuildStatusSuccess(copier.scheduleBuild2(
                 0,
                 new ParametersAction(new StringParameterValue(
                         "SELECTOR",

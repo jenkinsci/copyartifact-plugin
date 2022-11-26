@@ -61,7 +61,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
         if (xml == null) {
             return null;
         }
-        BuildSelector selector = null;
+        BuildSelector selector;
         try {
             selector = BuildSelectorParameter.getSelectorFromXml(xml);
         } catch (Exception e) {
@@ -108,6 +108,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
      * @deprecated
      *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
      */
+    @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
     @Extension(ordinal=-20) @Symbol("buildParameter")

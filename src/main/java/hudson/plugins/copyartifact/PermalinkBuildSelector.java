@@ -53,7 +53,9 @@ public class PermalinkBuildSelector extends BuildSelector {
     @Override
     public Run<?,?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         Permalink p = job.getPermalinks().get(id);
-        if (p==null)    return null;
+        if (p == null) {
+            return null;
+        }
         Run<?,?> run = p.resolve(job);
         return (run != null && filter.isSelectable(run, env)) ? run : null;
     }
@@ -67,7 +69,7 @@ public class PermalinkBuildSelector extends BuildSelector {
 
         public ComboBoxModel doFillIdItems(@AncestorInPath Job copyingJob, @RelativePath("..") @QueryParameter("projectName") String projectName) {
             Job j = null;
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (projectName != null && jenkins != null) {
                 j = jenkins.getItem(projectName, copyingJob, Job.class);
             }

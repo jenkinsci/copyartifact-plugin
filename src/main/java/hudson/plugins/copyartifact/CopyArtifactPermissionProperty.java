@@ -82,8 +82,8 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
      */
     @DataBoundConstructor
     public CopyArtifactPermissionProperty(String projectNames) {
-        List<String> rawProjectNameList = Arrays.asList((projectNames != null)?StringUtils.split(projectNames, ','):new String[0]);
-        projectNameList = new ArrayList<String>(rawProjectNameList.size());
+        List<String> rawProjectNameList = Arrays.asList(projectNames != null ? StringUtils.split(projectNames, ',') : new String[0]);
+        projectNameList = new ArrayList<>(rawProjectNameList.size());
         for (String rawProjectName: rawProjectNameList) {
             if (StringUtils.isBlank(rawProjectName)) {
                 continue;
@@ -202,7 +202,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
             if (StringUtils.isBlank(projectNames)) {
                 return Collections.emptyList();
             }
-            List<String> notFound = new ArrayList<String>();
+            List<String> notFound = new ArrayList<>();
             for (String projectName: StringUtils.split(projectNames, ',')) {
                 if (StringUtils.isBlank(projectName)) {
                     continue;
@@ -212,8 +212,8 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
                     // no check for pattern
                     continue;
                 }
-                Jenkins jenkins = Jenkins.getInstance();
-                Job<?,?> proj = (jenkins == null)?null:jenkins.getItem(projectName, (context != null) ? context : jenkins, Job.class);
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
+                Job<?,?> proj = jenkins == null ? null : jenkins.getItem(projectName, context != null ? context : jenkins, Job.class);
                 if (
                         proj == null
                         || ((proj instanceof AbstractProject) && ((AbstractProject<?, ?>)proj).getRootProject() != proj)
@@ -234,7 +234,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
          * @return ok if all projects are found and a warning otherwise.
          */
         public FormValidation doCheckProjectNames(@QueryParameter String projectNames, @CheckForNull @AncestorInPath Job<?, ?> job) {
-            List<String> notFound = checkNotFoundProjects(projectNames, (job != null) ? job.getParent() : null);
+            List<String> notFound = checkNotFoundProjects(projectNames, job != null ? job.getParent() : null);
             if (!notFound.isEmpty()) {
                 return FormValidation.warning(Messages.CopyArtifactPermissionProperty_MissingProject(StringUtils.join(notFound, ",")));
             }
@@ -253,7 +253,7 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
                 return candidates;
             }
             value = StringUtils.trim(value);
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return candidates;
             }

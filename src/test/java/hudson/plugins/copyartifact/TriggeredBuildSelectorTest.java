@@ -24,11 +24,11 @@
 
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -218,9 +218,9 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
         
         // 3 upstream builds.
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -270,9 +270,9 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
         
         // 3 upstream builds.
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -320,9 +320,9 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
         
         // 3 upstream builds.
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -372,9 +372,9 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
         
         // 3 upstream builds.
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -439,8 +439,8 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(intermediate1.getName(), Result.SUCCESS));
         upstream.save();
         j.jenkins.rebuildDependencyGraph();
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
         
         // 2 upstream builds for intermediate2.
         upstream.getPublishersList().clear();
@@ -448,8 +448,8 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(intermediate2.getName(), Result.SUCCESS));
         upstream.save();
         j.jenkins.rebuildDependencyGraph();
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value4"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value4"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -529,8 +529,8 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(intermediate1.getName(), Result.SUCCESS));
         upstream.save();
         j.jenkins.rebuildDependencyGraph();
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
         
         // 2 upstream builds for intermediate2.
         upstream.getPublishersList().clear();
@@ -538,8 +538,8 @@ public class TriggeredBuildSelectorTest {
         upstream.getPublishersList().add(new BuildTrigger(intermediate2.getName(), Result.SUCCESS));
         upstream.save();
         j.jenkins.rebuildDependencyGraph();
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value4"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value4"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -605,9 +605,9 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
         
         // 3 upstream builds.
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value2"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "value3"))));
         
         // wait till downstream will be triggered and completed
         j.waitUntilNoActivity();
@@ -626,7 +626,7 @@ public class TriggeredBuildSelectorTest {
     }
     
     @Test
-    public void testIsUseNewest() throws Exception {
+    public void testIsUseNewest() {
         // |Descriptor      |BuildSelector   |Result|
         // |:---------------|:---------------|:-----|
         // |null            |null            |false |
@@ -729,15 +729,15 @@ public class TriggeredBuildSelectorTest {
         j.jenkins.rebuildDependencyGraph();
 
         // First (initial) build for each job
-        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue1"))));
+        j.assertBuildStatusSuccess(upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue1"))));
         
         j.waitUntilNoActivity();
 
         // Trigger directly an 'intermediate#2' build, which depends on 'upstream#1'
-        intermediate.scheduleBuild2(0, new Cause.UserCause()).waitForStart();
+        intermediate.scheduleBuild2(0, new Cause.UserIdCause()).waitForStart();
 
         // 'intermediate#2' build is running. Meanwhile, a new 'upstream#2' is completing and triggers 'intermediate#3':
-        upstream.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue2")));
+        upstream.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(new StringParameterValue("CONTENT", "upstreamValue2")));
         
         j.waitUntilNoActivity();
 

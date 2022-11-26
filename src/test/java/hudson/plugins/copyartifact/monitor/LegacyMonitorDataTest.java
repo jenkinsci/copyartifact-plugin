@@ -32,7 +32,6 @@ import hudson.model.TopLevelItemDescriptor;
 import hudson.model.User;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
-import hudson.security.Permission;
 import jenkins.model.Jenkins;
 import org.acegisecurity.AccessDeniedException;
 import org.junit.Rule;
@@ -46,20 +45,16 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.SortedMap;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class LegacyMonitorDataTest {
@@ -69,7 +64,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void simpleAddJob() throws Exception {
+    public void simpleAddJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         assertTrue(data.isEmpty());
         
@@ -81,7 +76,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void advancedAddJob() throws Exception {
+    public void advancedAddJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         assertTrue(data.isEmpty());
         
@@ -98,7 +93,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void simpleRenameJob() throws Exception {
+    public void simpleRenameJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         data.addLegacyJob(new SimpleJob("copier"), new SimpleJob("copiee"), new Date(), "tester");
         
@@ -112,7 +107,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void advancedRenameJob() throws Exception {
+    public void advancedRenameJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         data.addLegacyJob(new SimpleJob("copier1"), new SimpleJob("copiee1"), new Date(), "tester1");
         data.addLegacyJob(new SimpleJob("copier1"), new SimpleJob("copiee2"), new Date(), "tester2");
@@ -129,7 +124,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void expertRenameJob() throws Exception {
+    public void expertRenameJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         data.addLegacyJob(new SimpleJob("a1"), new SimpleJob("c1"), new Date(), "tester1");
         data.addLegacyJob(new SimpleJob("a1"), new SimpleJob("d1"), new Date(), "tester2");
@@ -162,7 +157,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void multipleTimeAddSameJob() throws Exception {
+    public void multipleTimeAddSameJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         
         SimpleJob copier = new SimpleJob("copier1");
@@ -193,7 +188,7 @@ public class LegacyMonitorDataTest {
     
     @Test
     @WithoutJenkins
-    public void removeJob() throws Exception {
+    public void removeJob() {
         LegacyMonitorData data = new LegacyMonitorData();
         
         data.addLegacyJob(new SimpleJob("copier1"), new SimpleJob("copiee1"), new Date(), "tester1");
@@ -353,7 +348,7 @@ public class LegacyMonitorDataTest {
         }
     
         @Override 
-        public synchronized void save() throws IOException {
+        public synchronized void save() {
             // do nothing to avoid problem when using addProperty
         }
     }
@@ -401,7 +396,7 @@ public class LegacyMonitorDataTest {
         }
         
         @Override
-        public void onDeleted(SimpleJob item) throws IOException {
+        public void onDeleted(SimpleJob item) {
             
         }
         
@@ -416,7 +411,7 @@ public class LegacyMonitorDataTest {
         }
         
         @Override
-        public void save() throws IOException {
+        public void save() {
             
         }
     }

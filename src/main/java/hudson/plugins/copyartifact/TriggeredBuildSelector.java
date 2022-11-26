@@ -23,13 +23,11 @@
  */
 package hudson.plugins.copyartifact;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import jenkins.model.Jenkins;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Result;
@@ -94,7 +92,8 @@ public class TriggeredBuildSelector extends BuildSelector {
         public boolean isForGlobalSetting() {
             return forGlobalSetting;
         }
-    };
+    }
+
     private Boolean fallbackToLastSuccessful;
     private UpstreamFilterStrategy upstreamFilterStrategy;
     private boolean allowUpstreamDependencies;
@@ -203,13 +202,13 @@ public class TriggeredBuildSelector extends BuildSelector {
         Run<?,?> result = null;
 
         // Upstream job for matrix will be parent project, not only individual configuration:
-        List<String> jobNames = new ArrayList<String>();
+        List<String> jobNames = new ArrayList<>();
         jobNames.add(job.getFullName());
         if ((job instanceof AbstractProject<?,?>) && ((AbstractProject<?,?>)job).getRootProject() != job) {
             jobNames.add(((AbstractProject<?,?>)job).getRootProject().getFullName());
         }
 
-        List<Run<?, ?>> upstreamBuilds = new ArrayList<Run<?, ?>>();
+        List<Run<?, ?>> upstreamBuilds = new ArrayList<>();
 
         for (Cause cause: parent.getCauses()) {
             if (cause instanceof UpstreamCause) {
@@ -232,7 +231,7 @@ public class TriggeredBuildSelector extends BuildSelector {
         }
 
         for (Run<?, ?> upstreamBuild : upstreamBuilds) {
-            Run<?,?> run = null;
+            Run<?,?> run;
 
             if (jobNames.contains(upstreamBuild.getParent().getFullName())) {
                 // Use the 'job' parameter instead of directly the 'upstreamBuild', because of Matrix jobs.
