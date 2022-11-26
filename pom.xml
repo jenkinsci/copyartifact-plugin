@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.46</version>
+        <version>4.51</version>
         <relativePath />
     </parent>
 
@@ -108,15 +108,8 @@
       <dependency>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>compress-artifacts</artifactId>
-        <version>1.10</version>
+        <version>98.vb_20f3c77ddf7</version>
         <scope>test</scope>
-        <exclusions>
-          <exclusion>
-            <!-- to avoid RequireUpperBoundDeps with git plugin -->
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-          </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
         <!-- for DirectArtifactManagerFactory -->
@@ -167,7 +160,7 @@
         <dependency>
           <groupId>io.jenkins.tools.bom</groupId>
           <artifactId>bom-2.319.x</artifactId>
-          <version>1577.v63609d9cb_5dc</version>
+          <version>1654.vcb_69d035fa_20</version>
           <scope>import</scope>
           <type>pom</type>
         </dependency>
