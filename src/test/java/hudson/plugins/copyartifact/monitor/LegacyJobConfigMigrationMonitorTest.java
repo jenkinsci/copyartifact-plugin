@@ -61,11 +61,11 @@ import org.jvnet.hudson.test.recipes.LocalData;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class LegacyJobConfigMigrationMonitorTest {

@@ -70,6 +70,7 @@ public class WorkspaceSelector extends BuildSelector {
      * @deprecated
      *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
      */
+    @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
     @Extension(ordinal=-20) @Symbol("workspace")

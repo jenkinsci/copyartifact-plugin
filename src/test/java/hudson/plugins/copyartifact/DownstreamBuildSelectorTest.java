@@ -24,13 +24,15 @@
 
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
-import hudson.model.AbstractProject;
 import hudson.model.Cause;
 import hudson.model.FreeStyleProject;
 import hudson.model.FreeStyleBuild;
@@ -151,7 +153,7 @@ public class DownstreamBuildSelectorTest {
         
         upstream.save();
         downstream.save();
-        j.jenkins.rebuildDependencyGraph();;
+        j.jenkins.rebuildDependencyGraph();
         
         
         // upstreamBuild1 -> downstreamBuild1
@@ -234,7 +236,7 @@ public class DownstreamBuildSelectorTest {
                     true
             ));
             
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", upstreamBuild1.getId())
             )).get();
@@ -269,7 +271,7 @@ public class DownstreamBuildSelectorTest {
                     true
             ));
             
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "upstreamBuild3")
             )).get();
@@ -321,7 +323,7 @@ public class DownstreamBuildSelectorTest {
         
         upstream.save();
         downstream.save();
-        j.jenkins.rebuildDependencyGraph();;
+        j.jenkins.rebuildDependencyGraph();
         
         
         // upstreamBuild1 -> downstreamBuild1
@@ -342,7 +344,6 @@ public class DownstreamBuildSelectorTest {
         j.assertBuildStatusSuccess(upstreamBuild2);
         j.assertBuildStatusSuccess(downstreamBuild2);
         downstreamBuild2.delete();
-        downstreamBuild2 = null;
         
         
         FreeStyleProject p = j.createFreeStyleProject();
@@ -369,7 +370,7 @@ public class DownstreamBuildSelectorTest {
         
         // upstreamProjectName is empty
         {
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", "   "),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "2")
             )).get();
@@ -379,7 +380,7 @@ public class DownstreamBuildSelectorTest {
         
         // upstreamBuildNumber is empty
         {
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "    ")
             )).get();
@@ -389,7 +390,7 @@ public class DownstreamBuildSelectorTest {
         
         // upstreamProjectName is invalid
         {
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", "Nosuchproject"),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "2")
             )).get();
@@ -399,7 +400,7 @@ public class DownstreamBuildSelectorTest {
         
         // upstreamBuildNumber is invalid
         {
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "NoSuchBuild")
             )).get();
@@ -409,7 +410,7 @@ public class DownstreamBuildSelectorTest {
         
         // No downstream
         {
-            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserCause(), new ParametersAction(
+            FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(), new ParametersAction(
                     new StringParameterValue("UPSTREAM_PROJECT_NAME", upstream.getFullName()),
                     new StringParameterValue("UPSTREAM_BUILD_NUMBER", "upstreamBuild2")
             )).get();
@@ -664,14 +665,14 @@ public class DownstreamBuildSelectorTest {
     private void testAutoCompleteUpstreamProjectName(
             String [] expectedValues,
             String value,
-            AbstractProject project,
+            FreeStyleProject project,
             DownstreamBuildSelector.DescriptorImpl d) {
 
-        Set<String> actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
-        assertArrayEquals(expectedValues, actualValues.toArray(new String [actualValues.size()]));
+        Set<String> actualValues = new TreeSet<>(d.doAutoCompleteUpstreamProjectName(value, project).getValues());
+        assertArrayEquals(expectedValues, actualValues.toArray(new String[0]));
         //JENKINS-32526: Auto-completion disabled if no context
-        actualValues = new TreeSet<String>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
-        assertArrayEquals(new String[] {}, actualValues.toArray(new String [actualValues.size()]));
+        actualValues = new TreeSet<>(d.doAutoCompleteUpstreamProjectName(value, null).getValues());
+        assertArrayEquals(new String[]{}, actualValues.toArray(new String[0]));
     }
 
     @Test

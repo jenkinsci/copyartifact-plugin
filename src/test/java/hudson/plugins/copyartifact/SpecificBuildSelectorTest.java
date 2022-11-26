@@ -7,7 +7,8 @@ import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class SpecificBuildSelectorTest {
     @Rule
@@ -24,7 +25,7 @@ public class SpecificBuildSelectorTest {
         BuildSelector s = new SpecificBuildSelector("$NUM");
         BuildFilter f = new BuildFilter();
         assertEquals(p.getBuildByNumber(2), s.getBuild(p, new EnvVars("NUM", "2"), f, null));
-        assertEquals(null, s.getBuild(p, new EnvVars("HUM", "two"), f, null));
+        assertNull(s.getBuild(p, new EnvVars("HUM", "two"), f, null));
     }
 
     @Issue("JENKINS-19693")
@@ -39,7 +40,7 @@ public class SpecificBuildSelectorTest {
         BuildSelector s = new SpecificBuildSelector("$NUM");
         BuildFilter f = new BuildFilter();
         assertEquals(p.getBuildByNumber(2), s.getBuild(p, new EnvVars("NUM", "RC1"), f, null));
-        assertEquals(null, s.getBuild(p, new EnvVars("NUM", "RC2"), f, null));
+        assertNull(s.getBuild(p, new EnvVars("NUM", "RC2"), f, null));
     }
 
     @Test

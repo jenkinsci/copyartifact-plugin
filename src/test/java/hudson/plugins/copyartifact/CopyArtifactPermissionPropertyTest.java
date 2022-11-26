@@ -24,7 +24,12 @@
 
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
 import hudson.matrix.MatrixConfiguration;
@@ -75,16 +80,16 @@ public class CopyArtifactPermissionPropertyTest {
     }
     
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         System.clearProperty("hudson.security.ArtifactsPermission");
     }
 
     @Test
-    public void testCopyArtifactPermissionProperty() throws Exception {
+    public void testCopyArtifactPermissionProperty() {
         // single
         {
             CopyArtifactPermissionProperty target = new CopyArtifactPermissionProperty("project1");
-            assertEquals(Arrays.asList("project1"), target.getProjectNameList());
+            assertEquals(Collections.singletonList("project1"), target.getProjectNameList());
         }
         
         // multiple
@@ -96,7 +101,7 @@ public class CopyArtifactPermissionPropertyTest {
         // single with blanks
         {
             CopyArtifactPermissionProperty target = new CopyArtifactPermissionProperty("  project1  ");
-            assertEquals(Arrays.asList("project1"), target.getProjectNameList());
+            assertEquals(Collections.singletonList("project1"), target.getProjectNameList());
         }
         
         // multiple with blanks
@@ -131,7 +136,7 @@ public class CopyArtifactPermissionPropertyTest {
     }
     
     @Test
-    public void testIsNameMatch() throws Exception {
+    public void testIsNameMatch() {
         // no pattern
         assertTrue(CopyArtifactPermissionProperty.isNameMatch("project1", "project1"));
         assertFalse(CopyArtifactPermissionProperty.isNameMatch("xproject1", "project1"));
@@ -274,7 +279,7 @@ public class CopyArtifactPermissionPropertyTest {
         assertEquals(Collections.emptyList(), d.checkNotFoundProjects("", j.jenkins));
         assertEquals(Collections.emptyList(), d.checkNotFoundProjects("project*,*,nosuch*", j.jenkins));
         
-        assertEquals(Arrays.asList(matrixConf.getFullDisplayName()), d.checkNotFoundProjects(matrixConf.getFullDisplayName(), j.jenkins));
+        assertEquals(Collections.singletonList(matrixConf.getFullDisplayName()), d.checkNotFoundProjects(matrixConf.getFullDisplayName(), j.jenkins));
         assertEquals(Arrays.asList("nosuch1", "nosuch2"), d.checkNotFoundProjects("nosuch1,project1,,nosuch2", j.jenkins));
     }
     
@@ -290,12 +295,12 @@ public class CopyArtifactPermissionPropertyTest {
         MockFolder folder = j.jenkins.createProject(MockFolder.class, "folder");
         FreeStyleProject child = folder.createProject(FreeStyleProject.class, "child1");
         
-        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames("p", freestyle).getValues());
-        assertEquals(Arrays.asList("project1"), d.doAutoCompleteProjectNames(" p", freestyle).getValues());
-        assertEquals(Arrays.asList("matrix1"), d.doAutoCompleteProjectNames("m", freestyle).getValues());
-        assertEquals(Arrays.asList("folder/child1"), d.doAutoCompleteProjectNames("f", freestyle).getValues());
-        assertEquals(Arrays.asList("child1"), d.doAutoCompleteProjectNames("c", child).getValues());
-        assertEquals(Arrays.asList("../project1"), d.doAutoCompleteProjectNames("../p", child).getValues());
+        assertEquals(Collections.singletonList("project1"), d.doAutoCompleteProjectNames("p", freestyle).getValues());
+        assertEquals(Collections.singletonList("project1"), d.doAutoCompleteProjectNames(" p", freestyle).getValues());
+        assertEquals(Collections.singletonList("matrix1"), d.doAutoCompleteProjectNames("m", freestyle).getValues());
+        assertEquals(Collections.singletonList("folder/child1"), d.doAutoCompleteProjectNames("f", freestyle).getValues());
+        assertEquals(Collections.singletonList("child1"), d.doAutoCompleteProjectNames("c", child).getValues());
+        assertEquals(Collections.singletonList("../project1"), d.doAutoCompleteProjectNames("../p", child).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("x", freestyle).getValues());
         assertEquals(Collections.emptyList(), d.doAutoCompleteProjectNames("", freestyle).getValues());
     }

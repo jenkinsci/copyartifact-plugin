@@ -23,7 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -50,14 +52,14 @@ public class LastBuildWithArtifactSelectorTest {
 
         // schedule build with archiving artifacts
         FreeStyleBuild buildWithArtifact = project.scheduleBuild2(0).get();
-        assertEquals(true, buildWithArtifact.getHasArtifacts());
+        assertTrue(buildWithArtifact.getHasArtifacts());
 
         // remove archiver from project
         project.getPublishersList().removeAll(ArtifactArchiver.class);
 
         // schedule build without archiving artifacts
         FreeStyleBuild buildWithoutArtifact = project.scheduleBuild2(0).get();
-        assertEquals(false, buildWithoutArtifact.getHasArtifacts());
+        assertFalse(buildWithoutArtifact.getHasArtifacts());
 
         // add copy artifact selector and archiver to project
         CopyArtifact copyArtifact = new CopyArtifact(project.getName());

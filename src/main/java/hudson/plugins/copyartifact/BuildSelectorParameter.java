@@ -35,7 +35,6 @@ import hudson.Extension;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.ParameterValue;
 import hudson.model.SimpleParameterDefinition;
 import hudson.model.StringParameterValue;
@@ -132,18 +131,18 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         }
 
         public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return DescriptorExtensionList.createDescriptorList((Jenkins)null, BuildSelector.class);
             }
-            return jenkins.<BuildSelector,Descriptor<BuildSelector>>getDescriptorList(BuildSelector.class);
+            return jenkins.getDescriptorList(BuildSelector.class);
         }
 
         /**
          * @return {@link BuildSelector}s available for BuildSelectorParameter.
          */
         public List<Descriptor<BuildSelector>> getAvailableBuildSelectorList() {
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 return Collections.emptyList();
             }
@@ -159,8 +158,8 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                 // for `defaultSelector` ("Default Selector" field) in project configuration pages
                 // and the value of build parameter ("Build selector for Copy Artifact" field)
                 // in "This build requires parameters" pages.
-                Jenkins jenkins = Jenkins.getInstance();
-                Descriptor<?> d = (jenkins == null)?null:jenkins.getDescriptor(CopyArtifact.class);
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
+                Descriptor<?> d = jenkins == null ? null : jenkins.getDescriptor(CopyArtifact.class);
                 if (d != null) {
                     return d.getHelpFile("selector");
                 }
@@ -173,7 +172,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     @Initializer(after=InitMilestone.PLUGINS_STARTED)
     public static void initAliases() {
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             LOGGER.severe("Called for initialization but Jenkins instance no longer available.");
             return;
@@ -181,7 +180,8 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
         DescriptorImpl descriptor = jenkins.getDescriptorByType(DescriptorImpl.class);
         List<Descriptor<BuildSelector>> descriptorList = descriptor.getBuildSelectors();
         // Alias all BuildSelectors to their simple names
-        for (Descriptor<BuildSelector> d : descriptorList)
+        for (Descriptor<BuildSelector> d : descriptorList) {
             XSTREAM.alias(d.clazz.getSimpleName(), d.clazz);
+        }
     }
 }

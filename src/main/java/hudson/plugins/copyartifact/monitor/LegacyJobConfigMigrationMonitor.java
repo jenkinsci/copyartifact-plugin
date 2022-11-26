@@ -41,7 +41,6 @@ import hudson.model.listeners.SaveableListener;
 import hudson.plugins.copyartifact.CopyArtifactPermissionProperty;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
-import hudson.util.HttpResponses;
 import jenkins.model.Jenkins;
 
 import org.apache.commons.io.IOUtils;
@@ -50,6 +49,7 @@ import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.interceptor.RequirePOST;

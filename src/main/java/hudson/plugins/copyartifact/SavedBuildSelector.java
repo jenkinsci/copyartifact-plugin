@@ -48,6 +48,7 @@ public class SavedBuildSelector extends BuildSelector {
      * @deprecated
      *      here for backward compatibility. Get it from {@link Jenkins#getDescriptor(Class)}
      */
+    @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
     @Extension(ordinal=50) @Symbol("latestSavedBuild")

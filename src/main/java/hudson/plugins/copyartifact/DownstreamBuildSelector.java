@@ -102,7 +102,7 @@ public class DownstreamBuildSelector extends BuildSelector {
             );
             return false;
         }
-        Jenkins jenkins = Jenkins.getInstance();
+        Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {
             // to suppress findbugs warnings.
             LOGGER.log(
@@ -115,7 +115,7 @@ public class DownstreamBuildSelector extends BuildSelector {
         
         // Workaround to retrieve who is copying.
         Job<?,?> copier = jenkins.getItemByFullName(env.get(COPIER_PROJECT_KEY), Job.class);
-        if (copier != null && (copier instanceof AbstractProject<?,?>)) {
+        if (copier instanceof AbstractProject<?, ?>) {
             copier = ((AbstractProject<?,?>)copier).getRootProject();
         }
         
@@ -214,7 +214,7 @@ public class DownstreamBuildSelector extends BuildSelector {
                 return FormValidation.ok();
             }
             
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();
@@ -279,7 +279,7 @@ public class DownstreamBuildSelector extends BuildSelector {
                 return FormValidation.ok();
             }
             
-            Jenkins jenkins = Jenkins.getInstance();
+            Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
                 // Jenkins is unavailable and validation is useless.
                 return FormValidation.ok();

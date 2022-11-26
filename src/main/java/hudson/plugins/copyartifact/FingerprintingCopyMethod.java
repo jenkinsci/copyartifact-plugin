@@ -10,7 +10,6 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.os.PosixException;
 import hudson.tasks.Fingerprinter.FingerprintAction;
-import hudson.util.IOException2;
 import jenkins.model.Jenkins;
 
 import java.io.IOException;
@@ -41,7 +40,7 @@ public class FingerprintingCopyMethod extends Copier {
     private Run<?,?> src;
     private Run<?,?> dst;
     private final MessageDigest md5 = newMD5();
-    private final Map<String,String> fingerprints = new HashMap<String, String>();
+    private final Map<String,String> fingerprints = new HashMap<>();
 
     @Override
     public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
@@ -64,8 +63,9 @@ public class FingerprintingCopyMethod extends Copier {
         FilePath[] list = srcDir.list(filter, excludes, false);
         for (FilePath file : list) {
             String tail = file.getRemote().substring(srcDir.getRemote().length());
-            if (tail.startsWith("\\") || tail.startsWith("/"))
+            if (tail.startsWith("\\") || tail.startsWith("/")) {
                 tail = tail.substring(1);
+            }
             copyOne(file, new FilePath(targetDir, tail), fingerprintArtifacts);
         }
         return list.length;
@@ -84,11 +84,8 @@ public class FingerprintingCopyMethod extends Copier {
         }
         try {
             md5.reset();
-            DigestOutputStream out =new DigestOutputStream(d.write(),md5);
-            try {
+            try (DigestOutputStream out = new DigestOutputStream(d.write(), md5)) {
                 s.copyTo(out);
-            } finally {
-                out.close();
             }
             try {
                 d.chmod(s.mode());
@@ -106,7 +103,7 @@ public class FingerprintingCopyMethod extends Copier {
             String digest = Util.toHexString(md5.digest());
 
             if (fingerprintArtifacts) {
-                Jenkins jenkins = Jenkins.getInstance();
+                Jenkins jenkins = Jenkins.getInstanceOrNull();
                 if (jenkins == null) {
                     throw new AbortException("Jenkins instance no longer exists.");
                 }
@@ -122,7 +119,7 @@ public class FingerprintingCopyMethod extends Copier {
                 fingerprints.put(s.getName(), digest);
             }
         } catch (IOException e) {
-            throw new IOException2("Failed to copy "+s+" to "+d,e);
+            throw new IOException("Failed to copy " + s + " to " + d, e);
         }
     }
 
@@ -130,13 +127,17 @@ public class FingerprintingCopyMethod extends Copier {
     public void end() {
         // add action
         for (Run r : new Run[]{src,dst}) {
-            if (r == null)
+            if (r == null) {
                 continue;
+            }
 
             if (fingerprints.size() > 0) {
                 FingerprintAction fa = r.getAction(FingerprintAction.class);
-                if (fa != null) fa.add(fingerprints);
-                else            r.getActions().add(new FingerprintAction(r, fingerprints));
+                if (fa != null) {
+                    fa.add(fingerprints);
+                } else {
+                    r.getActions().add(new FingerprintAction(r, fingerprints));
+                }
             }
         }
     }

@@ -23,9 +23,9 @@
  */
 package hudson.plugins.copyartifact;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -110,7 +110,7 @@ public class CopyArtifactConfigurationTest {
     }
 
     @Test
-    public void productionMode_storedToTheDisk() throws Exception {
+    public void productionMode_storedToTheDisk() {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
         assertFalse(config.isFirstLoad());
@@ -122,7 +122,7 @@ public class CopyArtifactConfigurationTest {
 
     @Issue("JENKINS-62267")
     @Test
-    public void circularDependencyTestWithSavableListener() throws Exception {
+    public void circularDependencyTestWithSavableListener() {
         assertNotNull(CopyArtifactConfiguration.get());
     }
 
@@ -139,7 +139,7 @@ public class CopyArtifactConfigurationTest {
             LOG.log(
                 Level.INFO,
                 "LoadingExtensionFinderSavableListener#onChange with: {0}",
-                (user != null) ? user.getId() : "NULL"
+                user != null ? user.getId() : "NULL"
             );
         }
     }

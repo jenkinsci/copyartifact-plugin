@@ -61,9 +61,11 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
             return (run != null && filter.isSelectable(run, env)) ? run : null;
         }
 
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild())
-            if (isSelectable(run, env) && filter.isSelectable(run, env))
+        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) {
+            if (isSelectable(run, env) && filter.isSelectable(run, env)) {
                 return run;
+            }
+        }
 
         return null;
     }

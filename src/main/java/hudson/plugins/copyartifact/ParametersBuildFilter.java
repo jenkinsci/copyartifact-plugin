@@ -50,7 +50,7 @@ public class ParametersBuildFilter extends BuildFilter {
 
     public ParametersBuildFilter(String paramsToMatch) {
         // Initialize.. parse out the given parameters/values.
-        filters = new ArrayList<StringParameterValue>(5);
+        filters = new ArrayList<>(5);
         Matcher m = PARAMVAL_PATTERN.matcher(paramsToMatch);
         while (m.find()) {
             filters.add(new StringParameterValue(m.group(1), m.group(2)));
@@ -58,19 +58,23 @@ public class ParametersBuildFilter extends BuildFilter {
     }
 
     public boolean isValid(Job<?,?> job) {
-        if (filters.isEmpty()) return false;  // Unable to parse text after /
+        if (filters.isEmpty()) {
+            // Unable to parse text after /
+            return false;
+        }
         // Consider the filter valid for this job if any build for this job has all the filter params
         outer:
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) try {
-            EnvVars env = run.getEnvironment(TaskListener.NULL);
-            for (StringParameterValue spv : filters) {
-                if (!env.containsKey(spv.getName())) {
-                    continue outer;
+        for (Run<?, ?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) {
+            try {
+                EnvVars env = run.getEnvironment(TaskListener.NULL);
+                for (StringParameterValue spv : filters) {
+                    if (!env.containsKey(spv.getName())) {
+                        continue outer;
+                    }
                 }
+                return true;
+            } catch (InterruptedException | IOException ignore) {
             }
-            return true;
-        } catch (InterruptedException ignore) {
-        } catch (IOException ignore) {
         }
         return false;
     }
