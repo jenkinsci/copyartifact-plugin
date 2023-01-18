@@ -106,12 +106,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.jenkins-ci.plugins</groupId>
-        <artifactId>compress-artifacts</artifactId>
-        <version>98.vb_20f3c77ddf7</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <!-- for DirectArtifactManagerFactory -->
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-api</artifactId>
