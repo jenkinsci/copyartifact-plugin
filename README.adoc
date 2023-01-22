@@ -236,6 +236,6 @@ Please use the link:https://www.jenkins.io/participate/report-issue/["How to Rep
 
 == Release History
 
-link:https://github.com/jenkinsci/copyartifact-plugin/releases[GitHub releases]
+Changelogs for current releases are recorded in link:https://github.com/jenkinsci/copyartifact-plugin/releases[GitHub releases]
 
-Changelogs for releases are recorded in the link:https://github.com/jenkinsci/copyartifact-plugin/blob/8598cd8c4aa8724680a8e286eb314202249c3049/CHANGELOG.adoc[legacy changelog].
+Changelogs for previous releases are recorded in the link:https://github.com/jenkinsci/copyartifact-plugin/blob/8598cd8c4aa8724680a8e286eb314202249c3049/CHANGELOG.adoc[legacy changelog].
