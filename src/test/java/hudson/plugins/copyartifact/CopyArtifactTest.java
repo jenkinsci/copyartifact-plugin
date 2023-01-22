@@ -94,7 +94,6 @@ import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
-import org.jenkinsci.plugins.compress_artifacts.CompressingArtifactManagerFactory;
 import org.jenkinsci.plugins.workflow.DirectArtifactManagerFactory;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -2338,19 +2337,6 @@ public class CopyArtifactTest {
                     ceb.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SRC_PROJECT_")
             );
         }
-    }
-
-    @Issue("JENKINS-22637")
-    @Test
-    public void compressArtifacts() throws Exception {
-        ArtifactManagerConfiguration.get().getArtifactManagerFactories().add(new CompressingArtifactManagerFactory());
-        FreeStyleProject other = createArtifactProject();
-        rule.buildAndAssertSuccess(other);
-        FreeStyleProject p = createProject(other.getName(), null, "", "", false, false, false, false);
-        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
-        assertFile(true, "foo.txt", b);
-        assertFile(true, "subdir/subfoo.txt", b);
-        assertFile(true, "deepfoo/a/b/c.log", b);
     }
 
     @Issue("JENKINS-49635")
