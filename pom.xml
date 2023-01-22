@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.51</version>
+        <version>4.54</version>
         <relativePath />
     </parent>
 
@@ -28,7 +28,7 @@
         <revision>1.49</revision>
         <changelist>-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-        <jenkins.version>2.319.3</jenkins.version>
+        <jenkins.version>2.361.4</jenkins.version>
         <useBeta>true</useBeta>
     </properties>
 
@@ -49,15 +49,8 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <version>3.16</version>
+        <version>3.19</version>
         <optional>true</optional>
-        <exclusions>
-            <exclusion>
-                <!-- to avoid RequireUpperBoundDeps with jenkins-test-harness -->
-                <groupId>commons-net</groupId>
-                <artifactId>commons-net</artifactId>
-            </exclusion>
-        </exclusions>
       </dependency>
       <dependency>
           <groupId>org.jenkins-ci.plugins</groupId>
