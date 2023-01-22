@@ -13,7 +13,7 @@ selecting Maven or multiconfiguration projects or using build
 parameters. You can also copy from the workspace of the latest completed
 build of the source project, instead of its artifacts. All artifacts
 copied are automatically
-https://wiki.jenkins.io/display/JENKINS/Fingerprint[fingerprinted] for
+link:https://www.jenkins.io/doc/book/using/fingerprints/[fingerprinted] for
 you.
 
 #image:docs/images/screenshot-copy-artefacts.png[image]#
@@ -22,8 +22,6 @@ you.
 
 [[CopyArtifactPlugin-Pipelinesyntax]]
 == Pipeline syntax
-
-Available since copyartifact-1.39
 
 * To copy artifacts from the latest stable build of "sourceproject"
 +
@@ -101,7 +99,7 @@ at hudson.plugins.copyartifact.FilePathCopyMethod.copyAll(FilePathCopyMethod.jav
 ....
 
 [[CopyArtifactPlugin-RecommendedusageofCopyartifact]]
-== Recommended usage of Copyartifact
+== Recommended usage of copy artifact
 
 * Artifacts should be stored as archived files.
 ** Copyartifact tries to copy artifacts preserving file attributes like
@@ -169,13 +167,9 @@ node {
 [[CopyArtifactPlugin-Authorizebuildsasauser]]
 ==== Authorize builds as a user
 
-* https://plugins.jenkins.io/authorize-project/[Authorize
-Project plugin] enables you to run builds of a project as a specific
-user.
-** Copy Artifact treats builds running as anonymous without
-authorization configurations.
-* You can resolve permission problems by running builds as a user with
-read permission to the project with artifacts +
+* https://plugins.jenkins.io/authorize-project/[Authorize Project plugin] enables you to run builds of a project as a specific user.
+** Copy Artifact treats builds running as anonymous without authorization configurations.
+* You can resolve permission problems by running builds as a user with read permission to the project with artifacts +
 #image:docs/images/permissions_07_authorizeproject.png[image]#
 
 [[CopyArtifactPlugin-MigrationMode]]
@@ -189,14 +183,14 @@ configured with variables.
 This is the behavior compatible to Copy Artifact 1.43.1 or earlier.
 
 This may cause security vulnerabilities allowing malicious users
-to bypass permission checks. 
+to bypass permission checks.
 This mode is provided only to allow users to upgrade job configurations
 and migrate to Production mode easily. You should migrate to Production mode as soon as you can.
 
 Build executions that would fail in Production mode are
 recorded and displayed as warnings to administrators.
 
-#image:docs/images/migrationmode-monitor.png[Warnings for the migration mode]#
+#image:docs/images/migrationmode-monitor.png[migration mode warnings]#
 
 Administrators should check those warnings
 and update the job configurations to successfully use Production mode.
@@ -229,26 +223,19 @@ What that is doing:
 
 * Go to the project/workspace named "Create_archive".
 * Look in the folder "packages" for the file(s) "infra*.zip".
-* Copy that file(s) into the folder "Infra", in the local workspace. 
+* Copy that file(s) into the folder "Infra", in the local workspace.
 Folder will be created if it doesn't already exist.
 
 [[CopyArtifactPlugin-Issues]]
-== Issues
+## Reporting Issues
 
-To report a bug or request an enhancement to this plugin please create a
-ticket in JIRA (you need to login or to sign up for an account). Also
-have a look on
-https://wiki.jenkins.io/display/JENKINS/How+to+report+an+issue[How to
-report an issue]
+Report issues in the link:https://www.jenkins.io/participate/report-issue/redirect/#15692[Jenkins issue tracker].
+Please use the link:https://www.jenkins.io/participate/report-issue/["How to Report an Issue"] guidelines when reporting issues.
 
-* https://issues.jenkins-ci.org/issues/?jql=project%20%3D%20JENKINS%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened%2C%20%22In%20Review%22%2C%20Verified)%20AND%20component%20%3D%20%27copyartifact-plugin%27%20[Open
-Issues]
-* https://issues.jenkins-ci.org/secure/CreateIssueDetails!init.jspa?pid=10172&issuetype=1&components=15692&priority=4&assignee=ikedam[Bug
-report]
-* https://issues.jenkins-ci.org/secure/CreateIssueDetails!init.jspa?pid=10172&issuetype=4&components=15692&priority=4[Request
-or propose an improvement of existing feature]
-* https://issues.jenkins-ci.org/secure/CreateIssueDetails!init.jspa?pid=10172&issuetype=2&components=15692&priority=4[Request
-or propose a new feature]
+* https://issues.jenkins.io/issues/?jql=resolution%20is%20EMPTY%20and%20component%3D15692[Open Issues]
 
+== Release History
 
-include::CHANGELOG.adoc[]
+link:https://github.com/jenkinsci/copyartifact-plugin/releases[GitHub releases]
+
+Changelogs for releases are recorded in the link:https://github.com/jenkinsci/copyartifact-plugin/blob/8598cd8c4aa8724680a8e286eb314202249c3049/CHANGELOG.adoc[legacy changelog].
