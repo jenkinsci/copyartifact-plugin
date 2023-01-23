@@ -13,7 +13,7 @@
     <packaging>hpi</packaging>
     <name>Copy Artifact Plugin</name>
     <description>Adds a build step to copy artifacts from another project.</description>
-    <version>${revision}${changelist}</version>
+    <version>${changelist}</version>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
 
     <licenses>
@@ -26,7 +26,7 @@
 
     <properties>
         <revision>1.49</revision>
-        <changelist>-SNAPSHOT</changelist>
+        <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
         <jenkins.version>2.361.4</jenkins.version>
         <useBeta>true</useBeta>
