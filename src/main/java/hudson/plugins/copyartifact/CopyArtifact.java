@@ -133,6 +133,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private String project;
     private String parameters;
     private String filter, target;
+    private boolean appendSrcNumberToTarget;
     private String excludes;
     private /*almost final*/ BuildSelector selector;
     @Deprecated private transient Boolean stable;
@@ -201,6 +202,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         setOptional(false);
         setFingerprintArtifacts(false);
         setResultVariableSuffix(null);
+        setAppendSrcNumberToTarget(false);
     }
 
     @DataBoundSetter
@@ -231,6 +233,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     @DataBoundSetter
     public void setFlatten(boolean flatten) {
         this.flatten = flatten ? Boolean.TRUE : null;
+    }
+
+    @DataBoundSetter
+    public void setAppendSrcNumberToTarget(final boolean appendSrcNumberToTarget) {
+        this.appendSrcNumberToTarget = appendSrcNumberToTarget;
     }
 
     @DataBoundSetter
@@ -362,6 +369,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
      */
     public String getResultVariableSuffix() {
         return resultVariableSuffix;
+    }
+
+    public boolean getAppendSrcNumberToTarget() {
+        return this.appendSrcNumberToTarget;
     }
 
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
@@ -501,6 +512,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (target.length() > 0) {
             targetDir = new FilePath(targetDir, env.expand(target));
         }
+        if (this.appendSrcNumberToTarget) targetDir = new FilePath(targetDir, String.valueOf(src.getNumber()));
         expandedFilter = env.expand(filter);
         if (expandedFilter.trim().length() == 0) {
             expandedFilter = "**";

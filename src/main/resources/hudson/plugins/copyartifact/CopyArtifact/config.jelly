@@ -48,6 +48,9 @@ THE SOFTWARE.
     <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
     <f:checkbox field="fingerprintArtifacts" default="true"/>
     <label class="attach-previous">${%Fingerprint Artifacts}</label>
+    <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
+    <f:checkbox field="appendSourceNumberToTarget" default="false"/>
+    <label class="attach-previous">${%Append Source Number}</label>
   </f:entry>
   <f:advanced>
     <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
