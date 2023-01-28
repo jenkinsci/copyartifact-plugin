@@ -49,7 +49,7 @@ THE SOFTWARE.
     <f:checkbox field="fingerprintArtifacts" default="true"/>
     <label class="attach-previous">${%Fingerprint Artifacts}</label>
     <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="appendSourceNumberToTarget" default="false"/>
+    <f:checkbox field="appendSrcNumberToTarget" default="false"/>
     <label class="attach-previous">${%Append Source Number}</label>
   </f:entry>
   <f:advanced>
