@@ -2274,7 +2274,7 @@ public class CopyArtifactTest {
             p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     srcProject.getFullName(),
                     null,       // parameters
-                    new SpecificBuildSelector("lastSuccessfulBuild"), 
+                    new SpecificBuildSelector("lastSuccessfulBuild"),
                     "",         // filter
                     "",         // excludes
                     "",         // target
