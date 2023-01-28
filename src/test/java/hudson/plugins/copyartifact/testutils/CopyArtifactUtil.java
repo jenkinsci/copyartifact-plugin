@@ -48,9 +48,14 @@ public class CopyArtifactUtil {
                         boolean flatten, boolean optional, boolean fingerprintArtifacts) {
         return createCopyArtifact(projectName, parameters, selector, filter, excludes, target, flatten, optional, fingerprintArtifacts, null);
     }
-    
+
     public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
-                        boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix) {
+            boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix) {
+        return createCopyArtifact(projectName, parameters, selector, filter, excludes, target, flatten, optional, fingerprintArtifacts, resultVariableSuffix, false);
+    }
+
+    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
+                        boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix, boolean appendSrcNumberToTarget) {
         CopyArtifact copyArtifact = new CopyArtifact(projectName);
         copyArtifact.setParameters(parameters);
         copyArtifact.setSelector(selector);
@@ -61,6 +66,7 @@ public class CopyArtifactUtil {
         copyArtifact.setOptional(optional);
         copyArtifact.setFingerprintArtifacts(fingerprintArtifacts);
         copyArtifact.setResultVariableSuffix(resultVariableSuffix);
+        copyArtifact.setAppendSrcNumberToTarget(appendSrcNumberToTarget);
         return copyArtifact;
     }
 }
