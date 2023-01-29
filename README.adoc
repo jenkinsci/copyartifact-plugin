@@ -65,6 +65,7 @@ using those artifacts. false for default if the parameter isn't specified
 (Snippet Generator defaults this to true and specifies the parameter).
 
 |resultVariableSuffix |boolean |useless for pipelines
+|includeBuildNumberInTargetPath |boolean |Include source build number in target path.
 |===
 * selectors
 +

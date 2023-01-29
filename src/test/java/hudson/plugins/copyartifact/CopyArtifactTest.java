@@ -2249,7 +2249,47 @@ public class CopyArtifactTest {
         assertFalse(CopyArtifact.isValidVariableName("  "));
         assertFalse(CopyArtifact.isValidVariableName("=/?!\""));
     }
-    
+
+    @Test
+    public void testIncludeBuildNumberToTargetPath() throws Exception {
+        final Builder failureBuilder = new FailureBuilder();
+        final FreeStyleProject srcProject = createArtifactProject("SRC-PROJECT");
+
+        srcProject.getBuildersList().add(failureBuilder);
+        final FreeStyleBuild build1 = srcProject.scheduleBuild2(0).get();
+        rule.assertBuildStatus(Result.FAILURE, build1);
+
+        srcProject.getBuildersList().remove(failureBuilder);
+        final FreeStyleBuild build2 = srcProject.scheduleBuild2(0).get();
+        rule.assertBuildStatus(Result.SUCCESS, build2);
+
+        srcProject.getBuildersList().add(failureBuilder);
+        final FreeStyleBuild build3 = srcProject.scheduleBuild2(0).get();
+        rule.assertBuildStatus(Result.FAILURE, build3);
+
+        {
+            FreeStyleProject p = rule.createFreeStyleProject();
+            p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
+                    srcProject.getFullName(),
+                    null,       // parameters
+                    new SpecificBuildSelector("lastSuccessfulBuild"),
+                    "",         // filter
+                    "",         // excludes
+                    "",         // target
+                    false,      // flatten
+                    false,      // optional
+                    true,       // fingerprintArtifacts
+                    "",         // resultVariableSuffix
+                    true        // includeBuildNumberInTargetPath
+            ));
+            rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
+
+            assertFalse(new FilePath(p.getWorkspace(), "1").exists());
+            assertTrue(new FilePath(p.getWorkspace(), "2").exists());
+            assertFalse(new FilePath(p.getWorkspace(), "3").exists());
+        }
+    }
+
     @Test
     public void testResultVariableSuffix() throws Exception {
         FreeStyleProject srcProject = createArtifactProject("SRC-PROJECT1");
