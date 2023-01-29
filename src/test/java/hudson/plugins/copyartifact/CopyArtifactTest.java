@@ -84,7 +84,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.Jenkins;
@@ -131,7 +130,6 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNoException;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -2253,7 +2251,7 @@ public class CopyArtifactTest {
     }
 
     @Test
-    public void testAppendSrcNumberToTarget() throws Exception {
+    public void testIncludeBuildNumberToTargetPath() throws Exception {
         final Builder failureBuilder = new FailureBuilder();
         final FreeStyleProject srcProject = createArtifactProject("SRC-PROJECT");
 
@@ -2274,7 +2272,7 @@ public class CopyArtifactTest {
             p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(
                     srcProject.getFullName(),
                     null,       // parameters
-                    new SpecificBuildSelector("lastSuccessfulBuild"), 
+                    new SpecificBuildSelector("lastSuccessfulBuild"),
                     "",         // filter
                     "",         // excludes
                     "",         // target
@@ -2282,7 +2280,7 @@ public class CopyArtifactTest {
                     false,      // optional
                     true,       // fingerprintArtifacts
                     "",         // resultVariableSuffix
-                    true        // appendSrcNumberToTarget
+                    true        // includeBuildNumberInTargetPath
             ));
             rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
 

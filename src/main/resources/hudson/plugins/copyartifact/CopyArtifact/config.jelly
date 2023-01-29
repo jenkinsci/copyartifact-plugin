@@ -49,8 +49,8 @@ THE SOFTWARE.
     <f:checkbox field="fingerprintArtifacts" default="true"/>
     <label class="attach-previous">${%Fingerprint Artifacts}</label>
     <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/> <st:nbsp/>
-    <f:checkbox field="appendSrcNumberToTarget" default="false"/>
-    <label class="attach-previous">${%Append Source Number}</label>
+    <f:checkbox field="includeBuildNumberInTargetPath" default="false"/>
+    <label class="attach-previous">${%Include Build Number}</label>
   </f:entry>
   <f:advanced>
     <f:entry title="${%Result variable suffix}" field="resultVariableSuffix">
