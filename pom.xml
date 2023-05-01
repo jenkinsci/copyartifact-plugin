@@ -51,10 +51,10 @@
       <dependency>
         <groupId>org.jenkins-ci.main</groupId>
         <artifactId>maven-plugin</artifactId>
-        <!-- Intentionally kept at 3.16 to not disrupt Jenkins plugin bill of materials -->
+        <!-- Intentionally kept at 3.22 to not disrupt Jenkins plugin bill of materials -->
         <!-- https://github.com/jenkinsci/bom/pull/1978#issuecomment-1516220549 -->
         <!-- TODO: Before upgrading this version, must check that plugin bill of materials is unharmed -->
-        <version>3.16</version>
+        <version>3.22</version>
         <optional>true</optional>
       </dependency>
       <dependency>
