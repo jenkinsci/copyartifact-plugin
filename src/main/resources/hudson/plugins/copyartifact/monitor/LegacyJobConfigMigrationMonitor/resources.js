@@ -35,7 +35,7 @@ function selectAllInvalid(anchor){
 }
 
 function _selectAllThat(anchor, selector){
-    var parent = anchor.up('.legacy-copy-artifact');
+    var parent = anchor.closest('.legacy-copy-artifact');
     var allCheckBoxes = parent.querySelectorAll('.checkbox-line');
     var concernedCheckBoxes = parent.querySelectorAll(selector);
     
@@ -76,7 +76,7 @@ function confirmAndMigrateAllSelected(button){
 }
 
 function confirmAndSendRequest(button){
-    var parent = button.up('.legacy-copy-artifact');
+    var parent = button.closest('.legacy-copy-artifact');
     var allCheckBoxes = parent.querySelectorAll('.checkbox-line');
     var allCheckedCheckBoxes = [];
     for(var i = 0; i < allCheckBoxes.length ; i++){
@@ -104,13 +104,15 @@ function confirmAndSendRequest(button){
             }
             
             var params = {values: selectedValues}
-            new Ajax.Request(url, {
-                postBody: Object.toJSON(params),
-                contentType:"application/json",
-                encoding:"UTF-8",
-                onComplete: function(rsp) {
-                    window.location.reload();
-                }
+            fetch(url, {
+                method: 'post',
+                headers: crumb.wrap({
+                    'Content-Type': 'application/json; charset=UTF-8',
+                }),
+                // TODO simplify when Prototype.js is removed
+                body: Object.toJSON ? Object.toJSON(params) : JSON.stringify(params),
+            }).then((rsp) => {
+                window.location.reload();
             });
         }
     }
@@ -128,11 +130,11 @@ function onLineClicked(event){
 }
 
 function onCheckChanged(checkBox){
-    var line = checkBox.up('tr');
+    var line = checkBox.closest('tr');
     if(checkBox.checked){
-        line.addClassName('selected');
+        line.classList.add('selected');
     }else{
-        line.removeClassName('selected');
+        line.classList.remove('selected');
     }
 }
 
@@ -141,7 +143,7 @@ function onCheckChanged(checkBox){
         var allLines = document.querySelectorAll('.legacy-copy-artifact table tr');
         for(var i = 0; i < allLines.length; i++){
             var line = allLines[i];
-            if(!line.hasClassName('no-project-line')){
+            if(!line.classList.contains('no-project-line')){
                 line.onclick = onLineClicked;
             }
         }
@@ -162,15 +164,15 @@ function onCheckChanged(checkBox){
 
                 if (body.style.display != 'block') {
                     body.style.display = 'block';
-                    new Ajax.Request(this.getAttribute('data-help-url'), {
-                        method : 'get',
-                        onSuccess : function(x) {
-                            body.innerHTML = x.responseText;
-                        },
-                        onFailure : function(x) {
+                    fetch(this.getAttribute('data-help-url')).then((rsp) => {
+                        if (rsp.ok) {
+                            rsp.text().then((responseText) => {
+                                body.innerHTML = responseText;
+                            });
+                        } else {
                             body.innerHTML = (
                                 '<b>ERROR</b>: Failed to load help file: '
-                                + x.statusText
+                                + rsp.statusText
                             );
                         }
                     });
