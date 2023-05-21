@@ -10,3 +10,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    ignore:
+      # maven plugin updates break plugin bill of materials
+      # do not offer minor version updates
+      - dependency-name: "maven-plugin"
+        update-types: ["version-update:semver-minor"]
