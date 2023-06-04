@@ -23,11 +23,11 @@
  */
 package hudson.plugins.copyartifact;
 
-import com.gargoylesoftware.htmlunit.HttpMethod;
-import com.gargoylesoftware.htmlunit.WebClientOptions;
-import com.gargoylesoftware.htmlunit.WebRequest;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.util.NameValuePair;
+import org.htmlunit.HttpMethod;
+import org.htmlunit.WebClientOptions;
+import org.htmlunit.WebRequest;
+import org.htmlunit.html.HtmlForm;
+import org.htmlunit.util.NameValuePair;
 import hudson.cli.CLICommandInvoker;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
@@ -72,7 +72,7 @@ public class BuildSelectorParameterTest {
         HtmlForm form = wc.getPage(job, "build").getFormByName("parameters");
         form.getSelectByName("").getOptionByText("Specific build").setSelected(true);
         wc.waitForBackgroundJavaScript(10000);
-        form.getInputByName("_.buildNumber").setValueAttribute("6");
+        form.getInputByName("_.buildNumber").setValue("6");
         rule.submit(form);
         rule.waitUntilNoActivity();
         assertEquals("<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
