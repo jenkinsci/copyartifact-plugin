@@ -901,7 +901,7 @@ public class CopyArtifactTest {
                 null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.assertBuildStatusSuccess(rule.waitForCompletion(other.scheduleBuild2(0, new Cause.UserIdCause()).get()));
         // p#1 was triggered, now building.
         MatrixBuild b = p.getBuildByNumber(1);
         for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
@@ -912,6 +912,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
         MatrixRun r = b.getRuns().get(0);
         assertFile(true, "foo.txt", r);
+        rule.assertBuildStatusSuccess(rule.waitForCompletion(r));
     }
 
     @Test
