@@ -32,6 +32,8 @@
         <useBeta>true</useBeta>
         <spotbugs.effort>Max</spotbugs.effort>
         <spotbugs.threshold>Low</spotbugs.threshold>
+        <!-- TODO pending inclusion in parent: -->
+        <jenkins-test-harness.version>2061.v04b_f07857801</jenkins-test-harness.version> <!-- TODO https://github.com/jenkinsci/jenkins-test-harness/pull/643 -->
     </properties>
 
     <build>
@@ -42,6 +44,14 @@
           <configuration>
             <!-- Behavior incompatibility: Complete runtime permission check (in the production mode) -->
             <compatibleSinceVersion>1.44</compatibleSinceVersion>
+          </configuration>
+        </plugin>
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <systemPropertyVariables>
+                <org.jvnet.hudson.test.RemainingActivityListener.wait>true</org.jvnet.hudson.test.RemainingActivityListener.wait>
+            </systemPropertyVariables>
           </configuration>
         </plugin>
       </plugins>
