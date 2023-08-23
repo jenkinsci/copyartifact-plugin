@@ -45,6 +45,7 @@ import hudson.model.BuildListener;
 import hudson.model.Cause;
 import hudson.model.ChoiceParameterDefinition;
 import hudson.model.Computer;
+import hudson.model.Executor;
 import hudson.model.Fingerprint;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -185,6 +186,14 @@ public class CopyArtifactTest {
     
     @After
     public void tearDown() throws Exception {
+        for (Computer c : rule.jenkins.getComputers()) {
+            for (Executor x : c.getAllExecutors()) {
+                assert x.isIdle() : x.getCurrentExecutable();
+            }
+        }
+        for (Queue.Item q : rule.jenkins.getQueue().getItems()) {
+            assert false : q;
+        }
         if(Functions.isWindows()) {
             purgeAgents();
         }
@@ -798,6 +807,7 @@ public class CopyArtifactTest {
         FreeStyleBuild b = p.getBuildByNumber(1);
         for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
+        // TODO
         while (b.isBuilding()) {
             Thread.sleep(10);
         }
@@ -840,6 +850,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
         // p#1 was triggered, now building.
         b = p.getBuildByNumber(1);
+        // TODO
         for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) {
@@ -878,6 +889,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
         // p#1 was triggered, now building.
         FreeStyleBuild b = p.getBuildByNumber(1);
+        // TODO
         for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) {
@@ -903,13 +915,10 @@ public class CopyArtifactTest {
         rule.jenkins.rebuildDependencyGraph();
         rule.assertBuildStatusSuccess(rule.waitForCompletion(other.scheduleBuild2(0, new Cause.UserIdCause()).get()));
         // p#1 was triggered, now building.
+        rule.waitUntilNoActivity();
         MatrixBuild b = p.getBuildByNumber(1);
-        for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
-        while (b.isBuilding()) {
-            Thread.sleep(10);
-        }
-        rule.assertBuildStatusSuccess(b);
+        rule.assertBuildStatusSuccess(rule.waitForCompletion(b));
         MatrixRun r = b.getRuns().get(0);
         assertFile(true, "foo.txt", r);
         rule.assertBuildStatusSuccess(rule.waitForCompletion(r));

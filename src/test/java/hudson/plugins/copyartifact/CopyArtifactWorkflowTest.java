@@ -229,6 +229,7 @@ public class CopyArtifactWorkflowTest {
             "writeFile text: 'foobar', file: 'artifact.txt';"
             + "archive includes: 'artifact.txt';"
         );
+        // TODO just use buildAndAssertSuccess
         jenkinsRule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
 
         WorkflowJob copier = jenkinsRule.createWorkflow(

@@ -88,6 +88,7 @@ public class LastCompletedBuildSelectorTest {
     }
     
     private <P extends Project<P,B>, B extends Build<P,B>> B waitForBuildStarts(P project, long timeoutMillis) throws Exception {
+        // TODO
         long current = System.currentTimeMillis();
         while(project.getLastBuild() == null || !project.getLastBuild().isBuilding()) {
             assertTrue(System.currentTimeMillis() - current < timeoutMillis);
