@@ -88,7 +88,7 @@ public class LastCompletedBuildSelectorTest {
     }
     
     private <P extends Project<P,B>, B extends Build<P,B>> B waitForBuildStarts(P project, long timeoutMillis) throws Exception {
-        // TODO
+        // TODO use waitUntilNoActivity or Awaitility etc.
         long current = System.currentTimeMillis();
         while(project.getLastBuild() == null || !project.getLastBuild().isBuilding()) {
             assertTrue(System.currentTimeMillis() - current < timeoutMillis);
@@ -135,7 +135,7 @@ public class LastCompletedBuildSelectorTest {
         // Copy from a job without builds
         {
             assertNull(upstream.getLastBuild());
-            j.assertBuildStatus(Result.FAILURE, downstream.scheduleBuild2(0).get());
+            j.buildAndAssertStatus(Result.FAILURE, downstream);
             
         }
         

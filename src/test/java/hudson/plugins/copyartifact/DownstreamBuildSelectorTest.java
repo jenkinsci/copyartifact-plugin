@@ -728,7 +728,7 @@ public class DownstreamBuildSelectorTest {
         ));
         
         // fail as DownstreamBuildSelector doesn't support workflow upstream.
-        FreeStyleBuild b = j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        FreeStyleBuild b = j.buildAndAssertStatus(Result.FAILURE, p);
         // to see expected log is recorded.
         //System.out.println(b.getLog());
     }
@@ -773,7 +773,7 @@ public class DownstreamBuildSelectorTest {
         ));
         
         // fail as DownstreamBuildSelector doesn't support workflow downstream.
-        FreeStyleBuild b = j.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0).get());
+        FreeStyleBuild b = j.buildAndAssertStatus(Result.FAILURE, p);
         // to see expected log is recorded.
         //System.out.println(b.getLog());
     }

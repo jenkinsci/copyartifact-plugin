@@ -45,7 +45,6 @@ import hudson.model.BuildListener;
 import hudson.model.Cause;
 import hudson.model.ChoiceParameterDefinition;
 import hudson.model.Computer;
-import hudson.model.Executor;
 import hudson.model.Fingerprint;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -186,14 +185,6 @@ public class CopyArtifactTest {
     
     @After
     public void tearDown() throws Exception {
-        for (Computer c : rule.jenkins.getComputers()) {
-            for (Executor x : c.getAllExecutors()) {
-                assert x.isIdle() : x.getCurrentExecutable();
-            }
-        }
-        for (Queue.Item q : rule.jenkins.getQueue().getItems()) {
-            assert false : q;
-        }
         if(Functions.isWindows()) {
             purgeAgents();
         }
@@ -292,14 +283,14 @@ public class CopyArtifactTest {
     @Test
     public void testMissingProject() throws Exception {
         FreeStyleProject p = createProject("invalid", null, "", "", false, false, false, true);
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
     public void testMissingBuild() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false, true);
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
@@ -308,23 +299,23 @@ public class CopyArtifactTest {
                          p = createProject(other.getName(), null, "", "", true, false, false, true);
         // Make an unstable build in "other"
         other.getBuildersList().add(new UnstableBuilder());
-        rule.assertBuildStatus(Result.UNSTABLE, other.scheduleBuild2(0, new Cause.UserIdCause()).get());
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.UNSTABLE, other);
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
     public void testMissingArtifact() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(),
                          p = createProject(other.getName(), null, "*.txt", "", false, false, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
     public void testCopyAllWithFingerprints() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false, true);
-        FreeStyleBuild s = rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        FreeStyleBuild s = rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -342,7 +333,7 @@ public class CopyArtifactTest {
     public void testCopyAllWithoutFingerprints() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false, false);
-        FreeStyleBuild s = rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        FreeStyleBuild s = rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -361,7 +352,7 @@ public class CopyArtifactTest {
         FreeStyleProject other = createArtifactProject(),
                  p = createProject(other.getName(), null, "**/bogus*, **/sub*, bogus/**", "",
                                    false, false, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(false, "foo.txt", b);
@@ -374,7 +365,7 @@ public class CopyArtifactTest {
         FreeStyleProject other = createArtifactProject(),
                  p = createProject(other.getName(), null, "deep*/**", "new/deep/dir",
                                    true, false, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(false, "foo.txt", b);
@@ -392,7 +383,7 @@ public class CopyArtifactTest {
         }
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "", false, false, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         p.setAssignedLabel(node.getSelfLabel());
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -412,7 +403,7 @@ public class CopyArtifactTest {
         ParameterDefinition paramDef3 = new StringParameterDefinition("TARGET", "foo", "");
         ParametersDefinitionProperty paramsDef = new ParametersDefinitionProperty(paramDef, paramDef2, paramDef3);
         p.addProperty(paramsDef);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause(),
                 new ParametersAction(new StringParameterValue("PROJSRC", other.getName()),
                                      new StringParameterValue("BASE", "*r"),
@@ -442,9 +433,8 @@ public class CopyArtifactTest {
         MatrixProject other = createMatrixArtifactProject();
         FreeStyleProject p = createProject(other.getName() + "/FOO=two", null, "", "",
                                            true, false, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
-        FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
-        rule.assertBuildStatusSuccess(b);
+        rule.buildAndAssertSuccess(other);
+        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
         assertFile(true, "foo.txt", b);
         assertFile(true, "two.txt", b);
         assertFile(true, "subdir/subfoo.txt", b);
@@ -459,7 +449,7 @@ public class CopyArtifactTest {
         p.setAxes(new AxisList(new Axis("FOO", "one", "two"))); // should match other job
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName() + "/FOO=$FOO", null,
                 new StatusBuildSelector(true), "", "", false, false, true));
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         MatrixBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         MatrixRun r = b.getRun(new Combination(Collections.singletonMap("FOO", "one")));
@@ -493,7 +483,7 @@ public class CopyArtifactTest {
         mp.setAxes(new AxisList(new Axis("ARCH", "sparc", "x86")));
         mp.getBuildersList().add(new ArchMatrixBuilder());
         mp.getPublishersList().add(new ArtifactArchiver("target/*", "", false, false));
-        rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(mp);
         FreeStyleProject p = createProject(mp.getName(), null, "", "", true, false, false, true);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
@@ -523,7 +513,7 @@ public class CopyArtifactTest {
     @Test
     public void testMavenJob() throws Exception {
         MavenModuleSet mp = setupMavenJob();
-        rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(mp);
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$moduleB",
                 null, "", "", true, false, false, true);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
@@ -536,9 +526,9 @@ public class CopyArtifactTest {
     @Test
     public void testMavenAll() throws Exception {
         MavenModuleSet mp = setupMavenJob();
-        rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(mp);
         FreeStyleProject p = createProject(mp.getName(), null, "", "", true, false, false, true);
-        FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        FreeStyleBuild b = rule.buildAndAssertSuccess(p);
         String dir = "org.jvnet.hudson.main.test.multimod/";
         assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
         assertFile(true, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
@@ -548,7 +538,7 @@ public class CopyArtifactTest {
         assertFile(true, dir + pomName("moduleC", "1.0-SNAPSHOT"), b);
         // Test with filter
         p = createProject(mp.getName(), null, "**/*.jar", "", true, false, false, true);
-        b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        b = b = rule.buildAndAssertSuccess(p);
         assertFile(true, dir + "moduleA/1.0-SNAPSHOT/moduleA-1.0-SNAPSHOT.jar", b);
         assertFile(false, dir + pomName("moduleA", "1.0-SNAPSHOT"), b);
         assertFile(true, dir + "moduleB/1.0-SNAPSHOT/moduleB-1.0-SNAPSHOT.jar", b);
@@ -565,7 +555,7 @@ public class CopyArtifactTest {
         // Artifacts will be stored with the parent build instead of the child module builds.
         mp.setIsArchivingDisabled(true);
         mp.getPublishersList().add(new ArtifactArchiver("moduleB/*.xml", "", false, false));
-        rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(mp);
         FreeStyleProject p = createProject(mp.getName(), null, "", "", true, false, false, true);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         // Archived artifact should be copied:
@@ -588,7 +578,7 @@ public class CopyArtifactTest {
                 "**/*.txt", "", true, false, true));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -604,7 +594,7 @@ public class CopyArtifactTest {
                 "", "", false, false));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, ".hg/defaultexclude.txt", b);
@@ -618,7 +608,7 @@ public class CopyArtifactTest {
                 "**", "**/b/,foo*", "", false, false, true));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "subdir/subfoo.txt", b);
@@ -634,7 +624,7 @@ public class CopyArtifactTest {
                 "", "", true, false));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "defaultexclude.txt", b);
@@ -648,7 +638,7 @@ public class CopyArtifactTest {
                 "**", "**/*.log", "", true, false, true));
         // Run a build that places a file in the workspace, but does not archive anything
         other.getBuildersList().add(new ArtifactBuilder());
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "subfoo.txt", b);
@@ -782,7 +772,7 @@ public class CopyArtifactTest {
                 new ParametersAction(new StringParameterValue("FOO", "buildone"))).get();
         rule.assertBuildStatusSuccess(b);
         other.getBuildersList().add(new UnstableBuilder());
-        rule.assertBuildStatus(Result.UNSTABLE, other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.UNSTABLE, other);
         b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -791,7 +781,7 @@ public class CopyArtifactTest {
         // Invalid permalink
         p.getBuildersList().replace(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new PermalinkBuildSelector("fooBuild"), "*.txt", "", false, false, true));
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
@@ -807,7 +797,7 @@ public class CopyArtifactTest {
         FreeStyleBuild b = p.getBuildByNumber(1);
         for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
-        // TODO
+        // TODO use waitUntilNoActivity etc.
         while (b.isBuilding()) {
             Thread.sleep(10);
         }
@@ -815,18 +805,18 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
         // Verify error if build not triggered by upstream job:
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
         // test fallback
         
         //run a failing build to make sure the fallback selects the last successful build
         other.getPublishersList().clear();
         other.getBuildersList().add(new FailureBuilder());
-        rule.assertBuildStatus(Result.FAILURE, other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, other);
         
         p.getBuildersList().remove(CopyArtifact.class);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(),
                 null, new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
-        rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(p);
     }
 
     @Test
@@ -850,7 +840,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
         // p#1 was triggered, now building.
         b = p.getBuildByNumber(1);
-        // TODO
+        // TODO use waitUntilNoActivity etc.
         for (int i = 0; b == null && i < 2000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) {
@@ -860,18 +850,18 @@ public class CopyArtifactTest {
         assertFile(true, "foo.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
         // Verify error if build not triggered by upstream job:
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
         // test fallback
         
         //run a failing build to make sure the fallback selects the last successful build
         grandparent.getPublishersList().clear();
         grandparent.getBuildersList().add(new FailureBuilder());
-        rule.assertBuildStatus(Result.FAILURE, grandparent.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, grandparent);
         
         p.getBuildersList().remove(CopyArtifact.class);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(grandparent.getName(), null,
                 new TriggeredBuildSelector(true), "*.txt", "", false, false, true));
-        rule.assertBuildStatus(Result.SUCCESS, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(p);
     }
 
     /**
@@ -886,10 +876,10 @@ public class CopyArtifactTest {
                 null, new TriggeredBuildSelector(false), "*.txt", "", false, false, true));
         other.getPublishersList().add(new BuildTrigger(p.getFullName(), false));
         rule.jenkins.rebuildDependencyGraph();
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         // p#1 was triggered, now building.
         FreeStyleBuild b = p.getBuildByNumber(1);
-        // TODO
+        // TODO use waitUntilNoActivity etc.
         for (int i = 0; b == null && i < 1000; i++) { Thread.sleep(10); b = p.getBuildByNumber(1); }
         assertNotNull(b);
         while (b.isBuilding()) {
@@ -928,7 +918,7 @@ public class CopyArtifactTest {
     public void testFlatten() throws Exception {
         FreeStyleProject other = createArtifactProject(),
                          p = createProject(other.getName(), null, "", "newdir", false, true, false, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "newdir/foo.txt", b);
@@ -940,22 +930,22 @@ public class CopyArtifactTest {
     public void testOptional_MissingProject() throws Exception {
         // Missing project still fails even when copy is optional
         FreeStyleProject p = createProject("invalid", null, "", "", false, false, true, true);
-        rule.assertBuildStatus(Result.FAILURE, p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertStatus(Result.FAILURE, p);
     }
 
     @Test
     public void testOptional_MissingBuild() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(),
                          p = createProject(other.getName(), null, "", "", false, false, true, true);
-        rule.assertBuildStatusSuccess(p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(p);
     }
 
     @Test
     public void testOptional_MissingArtifact() throws Exception {
         FreeStyleProject other = rule.createFreeStyleProject(),
                          p = createProject(other.getName(), null, "*.txt", "", false, false, true, true);
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
-        rule.assertBuildStatusSuccess(p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
+        rule.buildAndAssertSuccess(p);
     }
 
     /**
@@ -1129,7 +1119,7 @@ public class CopyArtifactTest {
     @Test
     public void testPermissionWhenParameterizedForMavenModule() throws Exception {
         MavenModuleSet mp = setupMavenJob();
-        rule.assertBuildStatusSuccess(mp.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(mp);
         FreeStyleProject p = createProject(mp.getName() + "/org.jvnet.hudson.main.test.multimod$FOO",
                                            null, "", "", false, false, false, true);
         ParameterDefinition paramDef = new StringParameterDefinition("FOO", "foo");
@@ -1161,7 +1151,7 @@ public class CopyArtifactTest {
         for (int i = 0; i < 3; i++) {
             other.assignBuildNumber();
         }
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertEquals("4", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_MY_TEST_JOB"));
@@ -1335,9 +1325,9 @@ public class CopyArtifactTest {
         b.keepLog(true);
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact(other.getName(), "FOO=buildone",
                 new SavedBuildSelector(), "*.txt", "", false, false, true));
-        rule.assertBuildStatusSuccess(b = other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        b = rule.buildAndAssertSuccess(other);
         b.keepLog(true); // Keep #2 too, but it doesn't have FOO=buildone so should not be selected
-        rule.assertBuildStatusSuccess(b = p.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        b = rule.buildAndAssertSuccess(p);
         assertFile(true, "foo.txt", b);
         assertFile(true, "buildone.txt", b);
         assertFile(false, "subdir/subfoo.txt", b);
@@ -1497,7 +1487,7 @@ public class CopyArtifactTest {
 
         FreeStyleProject p = createProject("folder/foo", null, "", "", true, false, false, true);
 
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -1512,7 +1502,7 @@ public class CopyArtifactTest {
 
         FreeStyleProject p = createProject("/folder/foo", null, "", "", true, false, false, true);
 
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -1532,7 +1522,7 @@ public class CopyArtifactTest {
         // "folder/foo" should be resolved as "/folder/foo" even from "/other/bar", for backward compatibility
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("folder/foo", null, new StatusBuildSelector(true), "", "", false, false, true));
 
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -1548,7 +1538,7 @@ public class CopyArtifactTest {
         FreeStyleProject p = folder.createProject(FreeStyleProject.class, "bar");
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("/foo", null, new StatusBuildSelector(true), "", "", false, false, true));
 
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -1564,7 +1554,7 @@ public class CopyArtifactTest {
         FreeStyleProject p = folder.createProject(FreeStyleProject.class, "bar");
         p.getBuildersList().add(CopyArtifactUtil.createCopyArtifact("../foo", null, new StatusBuildSelector(true), "", "", false, false, true));
 
-        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause()).get());
+        rule.buildAndAssertSuccess(other);
         FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertFile(true, "foo.txt", b);
@@ -2024,7 +2014,7 @@ public class CopyArtifactTest {
         wc.getPage(req);
         
         // destProject should fail for permission error.
-        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
+        rule.buildAndAssertStatus(Result.FAILURE, destProject);
     }
     
     @Issue("JENKINS-23475")
@@ -2099,7 +2089,7 @@ public class CopyArtifactTest {
         }
         
         // destProject should fail for permission error.
-        rule.assertBuildStatus(Result.FAILURE, destProject.scheduleBuild2(0).get());
+        rule.buildAndAssertStatus(Result.FAILURE, destProject);
     }
 
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
