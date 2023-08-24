@@ -33,7 +33,7 @@
         <spotbugs.effort>Max</spotbugs.effort>
         <spotbugs.threshold>Low</spotbugs.threshold>
         <!-- TODO pending inclusion in parent: -->
-        <jenkins-test-harness.version>2061.v04b_f07857801</jenkins-test-harness.version> <!-- TODO https://github.com/jenkinsci/jenkins-test-harness/pull/643 -->
+        <jenkins-test-harness.version>2062.v3efc79721e45</jenkins-test-harness.version>
     </properties>
 
     <build>
