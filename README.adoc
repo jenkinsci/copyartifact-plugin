@@ -132,6 +132,8 @@ You can configure to allow Copy Artifact to access source jobs in the following 
 * <<CopyArtifactPlugin-Specifyprojectswhocancopyartifacts,Configure source jobs specifying jobs who can copy artifacts.>>
 * <<CopyArtifactPlugin-Authorizebuildsasauser,Authorize builds as a user.>>
 
+This message will not be encountered if the "Authenticated" user group has the "job/read" permission enabled. If you are suddenly starting to run into this issue, it is worth checking to see if this configuration has recently changed.
+
 [[CopyArtifactPlugin-Specifyprojectswhocancopyartifacts]]
 ==== Specify projects who can copy artifacts
 
