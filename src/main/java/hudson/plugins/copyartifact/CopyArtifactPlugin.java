@@ -28,5 +28,4 @@ import hudson.Plugin;
 /**
  * Copy Artifact plugin.
  */
-public class CopyArtifactPlugin extends Plugin {
-}
+public class CopyArtifactPlugin extends Plugin {}

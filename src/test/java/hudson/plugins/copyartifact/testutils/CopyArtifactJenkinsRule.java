@@ -24,6 +24,7 @@
 
 package hudson.plugins.copyartifact.testutils;
 
+import hudson.scm.SCM;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -38,23 +39,19 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.Map;
-
+import org.htmlunit.WebResponse;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import org.htmlunit.WebResponse;
-
-import hudson.scm.SCM;
-
 /**
  *
  */
 public class CopyArtifactJenkinsRule extends JenkinsRule {
     private static final int SC_METHOD_NOT_ALLOWED = 405;
-    
+
     /**
      * Get Web Client that allows 405 Method Not Allowed.
      * This happens when accessing build page of a project with parameters.
@@ -64,10 +61,8 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
             private static final long serialVersionUID = 2209855651713458482L;
 
             @Override
-            public void throwFailingHttpStatusCodeExceptionIfNecessary(
-                    WebResponse webResponse
-            ) {
-                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED) {
+            public void throwFailingHttpStatusCodeExceptionIfNecessary(WebResponse webResponse) {
+                if (webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED) {
                     // allow 405.
                     return;
                 }
@@ -76,8 +71,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
 
             @Override
             public void printContentIfNecessary(WebResponse webResponse) {
-                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED)
-                {
+                if (webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED) {
                     // allow 405.
                     return;
                 }
@@ -115,29 +109,18 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
         Files.deleteIfExists(scmZip.toPath());
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
-        try(final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env)) {
-            Files.walkFileTree(scmSource, new SimpleFileVisitor<Path>(){
+        try (final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env)) {
+            Files.walkFileTree(scmSource, new SimpleFileVisitor<Path>() {
                 @Override
-                public FileVisitResult visitFile(
-                    Path file,
-                    BasicFileAttributes attrs
-                ) throws IOException {
-                    Path dest = zipFile.getPath(
-                        "/",
-                        scmSource.relativize(file).toString()
-                    );
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    Path dest = zipFile.getPath("/", scmSource.relativize(file).toString());
                     Files.copy(file, dest);
                     return FileVisitResult.CONTINUE;
                 }
+
                 @Override
-                public FileVisitResult preVisitDirectory(
-                    Path dir,
-                    BasicFileAttributes attrs
-                ) throws IOException {
-                    Path dest = zipFile.getPath(
-                        "/",
-                        scmSource.relativize(dir).toString()
-                    );
+                public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                    Path dest = zipFile.getPath("/", scmSource.relativize(dir).toString());
                     if (Files.notExists(dest)) {
                         // Creating root directory cause FileAlreadyExistsException
                         Files.createDirectory(dest);

@@ -38,10 +38,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class LastCompletedBuildSelector extends BuildSelector {
 
     @DataBoundConstructor
-    public LastCompletedBuildSelector() { }
+    public LastCompletedBuildSelector() {}
 
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
         return true;
     }
 
@@ -52,7 +52,8 @@ public class LastCompletedBuildSelector extends BuildSelector {
     @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
-    @Extension @Symbol("lastCompleted")
+    @Extension
+    @Symbol("lastCompleted")
     public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         public DescriptorImpl() {
             super(LastCompletedBuildSelector.class, Messages._LastCompletedBuildSelector_DisplayName());

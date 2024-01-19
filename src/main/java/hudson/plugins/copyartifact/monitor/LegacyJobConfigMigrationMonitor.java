@@ -24,7 +24,8 @@
 package hudson.plugins.copyartifact.monitor;
 
 import com.cloudbees.hudson.plugins.folder.computed.ComputedFolder;
-
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.BulkChange;
 import hudson.Extension;
@@ -41,8 +42,20 @@ import hudson.model.listeners.SaveableListener;
 import hudson.plugins.copyartifact.CopyArtifactPermissionProperty;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.servlet.http.HttpServletResponse;
 import jenkins.model.Jenkins;
-
+import net.jcip.annotations.GuardedBy;
 import org.apache.commons.io.IOUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
@@ -56,23 +69,6 @@ import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.kohsuke.stapler.json.JsonBody;
 import org.kohsuke.stapler.lang.Klass;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
-import net.jcip.annotations.GuardedBy;
-import javax.servlet.http.HttpServletResponse;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 /**
  * Monitor the list of legacy job configuration that require administrator attention
  *
@@ -82,13 +78,14 @@ import java.util.logging.Logger;
 @Symbol("copyArtifactLegacyJobConfigMigration")
 public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor implements Saveable {
     private static final Logger LOGGER = Logger.getLogger(LegacyJobConfigMigrationMonitor.class.getName());
-    
+
     public static final String ID = "copyArtifactLegacyJobConfigMigration";
-    
+
     private final transient ReadWriteLock lock = new ReentrantReadWriteLock(true);
+
     @GuardedBy("lock")
     private final LegacyMonitorData data = new LegacyMonitorData();
-    
+
     /**
      * ctor.
      */
@@ -96,7 +93,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         super(ID);
         load();
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -104,7 +101,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     public String getDisplayName() {
         return Messages.LegacyJobConfigMigrationMonitor_displayName();
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -121,7 +118,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             readLock.unlock();
         }
     }
-    
+
     /**
      * @return data holding the list of jobs to warn.
      */
@@ -129,7 +126,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
     /* Visible for testing */ LegacyMonitorData getData() {
         return data;
     }
-    
+
     /**
      * Load recorded warnings from serialized data.
      */
@@ -138,7 +135,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         if (!file.exists()) {
             return;
         }
-        
+
         Lock writeLock = lock.writeLock();
         writeLock.lock();
         try {
@@ -149,7 +146,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             writeLock.unlock();
         }
     }
-    
+
     /**
      * Save recorded warnings to the file.
      *
@@ -161,7 +158,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             return;
         }
         XmlFile config = getConfigXml();
-        
+
         Lock readLock = lock.readLock();
         readLock.lock();
         try {
@@ -173,15 +170,16 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             readLock.unlock();
         }
     }
-    
+
     /**
      * @return the path of the xml file to save warnings.
      */
     @NonNull
     public static XmlFile getConfigXml() {
-        return new XmlFile(new File(Jenkins.get().getRootDir(), LegacyJobConfigMigrationMonitor.class.getName() + ".xml"));
+        return new XmlFile(
+                new File(Jenkins.get().getRootDir(), LegacyJobConfigMigrationMonitor.class.getName() + ".xml"));
     }
-    
+
     /**
      * Used by Jelly
      *
@@ -198,7 +196,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             readLock.unlock();
         }
     }
-    
+
     /**
      * Add information of the source job and destination job that would fail in Production mode.
      *
@@ -207,13 +205,15 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @param lastBuildDate the build timestamp.
      * @param username the user name the destination job ran as.
      */
-    public void addLegacyJob(@NonNull Job<?, ?> jobTryingToCopy,
-                             @NonNull Job<?, ?> jobToBeCopiedFrom,
-                             @NonNull Date lastBuildDate,
-                             @NonNull String username) {
-        LOGGER.log(Level.FINE, "Adding a legacy job to the monitor: from {0} to {1}",
-                new Object[]{jobToBeCopiedFrom.getFullName(), jobTryingToCopy.getFullName()});
-        
+    public void addLegacyJob(
+            @NonNull Job<?, ?> jobTryingToCopy,
+            @NonNull Job<?, ?> jobToBeCopiedFrom,
+            @NonNull Date lastBuildDate,
+            @NonNull String username) {
+        LOGGER.log(Level.FINE, "Adding a legacy job to the monitor: from {0} to {1}", new Object[] {
+            jobToBeCopiedFrom.getFullName(), jobTryingToCopy.getFullName()
+        });
+
         Lock writeLock = lock.writeLock();
         writeLock.lock();
         try {
@@ -223,29 +223,24 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
             writeLock.unlock();
         }
     }
-    
+
     /**
      * Remove information of the source job and destination job that would fail in Production mode.
      *
      * @param jobTryingToCopy the destination job.
      * @param jobToBeCopiedFrom the source job.
      */
-    public void removeLegacyJob(
-        @NonNull Job<?, ?> jobTryingToCopy,
-        @NonNull Job<?, ?> jobToBeCopiedFrom
-    ){
+    public void removeLegacyJob(@NonNull Job<?, ?> jobTryingToCopy, @NonNull Job<?, ?> jobToBeCopiedFrom) {
         String jobToBeCopiedFromName = jobToBeCopiedFrom.getFullName();
         String jobTryingToCopyName = jobTryingToCopy.getFullName();
         Lock writeLock = lock.writeLock();
         writeLock.lock();
         try {
-            if(data.removeLegacyJob(jobToBeCopiedFromName, jobTryingToCopyName)) {
+            if (data.removeLegacyJob(jobToBeCopiedFromName, jobTryingToCopyName)) {
                 save();
-                LOGGER.log(
-                    Level.FINE,
-                    "Removed a legacy job form the monitor: from {0} to {1}",
-                    new Object[]{jobToBeCopiedFromName, jobTryingToCopyName}
-                );
+                LOGGER.log(Level.FINE, "Removed a legacy job form the monitor: from {0} to {1}", new Object[] {
+                    jobToBeCopiedFromName, jobTryingToCopyName
+                });
             }
         } finally {
             writeLock.unlock();
@@ -277,10 +272,10 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         } catch (IOException e) {
             LOGGER.log(Level.INFO, "Problem during bulk save", e);
         }
-        
+
         return HttpResponses.ok();
     }
-    
+
     /**
      * Called from jelly (stapler).
      *
@@ -308,7 +303,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
                         this.data.removeLegacyJob(value.jobFrom, value.jobTo);
                     }
                 }
-                
+
                 bc.commit();
             } catch (IOException e) {
                 LOGGER.log(Level.INFO, "Problem during bulk save", e);
@@ -316,10 +311,10 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         }
         return HttpResponses.ok();
     }
-    
+
     private static Job<?, ?> getRootProject(Job<?, ?> job) {
         if (job instanceof AbstractProject) {
-            return ((AbstractProject<?,?>)job).getRootProject();
+            return ((AbstractProject<?, ?>) job).getRootProject();
         } else {
             return job;
         }
@@ -332,19 +327,22 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         Job<?, ?> jobFrom = getRootProject(jenkins.getItemByFullName(jobFromName, Job.class));
         Job<?, ?> jobTo = getRootProject(jenkins.getItemByFullName(jobToName, Job.class));
         if (jobFrom == null) {
-            LOGGER.log(Level.INFO, "Project (from) {0} not found, corresponds with (to) {1}, it was perhaps renamed or removed recently",
-                    new Object[]{jobFromName, jobToName});
+            LOGGER.log(
+                    Level.INFO,
+                    "Project (from) {0} not found, corresponds with (to) {1}, it was perhaps renamed or removed recently",
+                    new Object[] {jobFromName, jobToName});
             return false;
         }
         if (jobTo == null) {
-            LOGGER.log(Level.INFO, "Project (to) {0} not found, corresponds with (from) {1}, it was perhaps renamed or removed recently",
-                    new Object[]{jobToName, jobFromName});
+            LOGGER.log(
+                    Level.INFO,
+                    "Project (to) {0} not found, corresponds with (from) {1}, it was perhaps renamed or removed recently",
+                    new Object[] {jobToName, jobFromName});
             return false;
         }
 
         if (!canMigrate(jobFrom)) {
-            LOGGER.log(Level.INFO, "Auto-migration is not applicable to project (from) {0}.",
-                    jobFromName);
+            LOGGER.log(Level.INFO, "Auto-migration is not applicable to project (from) {0}.", jobFromName);
             return false;
         }
 
@@ -352,23 +350,25 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         if (property == null) {
             String relativeName = jobTo.getRelativeNameFrom(jobFrom);
             jobFrom.addProperty(new CopyArtifactPermissionProperty(relativeName));
-            
-            LOGGER.log(Level.INFO, "Project {0} is now authorized to copy from {1} as {2}",
-                    new Object[]{jobFromName, jobToName, relativeName});
+
+            LOGGER.log(Level.INFO, "Project {0} is now authorized to copy from {1} as {2}", new Object[] {
+                jobFromName, jobToName, relativeName
+            });
         } else {
             if (property.canCopiedBy(jobTo)) {
-                LOGGER.log(Level.FINE, "Project {0} was already authorized by {1}",
-                        new Object[]{jobToName, jobFromName});
+                LOGGER.log(
+                        Level.FINE, "Project {0} was already authorized by {1}", new Object[] {jobToName, jobFromName});
             } else {
                 // see CopyArtifactPermissionProperty#canCopiedBy(Job)
                 String relativeName = jobTo.getRelativeNameFrom(jobFrom);
                 String newProjectNames = property.getProjectNames() + "," + relativeName;
-                
+
                 jobFrom.removeProperty(CopyArtifactPermissionProperty.class);
                 jobFrom.addProperty(new CopyArtifactPermissionProperty(newProjectNames));
-                
-                LOGGER.log(Level.INFO, "Project {0} is now authorized to copy from {1} as {2}",
-                        new Object[]{jobFromName, jobToName, relativeName});
+
+                LOGGER.log(Level.INFO, "Project {0} is now authorized to copy from {1} as {2}", new Object[] {
+                    jobFromName, jobToName, relativeName
+                });
             }
         }
 
@@ -389,7 +389,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         }
         ItemGroup<?> parent = job.getParent();
         while (parent instanceof Job) {
-            parent = ((Job<?, ?>)parent).getParent();
+            parent = ((Job<?, ?>) parent).getParent();
         }
         return !(parent instanceof ComputedFolder<?>);
     }
@@ -398,27 +398,21 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * Used from jelly (stapler) to hold selected items.
      */
     @Restricted(NoExternalUse.class)
-    @SuppressFBWarnings(
-        value="UWF_NULL_FIELD",
-        justification="Fields are set from the json in the HTTP request"
-    )
+    @SuppressFBWarnings(value = "UWF_NULL_FIELD", justification = "Fields are set from the json in the HTTP request")
     public static final class MigrateAllSelectedModel {
         public MigrateAllSelectedFromAndTo[] values = null;
     }
-    
+
     /**
      * Used from jelly (stapler) to hold a selected item.
      */
     @Restricted(NoExternalUse.class)
-    @SuppressFBWarnings(
-        value="UWF_NULL_FIELD",
-        justification="Fields are set from the json in the HTTP request"
-    )
+    @SuppressFBWarnings(value = "UWF_NULL_FIELD", justification = "Fields are set from the json in the HTTP request")
     public static final class MigrateAllSelectedFromAndTo {
         public String jobFrom = null;
         public String jobTo = null;
     }
-    
+
     /**
      * @return the singleton instance.
      */
@@ -428,10 +422,11 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         if (monitor instanceof LegacyJobConfigMigrationMonitor) {
             return (LegacyJobConfigMigrationMonitor) monitor;
         } else {
-            throw new AssertionError("The desired monitor is missing: " + LegacyJobConfigMigrationMonitor.class.getName());
+            throw new AssertionError(
+                    "The desired monitor is missing: " + LegacyJobConfigMigrationMonitor.class.getName());
         }
     }
-    
+
     /**
      * Called from jelly (stapler).
      *
@@ -441,8 +436,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @throws IOException servlet communication errors.
      */
     @Restricted(DoNotUse.class)
-    public void doHelpDetailedSteps(StaplerResponse rsp) throws IOException
-    {
+    public void doHelpDetailedSteps(StaplerResponse rsp) throws IOException {
         URL url = getStaticResourceUrl("help-detailedSteps");
         if (url == null) {
             rsp.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -467,32 +461,15 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
 
         URL url;
         url = c.getResource(
-            base
-            + '_'
-            + locale.getLanguage()
-            + '_'
-            + locale.getCountry()
-            + '_'
-            + locale.getVariant() + ".html"
-        );
+                base + '_' + locale.getLanguage() + '_' + locale.getCountry() + '_' + locale.getVariant() + ".html");
         if (url != null) {
             return url;
         }
-        url = c.getResource(
-            base
-            + '_' + locale.getLanguage()
-            + '_' + locale.getCountry()
-            + ".html"
-        );
+        url = c.getResource(base + '_' + locale.getLanguage() + '_' + locale.getCountry() + ".html");
         if (url != null) {
             return url;
         }
-        url = c.getResource(
-            base
-            + '_'
-            + locale.getLanguage()
-            + ".html"
-        );
+        url = c.getResource(base + '_' + locale.getLanguage() + ".html");
         if (url != null) {
             return url;
         }
@@ -512,7 +489,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         public void onRenamed(Item item, String oldName, String newName) {
             String oldFullName = Items.getCanonicalName(item.getParent(), oldName);
             String newFullName = Items.getCanonicalName(item.getParent(), newName);
-            
+
             LegacyJobConfigMigrationMonitor monitor = LegacyJobConfigMigrationMonitor.get();
             Lock writeLock = monitor.lock.writeLock();
             writeLock.lock();

@@ -24,7 +24,6 @@
 package hudson.plugins.copyartifact;
 
 import hudson.model.Descriptor;
-
 import org.jvnet.localizer.Localizable;
 
 /**
@@ -36,8 +35,7 @@ import org.jvnet.localizer.Localizable;
 public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
     private transient Localizable displayName;
 
-    public SimpleBuildSelectorDescriptor(Class<? extends BuildSelector> clazz,
-                                         Localizable displayName) {
+    public SimpleBuildSelectorDescriptor(Class<? extends BuildSelector> clazz, Localizable displayName) {
         super(clazz);
         this.displayName = displayName;
     }
@@ -46,7 +44,7 @@ public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
     public String getDisplayName() {
         return displayName.toString();
     }
-    
+
     @Override
     public String getConfigPage() {
         if (!getClass().equals(SimpleBuildSelectorDescriptor.class)) {
@@ -60,7 +58,7 @@ public class SimpleBuildSelectorDescriptor extends Descriptor<BuildSelector> {
         // using SimpleBuildSelectorDescriptor (JENKINS-28972).
         return getViewPage(SimpleBuildSelectorDescriptor.class, "config.jelly");
     }
-    
+
     public String getBuildSelectorConfigPage() {
         return super.getConfigPage();
     }

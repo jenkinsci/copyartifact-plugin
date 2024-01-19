@@ -46,21 +46,19 @@ public class StatusBuildSelector extends BuildSelector {
     }
 
     @DataBoundConstructor
-    public StatusBuildSelector() {
-    }
+    public StatusBuildSelector() {}
 
     @DataBoundSetter
     public void setStable(boolean stable) {
         this.stable = stable ? Boolean.TRUE : null;
     }
 
-
     public boolean isStable() {
         return stable != null && stable.booleanValue();
     }
 
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
         return isBuildResultBetterOrEqualTo(run, isStable() ? Result.SUCCESS : Result.UNSTABLE);
     }
 
@@ -71,7 +69,8 @@ public class StatusBuildSelector extends BuildSelector {
     @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
-    @Extension(ordinal=100) @Symbol("lastSuccessful")
+    @Extension(ordinal = 100)
+    @Symbol("lastSuccessful")
     public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         public DescriptorImpl() {
             super(StatusBuildSelector.class, Messages._StatusBuildSelector_DisplayName());
