@@ -33,15 +33,15 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class LastBuildWithArtifactSelector extends BuildSelector {
 
     @DataBoundConstructor
-    public LastBuildWithArtifactSelector() {}
+    public LastBuildWithArtifactSelector() {
+    }
 
     @Override
     public boolean isSelectable(Run<?, ?> run, EnvVars env) {
         return run.getHasArtifacts();
     }
 
-    @Extension
-    @Symbol("lastWithArtifacts")
+    @Extension @Symbol("lastWithArtifacts")
     public static class DescriptorImpl extends Descriptor<BuildSelector> {
         @Override
         public String getDisplayName() {

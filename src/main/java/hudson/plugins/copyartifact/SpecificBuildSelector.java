@@ -31,6 +31,7 @@ import hudson.model.PermalinkProjectAction;
 import hudson.model.Run;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -55,32 +56,32 @@ public class SpecificBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?, ?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?, ?> parent) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         String num = env.expand(buildNumber);
         if (num.startsWith("$")) {
             LOGGER.log(Level.FINE, "unresolved variable {0}", num);
             return null;
         }
 
-        Run<?, ?> run = null;
+        Run<?,?> run = null;
 
-        if (num.matches("[0-9]*")) {
-            // If its a number, retrieve the build.
+        if(num.matches("[0-9]*")) {
+            //If its a number, retrieve the build.
             run = job.getBuildByNumber(Integer.parseInt(num));
         } else {
-            // Otherwise, check if the buildNumber value is a permalink or a display name.
+            //Otherwise, check if the buildNumber value is a permalink or a display name.
             PermalinkProjectAction.Permalink p = job.getPermalinks().get(num);
             if (p == null) {
-                // Not a permalink so check if the buildNumber value is a display name.
-                for (Run<?, ?> build : job.getBuilds()) {
-                    if (num.equals(build.getDisplayName())) {
-                        // First named build found is the right one, going from latest build to oldest.
+                //Not a permalink so check if the buildNumber value is a display name.
+                for(Run<?,?> build: job.getBuilds()){
+                    if(num.equals(build.getDisplayName())) {
+                        //First named build found is the right one, going from latest build to oldest.
                         run = build;
                         break;
                     }
                 }
             } else {
-                // Retrieve the permalink
+                //Retrieve the permalink
                 run = p.resolve(job);
             }
         }
@@ -103,8 +104,7 @@ public class SpecificBuildSelector extends BuildSelector {
     @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
-    @Extension(ordinal = -10)
-    @Symbol("specific")
+    @Extension(ordinal=-10) @Symbol("specific")
     public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         public DescriptorImpl() {
             super(SpecificBuildSelector.class, Messages._SpecificBuildSelector_DisplayName());

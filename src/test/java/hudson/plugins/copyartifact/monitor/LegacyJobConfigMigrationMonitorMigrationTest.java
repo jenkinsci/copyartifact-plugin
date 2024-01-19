@@ -27,6 +27,18 @@ package hudson.plugins.copyartifact.monitor;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProjectTest;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.MockFolder;
+import org.jvnet.hudson.test.ToolInstallations;
+
 import hudson.matrix.Axis;
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
@@ -47,17 +59,6 @@ import jenkins.branch.DefaultBranchPropertyStrategy;
 import jenkins.branch.NoTriggerBranchProperty;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
-import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProjectTest;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.MockAuthorizationStrategy;
-import org.jvnet.hudson.test.MockFolder;
-import org.jvnet.hudson.test.ToolInstallations;
 
 /**
  * Test that migration is applicable to various jobs.
@@ -65,23 +66,22 @@ import org.jvnet.hudson.test.ToolInstallations;
 public class LegacyJobConfigMigrationMonitorMigrationTest {
     @Rule
     public CopyArtifactJenkinsRule j = new CopyArtifactJenkinsRule();
-
     @Rule
     public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-
     @Rule
     public TemporaryFolder tempFolder = new TemporaryFolder();
 
     private boolean applyAutoMigrationToAll() throws Exception {
         boolean migrated = true;
-        for (JobKey key : LegacyJobConfigMigrationMonitor.get()
-                .getData()
-                .getLegacyJobInfos()
-                .keySet()) {
-            migrated &= LegacyJobConfigMigrationMonitor.get().applyAutoMigration(key.from, key.to);
+        for (JobKey key: LegacyJobConfigMigrationMonitor.get().getData().getLegacyJobInfos().keySet()) {
+            migrated &= LegacyJobConfigMigrationMonitor.get().applyAutoMigration(
+                key.from,
+                key.to
+            );
         }
         return migrated;
     }
+
 
     @Before
     public void prepareMigration() {
@@ -97,12 +97,18 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     @Test
     public void migrate_freestyle_to_freestyle() throws Exception {
         FreeStyleProject src = j.createFreeStyleProject();
-        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "artifact content"));
-        src.getPublishersList().add(new ArtifactArchiver("**/*"));
+        src.getBuildersList().add(
+            new FileWriteBuilder("artifact.txt", "artifact content")
+        );
+        src.getPublishersList().add(
+            new ArtifactArchiver("**/*")
+        );
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         FreeStyleProject dst = j.createFreeStyleProject();
-        dst.getBuildersList().add(new CopyArtifact(src.getFullName()));
+        dst.getBuildersList().add(
+            new CopyArtifact(src.getFullName())
+        );
 
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
@@ -119,15 +125,21 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_pipeline_to_pipeline() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -144,15 +156,21 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MockFolder f = j.createFolder("folder");
         WorkflowJob src = f.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -168,16 +186,22 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_pipeline_to_pipeline_in_folder() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         MockFolder f = j.createFolder("folder");
         WorkflowJob dst = f.createProject(WorkflowJob.class, "dst");
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -194,15 +218,21 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MockFolder f = j.createFolder("folder");
         WorkflowJob src = f.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = f.createProject(WorkflowJob.class, "dst");
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -219,16 +249,22 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         MockFolder f1 = j.createFolder("folder1");
         WorkflowJob src = f1.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         MockFolder f2 = j.createFolder("folder2");
         WorkflowJob dst = f2.createProject(WorkflowJob.class, "dst");
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -243,13 +279,24 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     @Test
     public void migrate_matrix_to_pipeline() throws Exception {
         MatrixProject src = j.createProject(MatrixProject.class);
-        src.setAxes(new AxisList(new Axis("axis1", "value1", "value2")));
-        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "artifact content"));
-        src.getPublishersList().add(new ArtifactArchiver("**/*"));
+        src.setAxes(new AxisList(
+            new Axis("axis1", "value1", "value2")
+        ));
+        src.getBuildersList().add(
+            new FileWriteBuilder("artifact.txt", "artifact content")
+        );
+        src.getPublishersList().add(
+            new ArtifactArchiver("**/*")
+        );
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -264,19 +311,25 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     @Test
     public void migrate_matrixchild_to_pipeline() throws Exception {
         MatrixProject src = j.createProject(MatrixProject.class);
-        AxisList axisList = new AxisList(new Axis("axis1", "value1", "value2"));
+        AxisList axisList = new AxisList(
+            new Axis("axis1", "value1", "value2")
+        );
         src.setAxes(axisList);
-        src.getBuildersList().add(new FileWriteBuilder("artifact.txt", "artifact content"));
-        src.getPublishersList().add(new ArtifactArchiver("**/*"));
+        src.getBuildersList().add(
+            new FileWriteBuilder("artifact.txt", "artifact content")
+        );
+        src.getPublishersList().add(
+            new ArtifactArchiver("**/*")
+        );
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
         dst.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "copyArtifacts('"
-                        + src.getItem(new Combination(axisList, "value1")).getFullName() + "');"
-                        + "}",
-                true));
+            "node {"
+                + "copyArtifacts('" + src.getItem(new Combination(axisList, "value1")).getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -292,17 +345,22 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_pipeline_to_matrix() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         MatrixProject dst = j.createProject(MatrixProject.class);
-        AxisList axisList = new AxisList(new Axis("axis1", "value1", "value2"));
+        AxisList axisList = new AxisList(
+            new Axis("axis1", "value1", "value2")
+        );
         dst.setAxes(axisList);
-        dst.getBuildersList().add(new CopyArtifact(src.getFullName()));
+        dst.getBuildersList().add(
+            new CopyArtifact(src.getFullName())
+        );
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -324,7 +382,12 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
-        dst.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        dst.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -347,10 +410,11 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
         dst.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "copyArtifacts('" + src.getFullName() + "/org.jvnet.hudson.main.test.multimod$moduleA');"
-                        + "}",
-                true));
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "/org.jvnet.hudson.main.test.multimod$moduleA');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -366,11 +430,12 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_pipeline_to_maven() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         ToolInstallations.configureMaven3();
@@ -378,7 +443,9 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         dst.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         dst.setRunHeadless(true);
         dst.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
-        dst.getPrebuilders().add(new CopyArtifact(src.getFullName()));
+        dst.getPrebuilders().add(
+            new CopyArtifact(src.getFullName())
+        );
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -394,30 +461,45 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_pipeline_to_multibranch() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}",
-                true));
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         sampleRepo.init();
-        sampleRepo.write("Jenkinsfile", "node {" + "copyArtifacts('" + src.getFullName() + "');" + "}");
+        sampleRepo.write(
+            "Jenkinsfile",
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}"
+        );
         sampleRepo.git("add", "Jenkinsfile");
         sampleRepo.git("commit", "--message=initial commit");
 
-        WorkflowMultiBranchProject mp = j.createProject(WorkflowMultiBranchProject.class);
+        WorkflowMultiBranchProject mp = j.createProject(
+            WorkflowMultiBranchProject.class
+        );
         BranchSource branch = new BranchSource(new GitSCMSource(
-                null, // id
-                sampleRepo.toString(),
-                "", // credentialsId
-                "*", // includes
-                "", // excludes
-                false // ignoreOnPushNotification
-                ));
-        branch.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] {new NoTriggerBranchProperty()}));
+            null,   // id
+            sampleRepo.toString(),
+            "",     // credentialsId
+            "*",    // includes
+            "",     // excludes
+            false   // ignoreOnPushNotification
+        ));
+        branch.setStrategy(
+            new DefaultBranchPropertyStrategy(new BranchProperty[] {
+                new NoTriggerBranchProperty()
+            })
+        );
         mp.getSourcesList().add(branch);
-        WorkflowJob dst = WorkflowMultiBranchProjectTest.scheduleAndFindBranchProject(mp, "master");
+        WorkflowJob dst = WorkflowMultiBranchProjectTest.scheduleAndFindBranchProject(
+            mp,
+            "master"
+        );
         j.assertBuildStatusSuccess(dst.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
@@ -433,37 +515,52 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     public void migrate_multibranch_to_pipeline() throws Exception {
         sampleRepo.init();
         sampleRepo.write(
-                "Jenkinsfile",
-                "node {"
-                        + "writeFile(text: 'artifact', file: 'artifact.txt');"
-                        + "archiveArtifacts(artifacts: 'artifact.txt');"
-                        + "}");
+            "Jenkinsfile",
+            "node {"
+                + "writeFile(text: 'artifact', file: 'artifact.txt');"
+                + "archiveArtifacts(artifacts: 'artifact.txt');"
+                + "}"
+        );
         sampleRepo.git("add", "Jenkinsfile");
         sampleRepo.git("commit", "--message=initial commit");
 
-        WorkflowMultiBranchProject mp = j.createProject(WorkflowMultiBranchProject.class);
+        WorkflowMultiBranchProject mp = j.createProject(
+            WorkflowMultiBranchProject.class
+        );
         BranchSource branch = new BranchSource(new GitSCMSource(
-                null, // id
-                sampleRepo.toString(),
-                "", // credentialsId
-                "*", // includes
-                "", // excludes
-                false // ignoreOnPushNotification
-                ));
-        branch.setStrategy(new DefaultBranchPropertyStrategy(new BranchProperty[] {new NoTriggerBranchProperty()}));
+            null,   // id
+            sampleRepo.toString(),
+            "",     // credentialsId
+            "*",    // includes
+            "",     // excludes
+            false   // ignoreOnPushNotification
+        ));
+        branch.setStrategy(
+            new DefaultBranchPropertyStrategy(new BranchProperty[] {
+                new NoTriggerBranchProperty()
+            })
+        );
         mp.getSourcesList().add(branch);
-        WorkflowJob src = WorkflowMultiBranchProjectTest.scheduleAndFindBranchProject(mp, "master");
+        WorkflowJob src = WorkflowMultiBranchProjectTest.scheduleAndFindBranchProject(
+            mp,
+            "master"
+        );
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         WorkflowJob dst = j.createProject(WorkflowJob.class);
-        src.setDefinition(new CpsFlowDefinition("node {" + "copyArtifacts('" + src.getFullName() + "');" + "}", true));
+        src.setDefinition(new CpsFlowDefinition(
+            "node {"
+                + "copyArtifacts('" + src.getFullName() + "');"
+                + "}",
+            true
+        ));
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
 
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.PRODUCTION);
 
         j.assertBuildStatus(Result.FAILURE, dst.scheduleBuild2(0));
 
-        // This should fail as the configuration of multibranch
+        // This should fail as the configuration of multibranch 
         // cannot be overwritten.
         assertFalse(applyAutoMigrationToAll());
 

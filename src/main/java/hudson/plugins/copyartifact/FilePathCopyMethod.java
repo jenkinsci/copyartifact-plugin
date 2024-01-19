@@ -23,11 +23,13 @@
  */
 package hudson.plugins.copyartifact;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.model.Run;
+
 import java.io.IOException;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Default implementation of CopyMethod extension point,
@@ -37,12 +39,11 @@ import java.io.IOException;
  * @deprecated No longer used.
  */
 @Deprecated
-@Extension(ordinal = -200)
+@Extension(ordinal=-200)
 public class FilePathCopyMethod extends Copier {
     /** @see FilePath#copyRecursiveTo(String,FilePath) */
     @Override
-    public int copyAll(
-            FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)
+    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)
             throws IOException, InterruptedException {
         return srcDir.copyRecursiveTo(filter, excludes, targetDir);
     }
@@ -56,13 +57,13 @@ public class FilePathCopyMethod extends Copier {
 
     @SuppressFBWarnings(
             value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
-            justification = "This is a method not of Cloneable but of Copier.")
+            justification = "This is a method not of Cloneable but of Copier."
+    )
     @Override
     public Copier clone() {
         return this;
     }
 
-    @Override
-    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir)
-            throws IOException, InterruptedException {}
+    @Override public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {}
+
 }

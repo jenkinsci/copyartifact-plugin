@@ -38,7 +38,7 @@ public class BuildFilter {
      * @param env Environment for build that is copying artifacts
      * @return True if this build may be selected; default implementation always returns true.
      */
-    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return true;
     }
 }

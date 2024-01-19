@@ -24,13 +24,14 @@
 package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
+import hudson.model.ParameterValue;
+import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.Job;
-import hudson.model.ParameterValue;
 import hudson.model.ParametersAction;
 import hudson.model.Run;
 import hudson.model.StringParameterValue;
-import hudson.model.TaskListener;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +57,7 @@ public class ParametersBuildFilter extends BuildFilter {
         }
     }
 
-    public boolean isValid(Job<?, ?> job) {
+    public boolean isValid(Job<?,?> job) {
         if (filters.isEmpty()) {
             // Unable to parse text after /
             return false;
@@ -82,25 +83,25 @@ public class ParametersBuildFilter extends BuildFilter {
      * {@inheritDoc}
      */
     @Override
-    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         EnvVars otherEnv;
         try {
             otherEnv = run.getEnvironment(TaskListener.NULL);
         } catch (Exception ex) {
             return false;
         }
-        if (!(run instanceof AbstractBuild)) {
+        if(!(run instanceof AbstractBuild)) {
             // Abstract#getEnvironment(TaskListener) put build parameters to
             // environments, but Run#getEnvironment(TaskListener) doesn't.
             // That means we can't retrieve build parameters from WorkflowRun
             // as it is a subclass of Run, not of AbstractBuild.
             // We need expand build parameters manually.
             // See JENKINS-26694 for details.
-            for (ParametersAction pa : run.getActions(ParametersAction.class)) {
+            for(ParametersAction pa: run.getActions(ParametersAction.class)) {
                 // We have to extract parameters manually as ParametersAction#buildEnvVars
                 // (overrides EnvironmentContributingAction#buildEnvVars)
                 // is applicable only for AbstractBuild.
-                for (ParameterValue pv : pa.getParameters()) {
+                for(ParameterValue pv: pa.getParameters()) {
                     pv.buildEnvironment(run, otherEnv);
                 }
             }

@@ -34,7 +34,7 @@ public enum CopyArtifactCompatibilityMode {
      * Once all the jobs are migrated using the {@link #MIGRATION} mode, this mode could be activated to ensure better security.
      */
     PRODUCTION(Messages._CopyArtifactCompatibilityMode_ProductionMode()),
-
+    
     /**
      * Legacy behavior where the project we want to copy the artifact from is checked either at configure time or at runtime
      * depending on who is configuring the project and if it's static or dynamic (using parameter)
@@ -48,21 +48,21 @@ public enum CopyArtifactCompatibilityMode {
      * @see hudson.plugins.copyartifact.monitor.MigrationModeDisabledMonitor
      */
     MIGRATION(Messages._CopyArtifactCompatibilityMode_MigrationMode());
-
+    
     private final Localizable description;
-
+    
     public String getDescription() {
         return description.toString();
     }
-
+    
     public String getName() {
         return name();
     }
-
+    
     CopyArtifactCompatibilityMode(Localizable description) {
         this.description = description;
     }
-
+    
     static {
         // to allow the conversion from the string to the Enum in the databinding process
         Stapler.CONVERT_UTILS.register(new EnumConverter(), CopyArtifactCompatibilityMode.class);

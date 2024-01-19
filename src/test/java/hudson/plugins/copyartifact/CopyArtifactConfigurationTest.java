@@ -27,20 +27,23 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
-import hudson.XmlFile;
-import hudson.model.Saveable;
-import hudson.model.User;
-import hudson.model.listeners.SaveableListener;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.hamcrest.Matchers;
-import org.htmlunit.html.HtmlForm;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
+
+import org.htmlunit.html.HtmlForm;
+
+import hudson.XmlFile;
+import hudson.model.Saveable;
+import hudson.model.User;
+import hudson.model.listeners.SaveableListener;
 
 /**
  * Tests for {@link CopyArtifactConfiguration}
@@ -134,9 +137,10 @@ public class CopyArtifactConfigurationTest {
             // An operation to call ExtensionFinder to verify JENKINS-62267 is fixed.
             User user = User.current();
             LOG.log(
-                    Level.INFO,
-                    "LoadingExtensionFinderSavableListener#onChange with: {0}",
-                    user != null ? user.getId() : "NULL");
+                Level.INFO,
+                "LoadingExtensionFinderSavableListener#onChange with: {0}",
+                user != null ? user.getId() : "NULL"
+            );
         }
     }
 }

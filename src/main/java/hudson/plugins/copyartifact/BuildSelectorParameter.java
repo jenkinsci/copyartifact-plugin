@@ -23,7 +23,13 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import com.thoughtworks.xstream.XStreamException;
+import jenkins.model.Jenkins;
 import hudson.DescriptorExtensionList;
 import hudson.Extension;
 import hudson.init.InitMilestone;
@@ -33,11 +39,6 @@ import hudson.model.ParameterValue;
 import hudson.model.SimpleParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.util.XStream2;
-import java.util.Collections;
-import java.util.List;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -103,7 +104,8 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
     }
 
     private StringParameterValue toStringValue(BuildSelector selector) {
-        return new StringParameterValue(getName(), toXML(selector), getDescription());
+        return new StringParameterValue(
+                getName(), toXML(selector), getDescription());
     }
 
     private static String toXML(BuildSelector selector) {
@@ -118,21 +120,20 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
      * @throws ClassCastException if input is invalid
      */
     public static BuildSelector getSelectorFromXml(String xml) {
-        return (BuildSelector) XSTREAM.fromXML(xml);
+        return (BuildSelector)XSTREAM.fromXML(xml);
     }
 
-    @Extension
-    @Symbol("buildSelector")
+    @Extension @Symbol("buildSelector")
     public static class DescriptorImpl extends ParameterDescriptor {
         @Override
         public String getDisplayName() {
             return Messages.BuildSelectorParameter_DisplayName();
         }
 
-        public DescriptorExtensionList<BuildSelector, Descriptor<BuildSelector>> getBuildSelectors() {
+        public DescriptorExtensionList<BuildSelector,Descriptor<BuildSelector>> getBuildSelectors() {
             Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
-                return DescriptorExtensionList.createDescriptorList((Jenkins) null, BuildSelector.class);
+                return DescriptorExtensionList.createDescriptorList((Jenkins)null, BuildSelector.class);
             }
             return jenkins.getDescriptorList(BuildSelector.class);
         }
@@ -149,7 +150,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
                     .filter(input -> !"ParameterizedBuildSelector".equals(input.clazz.getSimpleName()))
                     .collect(Collectors.toList());
         }
-
+        
         @Override
         public String getHelpFile(String fieldName) {
             if ("defaultSelector".equals(fieldName) || "parameter".equals(fieldName)) {
@@ -169,7 +170,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
 
     private static final XStream2 XSTREAM = new XStream2();
 
-    @Initializer(after = InitMilestone.PLUGINS_STARTED)
+    @Initializer(after=InitMilestone.PLUGINS_STARTED)
     public static void initAliases() {
         Jenkins jenkins = Jenkins.getInstanceOrNull();
         if (jenkins == null) {

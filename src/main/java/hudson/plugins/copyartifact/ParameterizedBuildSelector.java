@@ -23,13 +23,15 @@
  */
 package hudson.plugins.copyartifact;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Job;
 import hudson.model.Run;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
@@ -54,7 +56,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
     }
 
     @Override
-    public Run<?, ?> getBuild(Job<?, ?> job, EnvVars env, BuildFilter filter, Run<?, ?> parent) {
+    public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
         String xml = resolveParameter(env);
         if (xml == null) {
             return null;
@@ -78,7 +80,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
      *       This is to keep the compatibility of usage between workflow jobs and non-workflow jobs.</li>
      *   <li>Otherwise, considers a variable name.</li>
      * </ol>
-     *
+     * 
      * @param env
      * @return xstream expression.
      */
@@ -109,8 +111,7 @@ public class ParameterizedBuildSelector extends BuildSelector {
     @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
-    @Extension(ordinal = -20)
-    @Symbol("buildParameter")
+    @Extension(ordinal=-20) @Symbol("buildParameter")
     public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         public DescriptorImpl() {
             super(ParameterizedBuildSelector.class, Messages._ParameterizedBuildSelector_DisplayName());

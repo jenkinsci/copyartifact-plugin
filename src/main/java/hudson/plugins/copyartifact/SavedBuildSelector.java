@@ -37,10 +37,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class SavedBuildSelector extends BuildSelector {
     @DataBoundConstructor
-    public SavedBuildSelector() {}
+    public SavedBuildSelector() { }
 
     @Override
-    protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
+    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
         return run.isKeepLog();
     }
 
@@ -51,8 +51,7 @@ public class SavedBuildSelector extends BuildSelector {
     @Deprecated
     public static /*almost final*/ Descriptor<BuildSelector> DESCRIPTOR;
 
-    @Extension(ordinal = 50)
-    @Symbol("latestSavedBuild")
+    @Extension(ordinal=50) @Symbol("latestSavedBuild")
     public static final class DescriptorImpl extends SimpleBuildSelectorDescriptor {
         public DescriptorImpl() {
             super(SavedBuildSelector.class, Messages._SavedBuildSelector_DisplayName());

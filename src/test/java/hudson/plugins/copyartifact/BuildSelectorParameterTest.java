@@ -23,24 +23,26 @@
  */
 package hudson.plugins.copyartifact;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-
-import hudson.cli.CLICommandInvoker;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParametersDefinitionProperty;
-import java.net.URL;
-import java.util.Arrays;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.WebClientOptions;
 import org.htmlunit.WebRequest;
 import org.htmlunit.html.HtmlForm;
 import org.htmlunit.util.NameValuePair;
+import hudson.cli.CLICommandInvoker;
+import hudson.model.FreeStyleProject;
+import hudson.model.ParametersDefinitionProperty;
+
+import java.net.URL;
+import java.util.Arrays;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test interaction of BuildSelectorParameter with Jenkins core.
@@ -73,42 +75,38 @@ public class BuildSelectorParameterTest {
         form.getInputByName("_.buildNumber").setValue("6");
         rule.submit(form);
         rule.waitUntilNoActivity();
-        assertEquals(
-                "<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
-                ceb.getEnvVars().get("SELECTOR").replaceAll("\\s+", ""));
+        assertEquals("<SpecificBuildSelector><buildNumber>6</buildNumber></SpecificBuildSelector>",
+                     ceb.getEnvVars().get("SELECTOR").replaceAll("\\s+", ""));
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via HTTP POST (buildWithParameters)
-        WebRequest post =
-                new WebRequest(new URL(rule.getURL(), job.getUrl() + "/buildWithParameters"), HttpMethod.POST);
+        WebRequest post = new WebRequest(
+                new URL(rule.getURL(), job.getUrl()+"/buildWithParameters"), HttpMethod.POST);
         wc.addCrumb(post);
         String xml = "<StatusBuildSelector><stable>true</stable></StatusBuildSelector>";
-        post.setRequestParameters(Arrays.asList(
-                new NameValuePair("SELECTOR", xml), post.getRequestParameters().get(0)));
+        post.setRequestParameters(Arrays.asList(new NameValuePair("SELECTOR", xml),
+                                                post.getRequestParameters().get(0)));
         wc.getPage(post);
         rule.waitUntilNoActivity();
         assertEquals(xml, ceb.getEnvVars().get("SELECTOR"));
         job.getBuildersList().replace(ceb = new CaptureEnvironmentBuilder());
 
         // Run via CLI
-        assertThat(
-                new CLICommandInvoker(rule, "build")
-                        .invokeWithArgs(job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"),
+        assertThat(new CLICommandInvoker(rule, "build").invokeWithArgs(job.getFullName(), "-p", "SELECTOR=<SavedBuildSelector/>"),
                 CLICommandInvoker.Matcher.succeeded());
         rule.waitUntilNoActivity();
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
-
+    
     @Test
     public void testConfiguration() throws Exception {
         BuildSelectorParameter expected = new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(true), "foo");
         FreeStyleProject job = rule.createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(expected));
         job.save();
-
+        
         job = rule.configRoundtrip(job);
-        BuildSelectorParameter actual = (BuildSelectorParameter)
-                job.getProperty(ParametersDefinitionProperty.class).getParameterDefinition("SELECTOR");
+        BuildSelectorParameter actual = (BuildSelectorParameter)job.getProperty(ParametersDefinitionProperty.class).getParameterDefinition("SELECTOR");
         rule.assertEqualDataBoundBeans(expected, actual);
     }
 }

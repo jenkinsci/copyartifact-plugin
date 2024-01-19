@@ -1,14 +1,14 @@
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class SpecificBuildSelectorTest {
     @Rule
@@ -59,4 +59,5 @@ public class SpecificBuildSelectorTest {
         assertEquals(p.getLastUnstableBuild(), s.getBuild(p, new EnvVars("NUM", "lastUnstableBuild"), f, null));
         assertEquals(p.getLastUnsuccessfulBuild(), s.getBuild(p, new EnvVars("NUM", "lastUnsuccessfulBuild"), f, null));
     }
+
 }

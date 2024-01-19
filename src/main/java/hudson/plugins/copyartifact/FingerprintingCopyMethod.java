@@ -1,6 +1,5 @@
 package hudson.plugins.copyartifact;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
@@ -11,6 +10,8 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.os.PosixException;
 import hudson.tasks.Fingerprinter.FingerprintAction;
+import jenkins.model.Jenkins;
+
 import java.io.IOException;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
@@ -19,7 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jenkins.model.Jenkins;
+
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * Performs fingerprinting during the copy.
@@ -31,18 +33,17 @@ import jenkins.model.Jenkins;
  * @deprecated No longer used.
  */
 @Deprecated
-@Extension(ordinal = -100)
+@Extension(ordinal=-100)
 public class FingerprintingCopyMethod extends Copier {
 
     private static final Logger LOGGER = Logger.getLogger(FingerprintingCopyMethod.class.getName());
-    private Run<?, ?> src;
-    private Run<?, ?> dst;
+    private Run<?,?> src;
+    private Run<?,?> dst;
     private final MessageDigest md5 = newMD5();
-    private final Map<String, String> fingerprints = new HashMap<>();
+    private final Map<String,String> fingerprints = new HashMap<>();
 
     @Override
-    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir)
-            throws IOException, InterruptedException {
+    public void initialize(Run<?, ?> src, Run<?, ?> dst, FilePath srcDir, FilePath baseTargetDir) throws IOException, InterruptedException {
         this.src = src;
         this.dst = dst;
         fingerprints.clear();
@@ -52,15 +53,13 @@ public class FingerprintingCopyMethod extends Copier {
         try {
             return MessageDigest.getInstance("MD5");
         } catch (NoSuchAlgorithmException e) {
-            throw new AssertionError(e); // impossible
+            throw new AssertionError(e);    // impossible
         }
     }
 
     @Override
-    public int copyAll(
-            FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts)
-            throws IOException, InterruptedException {
-        targetDir.mkdirs(); // Create target if needed
+    public int copyAll(FilePath srcDir, String filter, String excludes, FilePath targetDir, boolean fingerprintArtifacts) throws IOException, InterruptedException {
+        targetDir.mkdirs();  // Create target if needed
         FilePath[] list = srcDir.list(filter, excludes, false);
         for (FilePath file : list) {
             String tail = file.getRemote().substring(srcDir.getRemote().length());
@@ -80,9 +79,7 @@ public class FingerprintingCopyMethod extends Copier {
             if (parent != null) {
                 parent.mkdirs();
             }
-            d.symlinkTo(
-                    link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */
-                    TaskListener.NULL);
+            d.symlinkTo(link, /* TODO Copier signature does not offer a TaskListener; anyway this is rarely used */TaskListener.NULL);
             return;
         }
         try {
@@ -97,8 +94,7 @@ public class FingerprintingCopyMethod extends Copier {
                 // IOException for Jenkins >= 2.339
                 LOGGER.log(Level.WARNING, "could not check mode of " + s, x);
             }
-            // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest
-            // separately:
+            // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
             try {
                 d.touch(s.lastModified());
             } catch (IOException x) {
@@ -114,7 +110,7 @@ public class FingerprintingCopyMethod extends Copier {
                 FingerprintMap map = jenkins.getFingerprintMap();
 
                 Fingerprint f = map.getOrCreate(src, s.getName(), digest);
-                if (src != null) {
+                if (src!=null) {
                     f.addFor(src);
                 }
                 if (dst != null) {
@@ -130,7 +126,7 @@ public class FingerprintingCopyMethod extends Copier {
     @Override
     public void end() {
         // add action
-        for (Run r : new Run[] {src, dst}) {
+        for (Run r : new Run[]{src,dst}) {
             if (r == null) {
                 continue;
             }
@@ -148,7 +144,8 @@ public class FingerprintingCopyMethod extends Copier {
 
     @SuppressFBWarnings(
             value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
-            justification = "This is a method not of Cloneable but of Copier.")
+            justification = "This is a method not of Cloneable but of Copier."
+    )
     @Override
     public Copier clone() {
         return new FingerprintingCopyMethod();

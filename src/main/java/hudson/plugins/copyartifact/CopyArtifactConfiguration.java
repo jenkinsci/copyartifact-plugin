@@ -23,19 +23,21 @@
  */
 package hudson.plugins.copyartifact;
 
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.init.InitMilestone;
 import hudson.init.Initializer;
-import java.io.IOException;
-import java.util.logging.Logger;
 import jenkins.model.GlobalConfiguration;
 import jenkins.model.GlobalConfigurationCategory;
 import jenkins.model.Jenkins;
 import org.jenkinsci.Symbol;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+
+import java.io.IOException;
+import java.util.logging.Logger;
+
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Provide the configuration about the compatibility mode (either production or migration)
@@ -52,24 +54,24 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      */
     @NonNull
     private CopyArtifactCompatibilityMode mode = CopyArtifactCompatibilityMode.PRODUCTION;
-
+    
     /**
      * ctor.
      */
     public CopyArtifactConfiguration() {
-        // TODO could be replaced by PersistentDescriptor once core is 2.140+
+        //TODO could be replaced by PersistentDescriptor once core is 2.140+
         load();
     }
-
+    
     /**
      * {@inheritDoc}
      */
     @Override
     public synchronized void load() {
         boolean firstLoadOfConfiguration = isFirstLoad();
-
+        
         super.load();
-
+        
         // Set to Migration mode when both of the followings are met:
         // * The configuration hasn't be saved.
         //       That is, when this is the first boot
@@ -79,11 +81,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
         if (firstLoadOfConfiguration) {
             boolean alreadyInstalledBefore = false;
             try {
-                alreadyInstalledBefore = Jenkins.get()
-                        .getRootPath()
-                        .child("plugins")
-                        .child("copyartifact.bak")
-                        .exists();
+                alreadyInstalledBefore = Jenkins.get().getRootPath().child("plugins").child("copyartifact.bak").exists();
             } catch (Exception e) {
                 // no care, that's just an heuristic
             }
@@ -94,12 +92,14 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
                 setModeWithoutSave(CopyArtifactCompatibilityMode.PRODUCTION);
             } else {
                 LOGGER.info(
-                        "CopyArtifact is set to Migration mode" + " as the older version of copyartifact is detected.");
+                    "CopyArtifact is set to Migration mode"
+                    + " as the older version of copyartifact is detected."
+                );
                 setModeWithoutSave(CopyArtifactCompatibilityMode.MIGRATION);
             }
         }
     }
-
+    
     @Initializer(after = InitMilestone.EXTENSIONS_AUGMENTED, before = InitMilestone.JOB_LOADED)
     public static void syncToDiskForFirstLoad() {
         // save the default configuration to the disk in the first load.
@@ -107,7 +107,9 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         if (config == null) {
             LOGGER.severe(
-                    "Could not get CopyArtifactConfiguration." + " It looks failed to initialized for some reason");
+                "Could not get CopyArtifactConfiguration." +
+                " It looks failed to initialized for some reason"
+            );
             return;
         }
         if (config.isFirstLoad()) {
@@ -129,7 +131,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     public void setToFirstLoad() throws IOException {
         getConfigFile().delete();
     }
-
+    
     /**
      * @return the compatibility mode
      */
@@ -137,7 +139,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     public CopyArtifactCompatibilityMode getMode() {
         return mode;
     }
-
+    
     /**
      * Set the compatibility mode without storing to the disk. Use only for testing purpose.
      */
@@ -153,7 +155,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
         setModeWithoutSave(mode);
         save();
     }
-
+    
     /**
      * @return {@code true} if set to Migration mode.
      */
@@ -165,7 +167,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
         }
         return CopyArtifactCompatibilityMode.MIGRATION.equals(config.getMode());
     }
-
+    
     /**
      * {@inheritDoc}
      */
@@ -173,7 +175,7 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
     public @NonNull GlobalConfigurationCategory getCategory() {
         return GlobalConfigurationCategory.get(GlobalConfigurationCategory.Security.class);
     }
-
+    
     /**
      * @return the singleton instance.
      */
