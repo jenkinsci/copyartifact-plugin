@@ -31,12 +31,11 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
+import java.io.File;
 import org.apache.commons.io.FileUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
-
-import java.io.File;
 
 public class LastBuildWithArtifactSelectorTest {
     @Rule

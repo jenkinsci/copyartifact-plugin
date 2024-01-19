@@ -26,12 +26,11 @@ package hudson.plugins.copyartifact.monitor;
 import hudson.Extension;
 import hudson.model.AdministrativeMonitor;
 import hudson.plugins.copyartifact.CopyArtifactConfiguration;
+import java.io.IOException;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.interceptor.RequirePOST;
-
-import java.io.IOException;
 
 /**
  * Responsible to ensure the {@link hudson.plugins.copyartifact.CopyArtifactCompatibilityMode#PRODUCTION} is used.
@@ -40,14 +39,14 @@ import java.io.IOException;
 @Extension
 @Symbol("copyArtifactMigrationMode")
 public class MigrationModeDisabledMonitor extends AdministrativeMonitor {
-    
+
     /**
      * ctor
      */
-    public MigrationModeDisabledMonitor(){
+    public MigrationModeDisabledMonitor() {
         super("copyArtifactMigrationMode");
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -55,7 +54,7 @@ public class MigrationModeDisabledMonitor extends AdministrativeMonitor {
     public String getDisplayName() {
         return Messages.MigrationModeDisabledMonitor_displayName();
     }
-    
+
     /**
      * {@inheritDoc}
      */
@@ -63,7 +62,7 @@ public class MigrationModeDisabledMonitor extends AdministrativeMonitor {
     public boolean isActivated() {
         return CopyArtifactConfiguration.isMigrationMode();
     }
-    
+
     @RequirePOST
     public HttpResponse doAct() throws IOException {
         return HttpResponses.redirectViaContextPath("configureSecurity");

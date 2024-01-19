@@ -31,31 +31,92 @@ import hudson.plugins.copyartifact.CopyArtifact;
  */
 public class CopyArtifactUtil {
 
-    private CopyArtifactUtil() {
-    }
+    private CopyArtifactUtil() {}
 
-    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
-            boolean flatten, boolean optional) {
+    public static CopyArtifact createCopyArtifact(
+            String projectName,
+            String parameters,
+            BuildSelector selector,
+            String filter,
+            String target,
+            boolean flatten,
+            boolean optional) {
         return createCopyArtifact(projectName, parameters, selector, filter, null, target, flatten, optional, false);
     }
 
-    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String target,
-            boolean flatten, boolean optional, boolean fingerprintArtifacts) {
-        return createCopyArtifact(projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts);
+    public static CopyArtifact createCopyArtifact(
+            String projectName,
+            String parameters,
+            BuildSelector selector,
+            String filter,
+            String target,
+            boolean flatten,
+            boolean optional,
+            boolean fingerprintArtifacts) {
+        return createCopyArtifact(
+                projectName, parameters, selector, filter, null, target, flatten, optional, fingerprintArtifacts);
     }
 
-    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
-                        boolean flatten, boolean optional, boolean fingerprintArtifacts) {
-        return createCopyArtifact(projectName, parameters, selector, filter, excludes, target, flatten, optional, fingerprintArtifacts, null);
+    public static CopyArtifact createCopyArtifact(
+            String projectName,
+            String parameters,
+            BuildSelector selector,
+            String filter,
+            String excludes,
+            String target,
+            boolean flatten,
+            boolean optional,
+            boolean fingerprintArtifacts) {
+        return createCopyArtifact(
+                projectName,
+                parameters,
+                selector,
+                filter,
+                excludes,
+                target,
+                flatten,
+                optional,
+                fingerprintArtifacts,
+                null);
     }
 
-    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
-            boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix) {
-        return createCopyArtifact(projectName, parameters, selector, filter, excludes, target, flatten, optional, fingerprintArtifacts, resultVariableSuffix, false);
+    public static CopyArtifact createCopyArtifact(
+            String projectName,
+            String parameters,
+            BuildSelector selector,
+            String filter,
+            String excludes,
+            String target,
+            boolean flatten,
+            boolean optional,
+            boolean fingerprintArtifacts,
+            String resultVariableSuffix) {
+        return createCopyArtifact(
+                projectName,
+                parameters,
+                selector,
+                filter,
+                excludes,
+                target,
+                flatten,
+                optional,
+                fingerprintArtifacts,
+                resultVariableSuffix,
+                false);
     }
 
-    public static CopyArtifact createCopyArtifact(String projectName, String parameters, BuildSelector selector, String filter, String excludes, String target,
-                        boolean flatten, boolean optional, boolean fingerprintArtifacts, String resultVariableSuffix, boolean includeBuildNumberInTargetPath) {
+    public static CopyArtifact createCopyArtifact(
+            String projectName,
+            String parameters,
+            BuildSelector selector,
+            String filter,
+            String excludes,
+            String target,
+            boolean flatten,
+            boolean optional,
+            boolean fingerprintArtifacts,
+            String resultVariableSuffix,
+            boolean includeBuildNumberInTargetPath) {
         CopyArtifact copyArtifact = new CopyArtifact(projectName);
         copyArtifact.setParameters(parameters);
         copyArtifact.setSelector(selector);

@@ -39,6 +39,6 @@ public class LastStableBuildSelectorTest {
         BuildSelector s = copyArtifact.getSelector();
         org.junit.Assert.assertNotNull(s);
         org.junit.Assert.assertTrue(s instanceof StatusBuildSelector);
-        org.junit.Assert.assertTrue(((StatusBuildSelector)s).isStable());
+        org.junit.Assert.assertTrue(((StatusBuildSelector) s).isStable());
     }
 }
