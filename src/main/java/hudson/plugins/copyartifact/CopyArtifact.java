@@ -376,18 +376,21 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     }
 
     private boolean upgradeIfNecessary(AbstractProject<?,?> job) throws IOException {
+        int i; 
+        
         if (isUpgradeNeeded()) {
             Jenkins jenkins = Jenkins.getInstanceOrNull();
             if (jenkins == null) {
-                LOGGER.log(Level.SEVERE, "upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
+                LOGGER.log(Level.SEVERE, "Upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
                 return false;
             }
+            
             if (projectName != null) {
-                int i = projectName.lastIndexOf('/');
+                i = projectName.lastIndexOf('/');
             } else {
                 throw new IllegalArgumentException("projectName cannot be null");
             }
-        }
+            
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */jenkins.getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
                 parameters = projectName.substring(i + 1);
@@ -395,6 +398,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 project = projectName;
                 parameters = null;
             }
+            
             LOGGER.log(Level.INFO, "Split {0} into {1} with parameters {2}", new Object[] {projectName, project, parameters});
             projectName = null;
             job.save();
@@ -403,6 +407,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return false;
         }
     }
+    
 
     private boolean isUpgradeNeeded() {
         return projectName != null;
