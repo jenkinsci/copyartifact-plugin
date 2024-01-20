@@ -382,7 +382,12 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 LOGGER.log(Level.SEVERE, "upgrading copyartifact is required for {0} but Jenkins instance is unavailable", job.getDisplayName());
                 return false;
             }
-            int i = projectName.lastIndexOf('/');
+            if (projectName != null) {
+                int i = projectName.lastIndexOf('/');
+            } else {
+                throw new IllegalArgumentException("projectName cannot be null");
+            }
+        }
             if (i != -1 && projectName.indexOf('=', i) != -1 && /* not matrix */jenkins.getItem(projectName, job.getParent(), Job.class) == null) {
                 project = projectName.substring(0, i);
                 parameters = projectName.substring(i + 1);
