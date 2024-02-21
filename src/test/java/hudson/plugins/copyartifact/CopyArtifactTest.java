@@ -94,6 +94,7 @@ import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
+import org.htmlunit.html.HtmlPage;
 import org.jenkinsci.plugins.workflow.DirectArtifactManagerFactory;
 import org.junit.After;
 import org.junit.ClassRule;
@@ -121,7 +122,8 @@ import org.htmlunit.FailingHttpStatusCodeException;
 import org.htmlunit.HttpMethod;
 import org.htmlunit.WebRequest;
 
-import static org.hamcrest.Matchers.not;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -988,9 +990,9 @@ public class CopyArtifactTest {
             } catch(FailingHttpStatusCodeException e) {
                 assertEquals("Job should not be accessible to anonymous", 404, e.getStatusCode());
             }
+            FreeStyleProject tempDest = dest;
+            await().atMost(10,TimeUnit.SECONDS).until(()-> rule.submit(wc.getPage(tempDest, "configure").getFormByName("config")).isHtmlPage());
 
-            rule.submit(wc.getPage(dest, "configure").getFormByName("config"));
-            
             dest = rule.jenkins.getItemByFullName(dest.getFullName(), FreeStyleProject.class);
             CopyArtifact ca = dest.getBuildersList().getAll(CopyArtifact.class).get(0);
             // Preserves the configuration as-is in Production mode.
