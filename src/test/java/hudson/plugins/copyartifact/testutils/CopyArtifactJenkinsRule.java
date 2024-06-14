@@ -60,7 +60,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
      * This happens when accessing build page of a project with parameters.
      */
     public JenkinsRule.WebClient createAllow405WebClient() {
-        return new JenkinsRule.WebClient() {
+        WebClient webClient = new WebClient() {
             private static final long serialVersionUID = 2209855651713458482L;
 
             @Override
@@ -84,6 +84,8 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
                 super.printContentIfNecessary(webResponse);
             }
         };
+        webClient.getOptions().setFetchPolyfillEnabled(true);
+        return webClient;
     }
 
     /**
