@@ -286,10 +286,14 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
 
     // get all CopyArtifacts configured to AbstractProject. This works both for Project and MatrixProject.
     private static List<CopyArtifact> getCopyArtifactsInProject(AbstractProject<?,?> project) {
-        DescribableList<Builder,Descriptor<Builder>> list =
-                project instanceof Project ? ((Project<?,?>)project).getBuildersList()
-                  : (project instanceof MatrixProject ?
-                      ((MatrixProject)project).getBuildersList() : null);
+        DescribableList<Builder,Descriptor<Builder>> list;
+        if (project instanceof Project) {
+            list = ((Project<?,?>)project).getBuildersList();
+        } else if (Jenkins.get().getPlugin("matrix-project") != null && project instanceof MatrixProject) {
+            list = ((MatrixProject)project).getBuildersList();
+        } else {
+            list = null;
+        }
         if (list == null) {
             return Collections.emptyList();
         }
@@ -543,7 +547,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (!ok) {
                 throw new AbortException(Messages.CopyArtifact_FailedToCopy(expandedProject, expandedFilter));
             }
-        } else if (src instanceof MatrixBuild) {
+        } else if (jenkins.getPlugin("matrix-project") != null && src instanceof MatrixBuild) {
             boolean ok = false;
             // Copy artifacts from all configurations of this matrix build
             // Use MatrixBuild.getExactRuns if available
@@ -854,10 +858,10 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             if (item != null) {
                 if (jenkins.getPlugin("maven-plugin") != null && item instanceof MavenModuleSet) {
                     result = FormValidation.warning(Messages.CopyArtifact_MavenProject());
+                } else if (jenkins.getPlugin("matrix-project") != null && item instanceof MatrixProject) {
+                    result = FormValidation.warning(Messages.CopyArtifact_MatrixProject());
                 } else {
-                    result = (item instanceof MatrixProject)
-                          ? FormValidation.warning(Messages.CopyArtifact_MatrixProject())
-                          : FormValidation.ok();
+                    result = FormValidation.ok();
                 }
             } else if (value.indexOf('$') >= 0) {
                 result = FormValidation.warning(Messages.CopyArtifact_ParameterizedName());
