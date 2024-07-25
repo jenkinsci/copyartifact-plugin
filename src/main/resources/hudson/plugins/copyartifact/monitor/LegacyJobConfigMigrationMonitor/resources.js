@@ -109,8 +109,7 @@ function confirmAndSendRequest(button){
                 headers: crumb.wrap({
                     'Content-Type': 'application/json; charset=UTF-8',
                 }),
-                // TODO simplify when Prototype.js is removed
-                body: Object.toJSON ? Object.toJSON(params) : JSON.stringify(params),
+                body: JSON.stringify(params),
             }).then((rsp) => {
                 window.location.reload();
             });
