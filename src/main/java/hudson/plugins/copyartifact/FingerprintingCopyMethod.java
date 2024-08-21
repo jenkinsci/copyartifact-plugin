@@ -8,7 +8,6 @@ import hudson.model.Fingerprint;
 import hudson.model.FingerprintMap;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.os.PosixException;
 import hudson.tasks.Fingerprinter.FingerprintAction;
 import jenkins.model.Jenkins;
 
@@ -89,9 +88,7 @@ public class FingerprintingCopyMethod extends Copier {
             }
             try {
                 d.chmod(s.mode());
-            } catch (IOException | PosixException x) {
-                // PosixException for Jenkins < 2.339
-                // IOException for Jenkins >= 2.339
+            } catch (IOException x) {
                 LOGGER.log(Level.WARNING, "could not check mode of " + s, x);
             }
             // FilePath.setLastModifiedIfPossible private; copyToWithPermission OK but would have to calc digest separately:
