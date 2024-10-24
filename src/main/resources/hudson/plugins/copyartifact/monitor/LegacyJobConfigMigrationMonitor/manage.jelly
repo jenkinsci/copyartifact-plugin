@@ -39,23 +39,23 @@ THE SOFTWARE.
                     <a href="#"
                        class="action"
                        title="${%SelectAll.title}"
-                       onclick="selectAll(this);return false;">${%SelectAll}</a>
+                       data-action="select-all">${%SelectAll}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllMigratable.title}"
-                       onclick="selectAllMigratable(this);return false;">${%SelectAllMigratable}</a>
+                       data-action="select-migratable">${%SelectAllMigratable}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllValid.title}"
-                       onclick="selectAllValid(this);return false;">${%SelectAllValid}</a>
+                       data-action="select-all-valid">${%SelectAllValid}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllInvalid.title}"
-                       onclick="selectAllInvalid(this);return false;">${%SelectAllInvalid}</a>
+                       data-action="select-all-invalid">${%SelectAllInvalid}</a>
                 </div>
                 <div class="action-panel">
                     <span class="yui-button">
-                        <button class="action-migrate-selected" onclick="confirmAndMigrateAllSelected(this);"
+                        <button class="action action-migrate-selected"
                                 data-url="${rootURL}/${it.url}/migrateAllSelected"
                                 data-confirm-template="${%MigrateAllSelected_confirm}"
                                 data-nothing-selected="${%MigrateAllSelected_nothing}">
@@ -63,7 +63,7 @@ THE SOFTWARE.
                         </button>
                     </span>
                     <span class="yui-button">
-                        <button class="action-ignore-selected" onclick="confirmAndIgnoreAllSelected(this);"
+                        <button class="action action-ignore-selected"
                                 data-url="${rootURL}/${it.url}/ignoreAllSelected"
                                 data-confirm-template="${%IgnoreAllSelected_confirm}"
                                 data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
@@ -187,24 +187,24 @@ THE SOFTWARE.
                     <a href="#"
                        class="action"
                        title="${%SelectAll.title}"
-                       onclick="selectAll(this);return false;">${%SelectAll}</a>
+                       data-action="select-all">${%SelectAll}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllMigratable.title}"
-                       onclick="selectAllMigratable(this);return false;">${%SelectAllMigratable}</a>
+                       data-action="select-migratable">${%SelectAllMigratable}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllValid.title}"
-                       onclick="selectAllValid(this);return false;">${%SelectAllValid}</a>
+                       data-action="select-all-valid">${%SelectAllValid}</a>
                     <a href="#"
                        class="action"
                        title="${%SelectAllInvalid.title}"
-                       onclick="selectAllInvalid(this);return false;">${%SelectAllInvalid}</a>
+                       data-action="select-all-invalid">${%SelectAllInvalid}</a>
                 </div>
                 
                 <div class="action-panel">
                     <span class="yui-button">
-                        <button class="action-migrate-selected" onclick="confirmAndMigrateAllSelected(this);"
+                        <button class="action action-migrate-selected"
                                 data-url="${rootURL}/${it.url}/migrateAllSelected"
                                 data-confirm-template="${%MigrateAllSelected_confirm}"
                                 data-nothing-selected="${%MigrateAllSelected_nothing}">
@@ -212,7 +212,7 @@ THE SOFTWARE.
                         </button>
                     </span>
                     <span class="yui-button">
-                        <button class="action-ignore-selected" onclick="confirmAndIgnoreAllSelected(this);"
+                        <button class="action action-ignore-selected"
                                 data-url="${rootURL}/${it.url}/ignoreAllSelected"
                                 data-confirm-template="${%IgnoreAllSelected_confirm}"
                                 data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">

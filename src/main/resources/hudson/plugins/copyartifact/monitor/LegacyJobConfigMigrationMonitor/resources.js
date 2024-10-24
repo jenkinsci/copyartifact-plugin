@@ -21,18 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-function selectAll(anchor){
-    _selectAllThat(anchor, '.checkbox-line');
-}
-function selectAllMigratable(anchor){
-    _selectAllThat(anchor, '.checkbox-line.migratable-line.valid-line');
-}
-function selectAllValid(anchor){
-    _selectAllThat(anchor, '.checkbox-line.valid-line');
-}
-function selectAllInvalid(anchor){
-    _selectAllThat(anchor, '.checkbox-line.invalid-line');
-}
 
 function _selectAllThat(anchor, selector){
     var parent = anchor.closest('.legacy-copy-artifact');
@@ -65,14 +53,6 @@ function checkTheDesiredOne(allCheckBoxes, concernedCheckBoxes){
         var checkBox = allCheckBoxes[i];
         onCheckChanged(checkBox);
     }
-}
-
-function confirmAndIgnoreAllSelected(button){
-    confirmAndSendRequest(button);
-}
-
-function confirmAndMigrateAllSelected(button){
-    confirmAndSendRequest(button);
 }
 
 function confirmAndSendRequest(button){
@@ -181,5 +161,25 @@ function onCheckChanged(checkBox){
                 return false;
             }
         );
+
+        const actionSelectors = {
+            "select-all": '.checkbox-line',
+            "select-migratable": '.checkbox-line.migratable-line.valid-line',
+            "select-all-valid": '.checkbox-line.valid-line',
+            "select-all-invalid": '.checkbox-line.invalid-line'
+        }
+
+        document.querySelectorAll("a.action").forEach(anchor => {
+            anchor.addEventListener("click", (event) => {
+                event.preventDefault();
+                _selectAllThat(event.target, actionSelectors[event.target.dataset.action]);
+            });
+        });
+
+        document.querySelectorAll(".action-panel button.action").forEach((button) => {
+            button.addEventListener("click", (event) => {
+                confirmAndSendRequest(event.target);
+            });
+        });
     });
 })();
