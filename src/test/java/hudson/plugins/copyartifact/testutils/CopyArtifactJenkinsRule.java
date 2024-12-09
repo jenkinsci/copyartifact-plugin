@@ -96,7 +96,7 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
      * @return the new workflow job
      * @throws IOException an error when creating a new job
      */
-    public WorkflowJob createWorkflow(String name, String script) throws IOException {
+    public WorkflowJob createWorkflow(String name, String script) throws Exception {
         WorkflowJob job = jenkins.createProject(WorkflowJob.class, name);
         job.setDefinition(new CpsFlowDefinition("node {" + script + "}", true));
         return job;
