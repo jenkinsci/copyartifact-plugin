@@ -54,22 +54,18 @@ THE SOFTWARE.
                        data-action="select-all-invalid">${%SelectAllInvalid}</a>
                 </div>
                 <div class="action-panel">
-                    <span class="yui-button">
-                        <button class="action action-migrate-selected"
-                                data-url="${rootURL}/${it.url}/migrateAllSelected"
-                                data-confirm-template="${%MigrateAllSelected_confirm}"
-                                data-nothing-selected="${%MigrateAllSelected_nothing}">
-                            ${%MigrateAllSelected}
-                        </button>
-                    </span>
-                    <span class="yui-button">
-                        <button class="action action-ignore-selected"
-                                data-url="${rootURL}/${it.url}/ignoreAllSelected"
-                                data-confirm-template="${%IgnoreAllSelected_confirm}"
-                                data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
-                            ${%IgnoreAllSelected}
-                        </button>
-                    </span>
+                    <button class="action action-migrate-selected jenkins-button jenkins-!-margin-right-2"
+                            data-url="${rootURL}/${it.url}/migrateAllSelected"
+                            data-confirm-template="${%MigrateAllSelected_confirm}"
+                            data-nothing-selected="${%MigrateAllSelected_nothing}">
+                        ${%MigrateAllSelected}
+                    </button>
+                    <button class="action action-ignore-selected jenkins-button"
+                            data-url="${rootURL}/${it.url}/ignoreAllSelected"
+                            data-confirm-template="${%IgnoreAllSelected_confirm}"
+                            data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
+                        ${%IgnoreAllSelected}
+                    </button>
                 </div>
                 <j:set var="jobInfoList" value="${it.getAllJobInformation()}"/>
                 <table class="pane bigtable align-th-left">
@@ -203,22 +199,18 @@ THE SOFTWARE.
                 </div>
                 
                 <div class="action-panel">
-                    <span class="yui-button">
-                        <button class="action action-migrate-selected"
-                                data-url="${rootURL}/${it.url}/migrateAllSelected"
-                                data-confirm-template="${%MigrateAllSelected_confirm}"
-                                data-nothing-selected="${%MigrateAllSelected_nothing}">
-                            ${%MigrateAllSelected}
-                        </button>
-                    </span>
-                    <span class="yui-button">
-                        <button class="action action-ignore-selected"
-                                data-url="${rootURL}/${it.url}/ignoreAllSelected"
-                                data-confirm-template="${%IgnoreAllSelected_confirm}"
-                                data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
-                            ${%IgnoreAllSelected}
-                        </button>
-                    </span>
+                    <button class="action action-migrate-selected jenkins-button jenkins-!-margin-right-2"
+                            data-url="${rootURL}/${it.url}/migrateAllSelected"
+                            data-confirm-template="${%MigrateAllSelected_confirm}"
+                            data-nothing-selected="${%MigrateAllSelected_nothing}">
+                        ${%MigrateAllSelected}
+                    </button>
+                    <button class="action action-ignore-selected jenkins-button"
+                            data-url="${rootURL}/${it.url}/ignoreAllSelected"
+                            data-confirm-template="${%IgnoreAllSelected_confirm}"
+                            data-nothing-selected="${%IgnoreMigrateAllSelected_nothing}">
+                        ${%IgnoreAllSelected}
+                    </button>
                 </div>
             </div>
         </l:main-panel>
