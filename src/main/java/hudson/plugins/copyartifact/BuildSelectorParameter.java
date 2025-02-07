@@ -42,7 +42,7 @@ import hudson.util.XStream2;
 import net.sf.json.JSONObject;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * @author Alan Harder
@@ -99,7 +99,7 @@ public class BuildSelectorParameter extends SimpleParameterDefinition {
     }
 
     @Override
-    public ParameterValue createValue(StaplerRequest req, JSONObject jo) {
+    public ParameterValue createValue(StaplerRequest2 req, JSONObject jo) {
         return toStringValue(req.bindJSON(BuildSelector.class, jo));
     }
 

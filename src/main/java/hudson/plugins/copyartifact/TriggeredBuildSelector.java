@@ -43,7 +43,7 @@ import org.jenkinsci.Symbol;
 import org.jvnet.localizer.Localizable;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * Copy artifacts from the build that triggered this build.
@@ -283,7 +283,7 @@ public class TriggeredBuildSelector extends BuildSelector {
         }
         
         @Override
-        public boolean configure(StaplerRequest req, JSONObject json)
+        public boolean configure(StaplerRequest2 req, JSONObject json)
                 throws hudson.model.Descriptor.FormException {
             setGlobalUpstreamFilterStrategy(UpstreamFilterStrategy.valueOf(json.getString("globalUpstreamFilterStrategy")));
             save();
