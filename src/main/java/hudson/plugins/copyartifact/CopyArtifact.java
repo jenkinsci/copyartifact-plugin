@@ -104,7 +104,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -171,7 +171,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     public CopyArtifact(String projectName) {
         if (CopyArtifactConfiguration.isMigrationMode()) {
             // check the permissions only if we can
-            StaplerRequest req = Stapler.getCurrentRequest();
+            StaplerRequest2 req = Stapler.getCurrentRequest2();
             if (req!=null) {
                 AbstractProject<?,?> p = req.findAncestorObject(AbstractProject.class);
                 if (p != null) {

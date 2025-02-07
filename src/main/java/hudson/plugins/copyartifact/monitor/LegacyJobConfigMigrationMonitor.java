@@ -51,7 +51,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 import org.kohsuke.stapler.json.JsonBody;
 import org.kohsuke.stapler.lang.Klass;
@@ -59,7 +59,7 @@ import org.kohsuke.stapler.lang.Klass;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import net.jcip.annotations.GuardedBy;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.io.IOException;
@@ -441,7 +441,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @throws IOException servlet communication errors.
      */
     @Restricted(DoNotUse.class)
-    public void doHelpDetailedSteps(StaplerResponse rsp) throws IOException
+    public void doHelpDetailedSteps(StaplerResponse2 rsp) throws IOException
     {
         URL url = getStaticResourceUrl("help-detailedSteps");
         if (url == null) {
@@ -461,7 +461,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @return the url of the resource.
      */
     private URL getStaticResourceUrl(String base) {
-        Locale locale = Stapler.getCurrentRequest().getLocale();
+        Locale locale = Stapler.getCurrentRequest2().getLocale();
         // allow to load html files.
         Klass<?> c = Klass.java(getClass());
 

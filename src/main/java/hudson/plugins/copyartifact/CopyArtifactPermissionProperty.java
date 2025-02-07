@@ -41,7 +41,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 import hudson.Extension;
 import hudson.model.AutoCompletionCandidates;
@@ -175,10 +175,10 @@ public class CopyArtifactPermissionProperty extends JobProperty<Job<?,?>> {
          * @param formData Form data.
          * @return The created property.
          * @throws hudson.model.Descriptor.FormException If an error occurs parsing the form data.
-         * @see hudson.model.JobPropertyDescriptor#newInstance(org.kohsuke.stapler.StaplerRequest, net.sf.json.JSONObject)
+         * @see hudson.model.JobPropertyDescriptor#newInstance(org.kohsuke.stapler.StaplerRequest2, net.sf.json.JSONObject)
          */
         @Override
-        public CopyArtifactPermissionProperty newInstance(StaplerRequest req, JSONObject formData)
+        public CopyArtifactPermissionProperty newInstance(StaplerRequest2 req, JSONObject formData)
                 throws hudson.model.Descriptor.FormException {
             if(formData == null || formData.isNullObject()) {
                 return null;
