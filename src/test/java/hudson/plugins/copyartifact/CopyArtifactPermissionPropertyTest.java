@@ -51,7 +51,7 @@ import java.util.Map;
 import jenkins.model.Jenkins;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
 
-import org.acegisecurity.Authentication;
+import org.springframework.security.core.Authentication;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.junit.After;
@@ -347,10 +347,8 @@ public class CopyArtifactPermissionPropertyTest {
         // if the permission is configured with QueueItemAuthenticator.
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
-            Map<String, Authentication> authMap = new HashMap<>();
-            authMap.put(downstream.getFullName(), User.getById("bob", true).impersonate());
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                new MockQueueItemAuthenticator(authMap)
+                new MockQueueItemAuthenticator().authenticate(downstream.getFullName(), User.getById("bob", true).impersonate2())
             );
             j.assertBuildStatus(Result.FAILURE, downstream.scheduleBuild2(0));
         }
@@ -360,10 +358,8 @@ public class CopyArtifactPermissionPropertyTest {
         // (actually, you don't need to configure copyArtifactPermission)
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
-            Map<String, Authentication> authMap = new HashMap<>();
-            authMap.put(downstream.getFullName(), User.getById("alice", true).impersonate());
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                new MockQueueItemAuthenticator(authMap)
+                new MockQueueItemAuthenticator().authenticate(downstream.getFullName(), User.getById("alice", true).impersonate2())
             );
             j.buildAndAssertSuccess(downstream);
         }

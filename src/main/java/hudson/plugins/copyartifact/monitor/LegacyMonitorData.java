@@ -236,7 +236,7 @@ public class LegacyMonitorData {
         Job<?, ?> job = jenkins.getItem(jobFullName, jenkins, Job.class);
         if (job == null) {
             hasAccessTo = false;
-            try (ACLContext acl = ACL.as(ACL.SYSTEM)) {
+            try (ACLContext acl = ACL.as2(ACL.SYSTEM2)) {
                 job = jenkins.getItem(jobFullName, jenkins, Job.class);
             }
         }

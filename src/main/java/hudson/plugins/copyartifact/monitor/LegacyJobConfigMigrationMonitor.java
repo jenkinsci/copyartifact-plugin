@@ -298,7 +298,7 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
         }
         // to avoid issue when a project is not visible for the regular admin
         // like with early version of ProjectMatrix
-        try (ACLContext acl = ACL.as(ACL.SYSTEM)) {
+        try (ACLContext acl = ACL.as2(ACL.SYSTEM2)) {
             try (BulkChange bc = new BulkChange(this)) {
                 for (MigrateAllSelectedFromAndTo value : content.values) {
                     if (value.jobFrom == null || value.jobTo == null) {

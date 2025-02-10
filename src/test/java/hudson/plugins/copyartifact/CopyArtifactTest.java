@@ -89,10 +89,10 @@ import jenkins.model.ArtifactManagerConfiguration;
 import jenkins.model.Jenkins;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
 
-import org.acegisecurity.Authentication;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
-import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.workflow.DirectArtifactManagerFactory;
 import org.junit.After;
@@ -1026,11 +1026,9 @@ public class CopyArtifactTest {
             assertEquals(src.getName(), ca.getProjectName());
 
             // Build should succeed when run as joe.
-            Map<String, Authentication> authMap = new HashMap<>();
-            authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                new MockQueueItemAuthenticator(authMap)
+                new MockQueueItemAuthenticator().authenticate(dest.getFullName(), User.getById("joe", true).impersonate2())
             );
             rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
         }
@@ -1074,7 +1072,7 @@ public class CopyArtifactTest {
         rule.assertBuildStatusSuccess(b);
         // Build step should fail for a job not accessible to all authenticated users,
         // even when accessible to the user starting the job, as in this case:
-        SecurityContext old = ACL.impersonate(
+        SecurityContext old = ACL.impersonate2(
                 new UsernamePasswordAuthenticationToken("joe","joe"));
         try {
         b = p.scheduleBuild2(0, new Cause.UserIdCause(),
@@ -1678,10 +1676,10 @@ public class CopyArtifactTest {
         
         // test permissions
         // not all user can access projects.
-        assertFalse(copiee.getACL().hasPermission(test1.impersonate(), Item.READ));
-        assertFalse(copier.getACL().hasPermission(test1.impersonate(), Item.READ));
-        assertFalse(matrixCopiee.getACL().hasPermission(test1.impersonate(), Item.READ));
-        assertFalse(matrixCopier.getACL().hasPermission(test1.impersonate(), Item.READ));
+        assertFalse(copiee.getACL().hasPermission2(test1.impersonate2(), Item.READ));
+        assertFalse(copier.getACL().hasPermission2(test1.impersonate2(), Item.READ));
+        assertFalse(matrixCopiee.getACL().hasPermission2(test1.impersonate2(), Item.READ));
+        assertFalse(matrixCopier.getACL().hasPermission2(test1.impersonate2(), Item.READ));
         
         // prepare an artifact
         rule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
@@ -2093,15 +2091,15 @@ public class CopyArtifactTest {
     }
 
     private static class TestQueueItemAuthenticator extends jenkins.security.QueueItemAuthenticator {
-        private final transient org.acegisecurity.Authentication auth;
+        private final transient Authentication auth;
         
-        public TestQueueItemAuthenticator(org.acegisecurity.Authentication auth) {
+        public TestQueueItemAuthenticator(Authentication auth) {
             this.auth = auth;
         }
         
         @Override
         @edu.umd.cs.findbugs.annotations.CheckForNull
-        public org.acegisecurity.Authentication authenticate(Queue.Item item) {
+        public Authentication authenticate2(Queue.Item item) {
             return auth;
         }
         
@@ -2146,20 +2144,20 @@ public class CopyArtifactTest {
         auth.grant(Item.READ).onItems(copier).to(test1,test2);
         
         // test permissions
-        assertTrue (copiee.getACL().hasPermission(admin.impersonate(), Item.READ));
-        assertTrue (copiee.getACL().hasPermission(test1.impersonate(), Item.READ));
-        assertFalse(copiee.getACL().hasPermission(test2.impersonate(), Item.READ));
+        assertTrue (copiee.getACL().hasPermission2(admin.impersonate2(), Item.READ));
+        assertTrue (copiee.getACL().hasPermission2(test1.impersonate2(), Item.READ));
+        assertFalse(copiee.getACL().hasPermission2(test2.impersonate2(), Item.READ));
         
-        assertTrue (copier.getACL().hasPermission(admin.impersonate(), Item.BUILD));
-        assertTrue (copier.getACL().hasPermission(test1.impersonate(), Item.BUILD));
-        assertTrue (copier.getACL().hasPermission(test2.impersonate(), Item.BUILD));
-        assertTrue (copier.getACL().hasPermission(Jenkins.ANONYMOUS, Item.BUILD));
+        assertTrue (copier.getACL().hasPermission2(admin.impersonate2(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission2(test1.impersonate2(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission2(test2.impersonate2(), Item.BUILD));
+        assertTrue (copier.getACL().hasPermission2(Jenkins.ANONYMOUS2, Item.BUILD));
         
         // Computer.BUILD is required since Jenkins 1.521.
-        assertTrue(rule.jenkins.getACL().hasPermission(admin.impersonate(), Computer.BUILD));
-        assertTrue(rule.jenkins.getACL().hasPermission(test1.impersonate(), Computer.BUILD));
-        assertTrue(rule.jenkins.getACL().hasPermission(test2.impersonate(), Computer.BUILD));
-        assertTrue(rule.jenkins.getACL().hasPermission(Jenkins.ANONYMOUS, Computer.BUILD));
+        assertTrue(rule.jenkins.getACL().hasPermission2(admin.impersonate2(), Computer.BUILD));
+        assertTrue(rule.jenkins.getACL().hasPermission2(test1.impersonate2(), Computer.BUILD));
+        assertTrue(rule.jenkins.getACL().hasPermission2(test2.impersonate2(), Computer.BUILD));
+        assertTrue(rule.jenkins.getACL().hasPermission2(Jenkins.ANONYMOUS2, Computer.BUILD));
         
         // prepare an artifact
         rule.assertBuildStatusSuccess(copiee.scheduleBuild2(0));
@@ -2174,7 +2172,7 @@ public class CopyArtifactTest {
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                    new TestQueueItemAuthenticator(admin.impersonate())
+                    new TestQueueItemAuthenticator(admin.impersonate2())
             );
             rule.assertBuildStatus(Result.SUCCESS, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         }
@@ -2184,7 +2182,7 @@ public class CopyArtifactTest {
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                    new TestQueueItemAuthenticator(test1.impersonate())
+                    new TestQueueItemAuthenticator(test1.impersonate2())
             );
             rule.assertBuildStatus(Result.SUCCESS, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         }
@@ -2194,7 +2192,7 @@ public class CopyArtifactTest {
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                    new TestQueueItemAuthenticator(test2.impersonate())
+                    new TestQueueItemAuthenticator(test2.impersonate2())
             );
             rule.assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         }
@@ -2204,7 +2202,7 @@ public class CopyArtifactTest {
         {
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
             QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-                    new TestQueueItemAuthenticator(Jenkins.ANONYMOUS)
+                    new TestQueueItemAuthenticator(Jenkins.ANONYMOUS2)
             );
             rule.assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
         }
@@ -2482,11 +2480,9 @@ public class CopyArtifactTest {
                 true
         ));
 
-        Map<String, Authentication> authMap = new HashMap<>();
-        authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
         QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
         QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-            new MockQueueItemAuthenticator(authMap)
+            new MockQueueItemAuthenticator().authenticate(dest.getFullName(), User.getById("joe", true).impersonate2())
         );
         rule.assertBuildStatusSuccess(dest.scheduleBuild2(0));
     }
@@ -2520,11 +2516,9 @@ public class CopyArtifactTest {
                 true
         ));
 
-        Map<String, Authentication> authMap = new HashMap<>();
-        authMap.put(dest.getFullName(), User.getById("joe", true).impersonate());
         QueueItemAuthenticatorConfiguration.get().getAuthenticators().clear();
         QueueItemAuthenticatorConfiguration.get().getAuthenticators().add(
-            new MockQueueItemAuthenticator(authMap)
+            new MockQueueItemAuthenticator().authenticate(dest.getFullName(), User.getById("joe", true).impersonate2())
         );
         rule.assertBuildStatus(Result.FAILURE, dest.scheduleBuild2(0));
     }

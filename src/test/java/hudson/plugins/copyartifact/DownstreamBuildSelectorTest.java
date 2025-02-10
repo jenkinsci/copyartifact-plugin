@@ -52,8 +52,8 @@ import hudson.tasks.BuildTrigger;
 import hudson.tasks.Fingerprinter;
 import hudson.util.FormValidation;
 
-import org.acegisecurity.Authentication;
-import org.acegisecurity.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
@@ -554,9 +554,9 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "folder1/project2").kind);
         
         // permission check
-        Authentication a = Jenkins.getAuthentication();
+        Authentication a = Jenkins.getAuthentication2();
         try {
-            SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate());
+            SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate2());
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(project2, "../project1").kind);
             assertEquals(FormValidation.Kind.ERROR, d.doCheckUpstreamProjectName(project2, "project3").kind);
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamProjectName(null, "/project1").kind);
@@ -625,9 +625,9 @@ public class DownstreamBuildSelectorTest {
         assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project2", "NosuchBuild").kind);
 
         // permission check
-        Authentication a = Jenkins.getAuthentication();
+        Authentication a = Jenkins.getAuthentication2();
         try {
-            SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate());
+            SecurityContextHolder.getContext().setAuthentication(User.get("devel").impersonate2());
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(project1, "project3", "nosuchbuild").kind);  // limitation
             assertEquals(FormValidation.Kind.OK, d.doCheckUpstreamBuildNumber(null, "project3", "nosuchbuild").kind);
         } finally {
