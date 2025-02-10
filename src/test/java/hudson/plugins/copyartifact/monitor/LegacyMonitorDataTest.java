@@ -33,7 +33,7 @@ import hudson.model.User;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
 import jenkins.model.Jenkins;
-import org.acegisecurity.AccessDeniedException;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;

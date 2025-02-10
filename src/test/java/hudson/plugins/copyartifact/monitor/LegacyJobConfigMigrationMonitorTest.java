@@ -49,7 +49,7 @@ import jenkins.model.Jenkins;
 import jenkins.model.ParameterizedJobMixIn;
 import jenkins.security.QueueItemAuthenticator;
 import jenkins.security.QueueItemAuthenticatorConfiguration;
-import org.acegisecurity.Authentication;
+import org.springframework.security.core.Authentication;
 import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -378,7 +378,7 @@ public class LegacyJobConfigMigrationMonitorTest {
         assertNoLegacyMonitor();
         
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_noAuth);
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_anonymous);
@@ -444,7 +444,7 @@ public class LegacyJobConfigMigrationMonitorTest {
             assertCopyParameterizedResult(Result.FAILURE, projectCopier, projectToBeCopied_restricted);
         }
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_noAuth);
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_anonymous);
@@ -498,7 +498,7 @@ public class LegacyJobConfigMigrationMonitorTest {
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_restricted);
         }
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             assertCopyParameterizedResult(Result.FAILURE, projectCopier, projectToBeCopied_restricted);
         }
@@ -540,7 +540,7 @@ public class LegacyJobConfigMigrationMonitorTest {
         assertNoLegacyMonitor();
         
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_noAuth);
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_anonymous);
@@ -606,7 +606,7 @@ public class LegacyJobConfigMigrationMonitorTest {
             assertCopyParameterizedResult(Result.FAILURE, projectCopier, projectToBeCopied_restricted);
         }
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_noAuth);
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_anonymous);
@@ -659,7 +659,7 @@ public class LegacyJobConfigMigrationMonitorTest {
             assertCopyParameterizedResult(Result.SUCCESS, projectCopier, projectToBeCopied_restricted);
         }
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             // even with access, the other job is not visible for anonymous
             assertCopyParameterizedResult(Result.FAILURE, projectCopier, projectToBeCopied_restricted);
@@ -704,7 +704,7 @@ public class LegacyJobConfigMigrationMonitorTest {
         assertLegacyMonitorHasOnly_andClear("to-be-copied_restricted");
         
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             j.assertBuildStatus(Result.SUCCESS, projectCopier_noAuth.scheduleBuild2(0));
             j.assertBuildStatus(Result.SUCCESS, projectCopier_anonymous.scheduleBuild2(0));
@@ -773,7 +773,7 @@ public class LegacyJobConfigMigrationMonitorTest {
             j.assertBuildStatus(Result.FAILURE, projectCopier_restricted.scheduleBuild2(0));
         }
         { // authQueue as anonymous
-            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS);
+            setupGlobalQueueAuthAs(Jenkins.ANONYMOUS2);
             
             j.assertBuildStatus(Result.SUCCESS, projectCopier_noAuth.scheduleBuild2(0));
             j.assertBuildStatus(Result.SUCCESS, projectCopier_anonymous.scheduleBuild2(0));
@@ -846,7 +846,7 @@ public class LegacyJobConfigMigrationMonitorTest {
     private Authentication createUserAndImpersonate(String userName) {
         User user = User.getById(userName, true);
         assertNotNull(user);
-        return user.impersonate();
+        return user.impersonate2();
     }
     
     private void assertNoLegacyMonitor() {
@@ -886,7 +886,7 @@ public class LegacyJobConfigMigrationMonitorTest {
         }
         
         @Override
-        public @CheckForNull Authentication authenticate(Queue.Item item) {
+        public @CheckForNull Authentication authenticate2(Queue.Item item) {
             return authentication;
         }
     }

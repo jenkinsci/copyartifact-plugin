@@ -94,9 +94,9 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.model.Jenkins;
 
 import jenkins.tasks.SimpleBuildStep;
-import org.acegisecurity.Authentication;
-import org.acegisecurity.GrantedAuthority;
-import org.acegisecurity.providers.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.Symbol;
 import org.kohsuke.stapler.AncestorInPath;
@@ -126,7 +126,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
     private static final Authentication AUTHENTICATED_ANONYMOUS = new UsernamePasswordAuthenticationToken(
         "authenticated",
         "",
-        new GrantedAuthority[]{ SecurityRealm.AUTHENTICATED_AUTHORITY }
+        List.of(SecurityRealm.AUTHENTICATED_AUTHORITY2)
     );
 
     @Deprecated private transient String projectName;
@@ -464,7 +464,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                     
                     Date buildStartedAt = new Date(build.getStartTimeInMillis());
                     // will be System if there is no QueueItemAuthenticator
-                    String currentUserName = Jenkins.getAuthentication().getName();
+                    String currentUserName = Jenkins.getAuthentication2().getName();
                     LegacyJobConfigMigrationMonitor.get().addLegacyJob(build.getParent(), job, buildStartedAt, currentUserName);
                     
                     // but let the process goes on 
@@ -581,8 +581,8 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         Job<?, ?> fromJob = job;
         Job<?, ?> toJob = build.getParent();
 
-        Authentication a = Jenkins.getAuthentication();
-        if (!ACL.SYSTEM.equals(a)) {
+        Authentication a = Jenkins.getAuthentication2();
+        if (!ACL.SYSTEM2.equals(a)) {
             // if the build does not run on SYSTEM authorization,
             // Jenkins is configured to use QueueItemAuthenticator.
             // In this case, the permission is already checked by Jenkins
@@ -603,7 +603,7 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         }
 
         // Test the permission as an anonymous authenticated user.
-        if (fromJob.getACL().hasPermission(
+        if (fromJob.getACL().hasPermission2(
                 AUTHENTICATED_ANONYMOUS,
                 Item.READ)) {
             LOGGER.log(Level.FINE, "The copy-artifact step (of {0}) was accepted because the target project {1}" +
@@ -631,11 +631,11 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
             return true;
         }
 
-        Authentication a = Jenkins.getAuthentication();
-        if (ACL.SYSTEM.equals(a)) {
+        Authentication a = Jenkins.getAuthentication2();
+        if (ACL.SYSTEM2.equals(a)) {
             a = AUTHENTICATED_ANONYMOUS;
         }
-        if (srcBuild.hasPermission(a, Run.ARTIFACTS)) {
+        if (srcBuild.hasPermission2(a, Run.ARTIFACTS)) {
             return true;
         }
 
