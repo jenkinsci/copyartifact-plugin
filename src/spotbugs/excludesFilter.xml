@@ -38,6 +38,14 @@
       <Class name="hudson.plugins.copyartifact.WorkspaceSelector$DescriptorImpl"/>
     </Or>
   </Match>
+  <Match>
+    <!-- clone methods are inherited from Copier, not from Cloneable -->
+    <Bug pattern="CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE"/>
+    <Or>
+      <Class name="hudson.plugins.copyartifact.FingerprintingCopyMethod"/>
+      <Class name="hudson.plugins.copyartifact.FilePathCopyMethod"/>
+    </Or>
+  </Match>
 
   <!--
     Here lies technical debt. Exclusions in this section have not yet
