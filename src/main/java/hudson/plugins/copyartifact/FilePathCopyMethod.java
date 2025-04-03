@@ -29,6 +29,8 @@ import hudson.model.Run;
 
 import java.io.IOException;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Default implementation of CopyMethod extension point,
  * using the Jenkins FilePath class.  Has -100 ordinal value so any other
@@ -53,6 +55,10 @@ public class FilePathCopyMethod extends Copier {
         source.copyToWithPermission(target);
     }
 
+    @SuppressFBWarnings(
+            value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
+            justification = "This is a method not of Cloneable but of Copier."
+    )
     @Override
     public Copier clone() {
         return this;
