@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 /**
  * Performs fingerprinting during the copy.
  *
@@ -137,6 +139,10 @@ public class FingerprintingCopyMethod extends Copier {
         }
     }
 
+    @SuppressFBWarnings(
+            value = "CN_IMPLEMENTS_CLONE_BUT_NOT_CLONEABLE",
+            justification = "This is a method not of Cloneable but of Copier."
+    )
     @Override
     public Copier clone() {
         return new FingerprintingCopyMethod();
