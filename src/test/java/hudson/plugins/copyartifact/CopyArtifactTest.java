@@ -130,6 +130,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -1920,6 +1921,11 @@ public class CopyArtifactTest {
         FreeStyleBuild b = rule.buildAndAssertSuccess(p2);
         FilePath ws = b.getWorkspace();
         assertEquals("text", ws.child("plain").readToString());
+        // Windows 10 and 11 by default will not create symbolic links. Don't fail test
+        // Mark the test as skipped if running on Windows and both symlinks return null
+        assumeFalse(Functions.isWindows() &&
+                    ws.child("link1").readLink() == null &&
+                    ws.child("link2").readLink() == null);
         assertEquals("plain", ws.child("link1").readLink());
         assertEquals("nonexistent", ws.child("link2").readLink());
     }
@@ -1943,6 +1949,10 @@ public class CopyArtifactTest {
         FreeStyleBuild b = rule.buildAndAssertSuccess(p2);
         FilePath ws = b.getWorkspace();
         assertEquals("text", ws.child("plain").readToString());
+        // Windows 10 and 11 by default will not create symbolic links. Don't fail test
+        // Mark the test as skipped if running on Windows and symlink is null
+        assumeFalse(Functions.isWindows() &&
+                    ws.child("dir/link1").readLink() == null);
         assertEquals(
             StringUtils.join(
                 new String[]{"..", "plain"},
