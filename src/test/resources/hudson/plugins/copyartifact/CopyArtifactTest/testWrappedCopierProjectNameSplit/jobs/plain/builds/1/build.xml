@@ -7,9 +7,9 @@
       </causes>
     </hudson.model.CauseAction>
   </actions>
-  <number>2</number>
+  <timestamp>1362112114000</timestamp>
   <result>SUCCESS</result>
-  <duration>78</duration>
+  <duration>293</duration>
   <charset>UTF-8</charset>
   <keepLog>false</keepLog>
   <builtOn></builtOn>
