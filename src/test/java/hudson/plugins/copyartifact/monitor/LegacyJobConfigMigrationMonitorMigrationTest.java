@@ -24,22 +24,26 @@
 
 package hudson.plugins.copyartifact.monitor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import hudson.plugins.copyartifact.testutils.JenkinsRuleUtil;
+import jenkins.plugins.git.junit.jupiter.WithGitSampleRepo;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProjectTest;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.MockFolder;
 import org.jvnet.hudson.test.ToolInstallations;
 
 import hudson.matrix.Axis;
+
+import java.io.File;
 import hudson.matrix.AxisList;
 import hudson.matrix.Combination;
 import hudson.matrix.MatrixProject;
@@ -50,7 +54,6 @@ import hudson.plugins.copyartifact.CopyArtifact;
 import hudson.plugins.copyartifact.CopyArtifactCompatibilityMode;
 import hudson.plugins.copyartifact.CopyArtifactConfiguration;
 import hudson.plugins.copyartifact.monitor.LegacyMonitorData.JobKey;
-import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
 import jenkins.branch.BranchProperty;
@@ -59,17 +62,19 @@ import jenkins.branch.DefaultBranchPropertyStrategy;
 import jenkins.branch.NoTriggerBranchProperty;
 import jenkins.plugins.git.GitSCMSource;
 import jenkins.plugins.git.GitSampleRepoRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Test that migration is applicable to various jobs.
  */
-public class LegacyJobConfigMigrationMonitorMigrationTest {
-    @Rule
-    public CopyArtifactJenkinsRule j = new CopyArtifactJenkinsRule();
-    @Rule
-    public GitSampleRepoRule sampleRepo = new GitSampleRepoRule();
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+@WithJenkins
+@WithGitSampleRepo
+class LegacyJobConfigMigrationMonitorMigrationTest {
+
+    private JenkinsRule j;
+    private GitSampleRepoRule sampleRepo;
+    @TempDir
+    private File tempFolder;
 
     private boolean applyAutoMigrationToAll() throws Exception {
         boolean migrated = true;
@@ -82,9 +87,11 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
         return migrated;
     }
 
+    @BeforeEach
+    void setUp(JenkinsRule rule, GitSampleRepoRule repo) {
+        j = rule;
+        sampleRepo = repo;
 
-    @Before
-    public void prepareMigration() {
         LegacyJobConfigMigrationMonitor.get().getData().clear();
         CopyArtifactConfiguration.get().setMode(CopyArtifactCompatibilityMode.MIGRATION);
 
@@ -95,7 +102,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_freestyle_to_freestyle() throws Exception {
+    void migrate_freestyle_to_freestyle() throws Exception {
         FreeStyleProject src = j.createFreeStyleProject();
         src.getBuildersList().add(
             new FileWriteBuilder("artifact.txt", "artifact content")
@@ -122,7 +129,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_pipeline() throws Exception {
+    void migrate_pipeline_to_pipeline() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
             "node {"
@@ -152,7 +159,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_in_folder_to_pipeline() throws Exception {
+    void migrate_pipeline_in_folder_to_pipeline() throws Exception {
         MockFolder f = j.createFolder("folder");
         WorkflowJob src = f.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
@@ -183,7 +190,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_pipeline_in_folder() throws Exception {
+    void migrate_pipeline_to_pipeline_in_folder() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
             "node {"
@@ -214,7 +221,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_pipeline_in_same_folder() throws Exception {
+    void migrate_pipeline_to_pipeline_in_same_folder() throws Exception {
         MockFolder f = j.createFolder("folder");
         WorkflowJob src = f.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
@@ -245,7 +252,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_pipeline_in_different_folder() throws Exception {
+    void migrate_pipeline_to_pipeline_in_different_folder() throws Exception {
         MockFolder f1 = j.createFolder("folder1");
         WorkflowJob src = f1.createProject(WorkflowJob.class, "src");
         src.setDefinition(new CpsFlowDefinition(
@@ -277,7 +284,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_matrix_to_pipeline() throws Exception {
+    void migrate_matrix_to_pipeline() throws Exception {
         MatrixProject src = j.createProject(MatrixProject.class);
         src.setAxes(new AxisList(
             new Axis("axis1", "value1", "value2")
@@ -309,7 +316,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_matrixchild_to_pipeline() throws Exception {
+    void migrate_matrixchild_to_pipeline() throws Exception {
         MatrixProject src = j.createProject(MatrixProject.class);
         AxisList axisList = new AxisList(
             new Axis("axis1", "value1", "value2")
@@ -342,7 +349,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_matrix() throws Exception {
+    void migrate_pipeline_to_matrix() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
             "node {"
@@ -373,10 +380,10 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_maven_to_pipeline() throws Exception {
+    void migrate_maven_to_pipeline() throws Exception {
         ToolInstallations.configureMaven3();
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
-        src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
+        src.setScm(JenkinsRuleUtil.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
         src.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
@@ -400,10 +407,10 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_mavenmodule_to_pipeline() throws Exception {
+    void migrate_mavenmodule_to_pipeline() throws Exception {
         ToolInstallations.configureMaven3();
         MavenModuleSet src = j.createProject(MavenModuleSet.class);
-        src.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
+        src.setScm(JenkinsRuleUtil.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         src.setRunHeadless(true);
         src.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         j.assertBuildStatusSuccess(src.scheduleBuild2(0));
@@ -427,7 +434,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_maven() throws Exception {
+    void migrate_pipeline_to_maven() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
             "node {"
@@ -440,7 +447,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
 
         ToolInstallations.configureMaven3();
         MavenModuleSet dst = j.createProject(MavenModuleSet.class);
-        dst.setScm(j.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
+        dst.setScm(JenkinsRuleUtil.getExtractResourceScm(tempFolder, getClass().getResource("../maven-job")));
         dst.setRunHeadless(true);
         dst.setGoals("clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8");
         dst.getPrebuilders().add(
@@ -458,7 +465,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_pipeline_to_multibranch() throws Exception {
+    void migrate_pipeline_to_multibranch() throws Exception {
         WorkflowJob src = j.createProject(WorkflowJob.class);
         src.setDefinition(new CpsFlowDefinition(
             "node {"
@@ -512,7 +519,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
     }
 
     @Test
-    public void migrate_multibranch_to_pipeline() throws Exception {
+    void migrate_multibranch_to_pipeline() throws Exception {
         sampleRepo.init();
         sampleRepo.write(
             "Jenkinsfile",
@@ -560,7 +567,7 @@ public class LegacyJobConfigMigrationMonitorMigrationTest {
 
         j.assertBuildStatus(Result.FAILURE, dst.scheduleBuild2(0));
 
-        // This should fail as the configuration of multibranch 
+        // This should fail as the configuration of multibranch
         // cannot be overwritten.
         assertFalse(applyAutoMigrationToAll());
 

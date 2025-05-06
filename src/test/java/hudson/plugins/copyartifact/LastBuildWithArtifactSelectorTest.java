@@ -23,27 +23,34 @@
  */
 package hudson.plugins.copyartifact;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.copyartifact.testutils.FileWriteBuilder;
 import hudson.tasks.ArtifactArchiver;
 import org.apache.commons.io.FileUtils;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import java.io.File;
 
-public class LastBuildWithArtifactSelectorTest {
-    @Rule
-    public final JenkinsRule j = new JenkinsRule();
+@WithJenkins
+class LastBuildWithArtifactSelectorTest {
+
+    private JenkinsRule j;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     @Test
-    public void testNoArtifactInPreviousBuild() throws Exception {
+    void testNoArtifactInPreviousBuild() throws Exception {
         // configure project
         FreeStyleProject project = j.createFreeStyleProject();
         String artifactString = "artifact.txt";
