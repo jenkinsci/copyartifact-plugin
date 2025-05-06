@@ -2,21 +2,28 @@ package hudson.plugins.copyartifact;
 
 import hudson.EnvVars;
 import hudson.model.FreeStyleProject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
-public class SpecificBuildSelectorTest {
-    @Rule
-    public final JenkinsRule rule = new JenkinsRule();
+@WithJenkins
+class SpecificBuildSelectorTest {
+
+    private JenkinsRule rule;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        this.rule = rule;
+    }
 
     @Issue("JENKINS-14266")
     @Test
-    public void testUnsetVar() throws Exception {
+    void testUnsetVar() throws Exception {
         FreeStyleProject p = rule.createFreeStyleProject();
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
@@ -30,7 +37,7 @@ public class SpecificBuildSelectorTest {
 
     @Issue("JENKINS-19693")
     @Test
-    public void testDisplayName() throws Exception {
+    void testDisplayName() throws Exception {
         FreeStyleProject p = rule.createFreeStyleProject();
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
@@ -44,7 +51,7 @@ public class SpecificBuildSelectorTest {
     }
 
     @Test
-    public void testPermalink() throws Exception {
+    void testPermalink() throws Exception {
         FreeStyleProject p = rule.createFreeStyleProject();
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));
         rule.assertBuildStatusSuccess(p.scheduleBuild2(0));

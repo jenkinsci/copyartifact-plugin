@@ -35,28 +35,35 @@ import hudson.model.ParametersDefinitionProperty;
 import java.net.URL;
 import java.util.Arrays;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.JenkinsRule.WebClient;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test interaction of BuildSelectorParameter with Jenkins core.
  * @author Alan Harder
  */
-public class BuildSelectorParameterTest {
-    @Rule
-    public final JenkinsRule rule = new JenkinsRule();
+@WithJenkins
+class BuildSelectorParameterTest {
+
+    private JenkinsRule rule;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        this.rule = rule;
+    }
 
     /**
      * Verify BuildSelectorParameter works via HTML form, http POST and CLI.
      */
     @Test
-    public void testParameter() throws Exception {
+    void testParameter() throws Exception {
         FreeStyleProject job = rule.createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(
                 new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(false), "foo")));
@@ -97,14 +104,14 @@ public class BuildSelectorParameterTest {
         rule.waitUntilNoActivity();
         assertEquals("<SavedBuildSelector/>", ceb.getEnvVars().get("SELECTOR"));
     }
-    
+
     @Test
-    public void testConfiguration() throws Exception {
+    void testConfiguration() throws Exception {
         BuildSelectorParameter expected = new BuildSelectorParameter("SELECTOR", new StatusBuildSelector(true), "foo");
         FreeStyleProject job = rule.createFreeStyleProject();
         job.addProperty(new ParametersDefinitionProperty(expected));
         job.save();
-        
+
         job = rule.configRoundtrip(job);
         BuildSelectorParameter actual = (BuildSelectorParameter)job.getProperty(ParametersDefinitionProperty.class).getParameterDefinition("SELECTOR");
         rule.assertEqualDataBoundBeans(expected, actual);

@@ -41,49 +41,26 @@ import java.util.Map;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.ExtractResourceSCM;
 import org.jvnet.hudson.test.JenkinsRule;
-
-import org.htmlunit.WebResponse;
 
 import hudson.scm.SCM;
 
 /**
  *
  */
-public class CopyArtifactJenkinsRule extends JenkinsRule {
-    private static final int SC_METHOD_NOT_ALLOWED = 405;
-    
+public class JenkinsRuleUtil {
+
+    private JenkinsRuleUtil() {
+    }
+
     /**
      * Get Web Client that allows 405 Method Not Allowed.
      * This happens when accessing build page of a project with parameters.
      */
-    public JenkinsRule.WebClient createAllow405WebClient() {
-        WebClient webClient = new WebClient() {
-            private static final long serialVersionUID = 2209855651713458482L;
-
-            @Override
-            public void throwFailingHttpStatusCodeExceptionIfNecessary(
-                    WebResponse webResponse
-            ) {
-                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED) {
-                    // allow 405.
-                    return;
-                }
-                super.throwFailingHttpStatusCodeExceptionIfNecessary(webResponse);
-            }
-
-            @Override
-            public void printContentIfNecessary(WebResponse webResponse) {
-                if(webResponse.getStatusCode() == SC_METHOD_NOT_ALLOWED)
-                {
-                    // allow 405.
-                    return;
-                }
-                super.printContentIfNecessary(webResponse);
-            }
-        };
+    public static JenkinsRule.WebClient createAllow405WebClient(JenkinsRule rule) {
+        JenkinsRule.WebClient webClient = rule.createWebClient();
+        webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
         webClient.getOptions().setFetchPolyfillEnabled(true);
         return webClient;
     }
@@ -94,10 +71,10 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
      * @param name the new job name
      * @param script the script put in <code>node{}</code>
      * @return the new workflow job
-     * @throws IOException an error when creating a new job
+     * @throws Exception an error when creating a new job
      */
-    public WorkflowJob createWorkflow(String name, String script) throws Exception {
-        WorkflowJob job = jenkins.createProject(WorkflowJob.class, name);
+    public static WorkflowJob createWorkflow(JenkinsRule rule, String name, String script) throws Exception {
+        WorkflowJob job = rule.createProject(WorkflowJob.class, name);
         job.setDefinition(new CpsFlowDefinition("node {" + script + "}", true));
         return job;
     }
@@ -105,40 +82,41 @@ public class CopyArtifactJenkinsRule extends JenkinsRule {
     /**
      * Create SCM from the specified directory in resources.
      *
-     * @param tempFolder an instance of {@link TemporaryFolder}
+     * @param tempFolder an instance of {@link File}
      * @param resource URL for the directory gotten with {@link Class#getResource(String)}
      * @return SCM
      * @throws Exception
      */
-    public SCM getExtractResourceScm(TemporaryFolder tempFolder, URL resource) throws Exception {
-        File scmZip = tempFolder.newFile();
+    public static SCM getExtractResourceScm(File tempFolder, URL resource) throws Exception {
+        File scmZip = File.createTempFile("junit", null, tempFolder);
         final Path scmSource = Paths.get(resource.toURI());
         URI scmZipUri = new URI("jar", scmZip.toURI().toString(), null);
         Files.deleteIfExists(scmZip.toPath());
         Map<String, String> env = new HashMap<>();
         env.put("create", "true");
         try(final FileSystem zipFile = FileSystems.newFileSystem(scmZipUri, env)) {
-            Files.walkFileTree(scmSource, new SimpleFileVisitor<Path>(){
+            Files.walkFileTree(scmSource, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(
-                    Path file,
-                    BasicFileAttributes attrs
+                        Path file,
+                        BasicFileAttributes attrs
                 ) throws IOException {
                     Path dest = zipFile.getPath(
-                        "/",
-                        scmSource.relativize(file).toString()
+                            "/",
+                            scmSource.relativize(file).toString()
                     );
                     Files.copy(file, dest);
                     return FileVisitResult.CONTINUE;
                 }
+
                 @Override
                 public FileVisitResult preVisitDirectory(
-                    Path dir,
-                    BasicFileAttributes attrs
+                        Path dir,
+                        BasicFileAttributes attrs
                 ) throws IOException {
                     Path dest = zipFile.getPath(
-                        "/",
-                        scmSource.relativize(dir).toString()
+                            "/",
+                            scmSource.relativize(dir).toString()
                     );
                     if (Files.notExists(dest)) {
                         // Creating root directory cause FileAlreadyExistsException
