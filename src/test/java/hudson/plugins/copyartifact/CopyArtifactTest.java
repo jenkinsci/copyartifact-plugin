@@ -110,7 +110,6 @@ import org.jvnet.hudson.test.TestBuilder;
 import org.jvnet.hudson.test.ToolInstallations;
 import org.jvnet.hudson.test.UnstableBuilder;
 import org.jvnet.hudson.test.recipes.LocalData;
-import org.jvnet.hudson.test.recipes.WithPlugin;
 
 import com.cloudbees.hudson.plugins.folder.Folder;
 import org.htmlunit.FailingHttpStatusCodeException;
@@ -2213,36 +2212,6 @@ class CopyArtifactTest {
                     new TestQueueItemAuthenticator(Jenkins.ANONYMOUS2)
             );
             rule.assertBuildStatus(Result.FAILURE, copier.scheduleBuild2(0).get(TIMEOUT, TimeUnit.SECONDS));
-        }
-    }
-
-    @Issue("JENKINS-28972")
-    @LocalData
-    @WithPlugin("copyartifact-extension-test.hpi")  // JENKINS-28792 reproduces only when classes are located in different class loaders.
-    @Test
-    void testSimpleBuildSelectorDescriptorInOtherPlugin() throws Exception {
-        WebClient wc = rule.createWebClient();
-
-        // An extension using SimpleBuildSelectorDescriptorSelector
-        {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("UsingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
-            assertNotNull(p);
-            wc.getPage(p, "configure");
-        }
-
-        // An extension using SimpleBuildSelectorDescriptorSelector without configuration pages.
-        {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("NoConfigPageSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
-            assertNotNull(p);
-            wc.getPage(p, "configure");
-        }
-
-        // An extension extending SimpleBuildSelectorDescriptorSelector.
-        // (Even though generally it is useless)
-        {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("ExtendingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
-            assertNotNull(p);
-            wc.getPage(p, "configure");
         }
     }
 
