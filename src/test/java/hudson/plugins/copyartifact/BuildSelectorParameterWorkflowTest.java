@@ -27,33 +27,41 @@ import hudson.cli.CLICommandInvoker;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersDefinitionProperty;
-import hudson.plugins.copyartifact.testutils.CopyArtifactJenkinsRule;
 
 import java.io.ByteArrayInputStream;
 
+import hudson.plugins.copyartifact.testutils.JenkinsRuleUtil;
 import org.hamcrest.Matchers;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class BuildSelectorParameterWorkflowTest {
+@WithJenkins
+class BuildSelectorParameterWorkflowTest {
 
-    @Rule
-    public CopyArtifactJenkinsRule j = new CopyArtifactJenkinsRule();
+    private JenkinsRule j;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     // Behaviors integrated with the CopyArtifact builder should be tested in other tests.
 
     @Test
-    public void testBuildSelectorParameter() throws Exception {
-        WorkflowJob pipeline = j.createWorkflow(
+    void testBuildSelectorParameter() throws Exception {
+        WorkflowJob pipeline = JenkinsRuleUtil.createWorkflow(
+                j,
                 "pipeline",
                 "properties([parameters([buildSelector(name: 'foo', description: 'description', defaultSelector: lastCompleted())])])"
         );
@@ -68,7 +76,7 @@ public class BuildSelectorParameterWorkflowTest {
     }
 
     @Test
-    public void testMigrateionFromOlderThan1_46() throws Exception {
+    void testMigrateionFromOlderThan1_46() throws Exception {
         CLICommandInvoker.Result r = new CLICommandInvoker(j, "create-job")
             .withArgs("job1")
             .withStdin(new ByteArrayInputStream(
@@ -105,7 +113,7 @@ public class BuildSelectorParameterWorkflowTest {
                 ).getBytes()
             ))
             .invoke();
-        assertEquals(r.stderr(), 0, r.returnCode());
+        assertEquals(0, r.returnCode(), r.stderr());
 
         FreeStyleProject p = j.jenkins.getItemByFullName("job1", FreeStyleProject.class);
         BuildSelectorParameter buildSelectorParameter = (BuildSelectorParameter)p.getProperty(ParametersDefinitionProperty.class)
@@ -128,7 +136,7 @@ public class BuildSelectorParameterWorkflowTest {
     }
 
     @Test
-    public void testRestoreDefaultSelector() throws Exception {
+    void testRestoreDefaultSelector() throws Exception {
         CLICommandInvoker.Result r = new CLICommandInvoker(j, "create-job")
             .withArgs("job1")
             .withStdin(new ByteArrayInputStream(
@@ -163,7 +171,7 @@ public class BuildSelectorParameterWorkflowTest {
                 ).getBytes()
             ))
             .invoke();
-        assertEquals(r.stderr(), 0, r.returnCode());
+        assertEquals(0, r.returnCode(), r.stderr());
 
         FreeStyleProject p = j.jenkins.getItemByFullName("job1", FreeStyleProject.class);
         BuildSelectorParameter buildSelectorParameter = (BuildSelectorParameter)p.getProperty(ParametersDefinitionProperty.class)
@@ -175,7 +183,7 @@ public class BuildSelectorParameterWorkflowTest {
     }
 
     @Test
-    public void testBrokenXml() throws Exception {
+    void testBrokenXml() throws Exception {
         // Broken configuration, no defaultSelector nor defaultSelectorXml.
         CLICommandInvoker.Result r = new CLICommandInvoker(j, "create-job")
             .withArgs("job1")
@@ -210,7 +218,7 @@ public class BuildSelectorParameterWorkflowTest {
                 ).getBytes()
             ))
             .invoke();
-        assertEquals(r.stderr(), 0, r.returnCode());
+        assertEquals(0, r.returnCode(), r.stderr());
 
         FreeStyleProject p = j.jenkins.getItemByFullName("job1", FreeStyleProject.class);
         BuildSelectorParameter buildSelectorParameter = (BuildSelectorParameter)p.getProperty(ParametersDefinitionProperty.class)

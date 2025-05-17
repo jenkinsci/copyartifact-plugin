@@ -24,16 +24,16 @@
 package hudson.plugins.copyartifact;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.hamcrest.Matchers;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestExtension;
@@ -44,16 +44,23 @@ import hudson.XmlFile;
 import hudson.model.Saveable;
 import hudson.model.User;
 import hudson.model.listeners.SaveableListener;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
 /**
  * Tests for {@link CopyArtifactConfiguration}
  */
-public class CopyArtifactConfigurationTest {
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+@WithJenkins
+class CopyArtifactConfigurationTest {
+
+    private JenkinsRule j;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     @Test
-    public void configProduction() throws Exception {
+    void configProduction() throws Exception {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         config.setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
@@ -66,7 +73,7 @@ public class CopyArtifactConfigurationTest {
     }
 
     @Test
-    public void configMigration() throws Exception {
+    void configMigration() throws Exception {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         config.setMode(CopyArtifactCompatibilityMode.MIGRATION);
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.MIGRATION));
@@ -79,7 +86,7 @@ public class CopyArtifactConfigurationTest {
     }
 
     @Test
-    public void productionMode_forFresh() throws Exception {
+    void productionMode_forFresh() throws Exception {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         // autoconfigured to production, and stored to the disk.
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
@@ -96,8 +103,8 @@ public class CopyArtifactConfigurationTest {
     }
 
     @Test
-    @Ignore("No way to detect we are in a new version of the plugin within a test")
-    public void migrationMode_forUpgrade() throws Exception {
+    @Disabled("No way to detect we are in a new version of the plugin within a test")
+    void migrationMode_forUpgrade() throws Exception {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         config.setMode(CopyArtifactCompatibilityMode.PRODUCTION);
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
@@ -110,7 +117,7 @@ public class CopyArtifactConfigurationTest {
     }
 
     @Test
-    public void productionMode_storedToTheDisk() {
+    void productionMode_storedToTheDisk() {
         CopyArtifactConfiguration config = CopyArtifactConfiguration.get();
         assertThat(config.getMode(), Matchers.is(CopyArtifactCompatibilityMode.PRODUCTION));
         assertFalse(config.isFirstLoad());
@@ -122,13 +129,13 @@ public class CopyArtifactConfigurationTest {
 
     @Issue("JENKINS-62267")
     @Test
-    public void circularDependencyTestWithSavableListener() {
+    void circularDependencyTestWithSavableListener() {
         assertNotNull(CopyArtifactConfiguration.get());
     }
 
     @TestExtension("circularDependencyTestWithSavableListener")
     public static class LoadingExtensionFinderSavableListener extends SaveableListener {
-        Logger LOG = Logger.getLogger(LoadingExtensionFinderSavableListener.class.getName());
+        private static final Logger LOG = Logger.getLogger(LoadingExtensionFinderSavableListener.class.getName());
 
         @Override
         public void onChange(Saveable config, XmlFile file) {

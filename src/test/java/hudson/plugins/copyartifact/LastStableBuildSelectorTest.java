@@ -23,22 +23,32 @@
  */
 package hudson.plugins.copyartifact;
 
-import org.junit.Rule;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class LastStableBuildSelectorTest {
+@WithJenkins
+class LastStableBuildSelectorTest {
 
-    @Rule
-    public final JenkinsRule rule = new JenkinsRule();
+    private JenkinsRule j;
+
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     @Test
-    public void testNullSettingSelectorNullFallsBackToDefaultAkaStableSelector() throws Exception {
+    void testNullSettingSelectorNullFallsBackToDefaultAkaStableSelector() {
         CopyArtifact copyArtifact = new CopyArtifact("dummy");
         copyArtifact.setSelector(null);
         BuildSelector s = copyArtifact.getSelector();
-        org.junit.Assert.assertNotNull(s);
-        org.junit.Assert.assertTrue(s instanceof StatusBuildSelector);
-        org.junit.Assert.assertTrue(((StatusBuildSelector)s).isStable());
+        assertNotNull(s);
+        assertInstanceOf(StatusBuildSelector.class, s);
+        assertTrue(((StatusBuildSelector)s).isStable());
     }
 }
