@@ -750,8 +750,10 @@ class TriggeredBuildSelectorTest {
 
         j.waitUntilNoActivity();
 
+
         assertEquals(2, upstream.getBuilds().size(), "Upstream builds " + upstream.getBuilds());
         assertEquals(3, intermediate.getBuilds().size(), "Intermediate builds " + intermediate.getBuilds());
+        Thread.sleep(1537); // Wait a little extra time for downstream builds
         assertEquals(3, downstream.getBuilds().size(), "Downstream builds " + downstream.getBuilds());
 
         // Get the 'downstream#2' build ...
