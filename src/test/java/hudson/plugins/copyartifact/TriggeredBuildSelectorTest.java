@@ -300,7 +300,6 @@ class TriggeredBuildSelectorTest {
         assertEquals("value1", b.getWorkspace().child("artifact.txt").readToString());
     }
 
-
     @Test
     void testUseNewest() throws Exception {
         FreeStyleProject upstream = j.createFreeStyleProject();
@@ -401,7 +400,6 @@ class TriggeredBuildSelectorTest {
 
         assertEquals("value3", b.getWorkspace().child("artifact.txt").readToString());
     }
-
 
     @Test
     void testUseOldestNested() throws Exception {
