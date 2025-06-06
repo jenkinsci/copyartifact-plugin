@@ -750,9 +750,9 @@ class TriggeredBuildSelectorTest {
 
         j.waitUntilNoActivity();
 
-        assertEquals(2, upstream.getBuilds().size(), "Number of upstream builds");
-        assertEquals(3, intermediate.getBuilds().size(), "Number of intermediate builds");
-        assertEquals(3, downstream.getBuilds().size(), "Number of downstream builds");
+        assertEquals(2, upstream.getBuilds().size(), "Upstream builds " + upstream.getBuilds());
+        assertEquals(3, intermediate.getBuilds().size(), "Intermediate builds " + intermediate.getBuilds());
+        assertEquals(3, downstream.getBuilds().size(), "Downstream builds " + downstream.getBuilds());
 
         // Get the 'downstream#2' build ...
         FreeStyleBuild downstreamBuild2 = downstream.getBuildByNumber(2);
