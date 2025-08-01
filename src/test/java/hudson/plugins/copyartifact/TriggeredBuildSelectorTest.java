@@ -752,7 +752,7 @@ class TriggeredBuildSelectorTest {
         assertEquals(2, upstream.getBuilds().size(), "Upstream builds " + upstream.getBuilds());
         assertEquals(3, intermediate.getBuilds().size(), "Intermediate builds " + intermediate.getBuilds());
         if (Functions.isWindows()) {
-            Thread.sleep(3541); // Wait a little extra time for downstream Windows builds
+            Thread.sleep(7541); // Wait a little extra time for downstream Windows builds
         }
         assertEquals(3, downstream.getBuilds().size(), "Downstream builds " + downstream.getBuilds());
 
