@@ -751,7 +751,7 @@ class TriggeredBuildSelectorTest {
 
         assertEquals(2, upstream.getBuilds().size(), "Upstream builds " + upstream.getBuilds());
         assertEquals(3, intermediate.getBuilds().size(), "Intermediate builds " + intermediate.getBuilds());
-        if (Functions.isWindows() && System.getenv("CI") != null) {
+        if (!(Functions.isWindows() && System.getenv("CI") != null)) {
             // ci.jenkins.io Windows builds often report only 2 downstream builds
             assertEquals(3, downstream.getBuilds().size(), "Downstream builds " + downstream.getBuilds());
         }
