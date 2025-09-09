@@ -23,38 +23,45 @@
  */
 package hudson.plugins.copyartifact;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import hudson.model.FreeStyleProject;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.LocalData;
 import org.jvnet.hudson.test.recipes.WithPlugin;
 
-import static org.junit.Assert.assertNotNull;
+@WithJenkins
+class SimpleBuildSelectorDescriptorTest {
 
-public class SimpleBuildSelectorDescriptorTest {
+    private JenkinsRule j;
 
-    @Rule
-    public JenkinsRule rule = new JenkinsRule();
+    @BeforeEach
+    void setUp(JenkinsRule rule) {
+        j = rule;
+    }
 
     @Issue("JENKINS-28972")
     @LocalData
-    @WithPlugin("copyartifact-extension-test.hpi")  // JENKINS-28792 reproduces only when classes are located in different class loaders.
+    @WithPlugin("copyartifact-extension-test.hpi")
+    // JENKINS-28792 reproduces only when classes are located in different class loaders.
     @Test
-    public void testSimpleBuildSelectorDescriptorInOtherPlugin() throws Exception {
-        JenkinsRule.WebClient wc = rule.createWebClient();
+    void testSimpleBuildSelectorDescriptorInOtherPlugin() throws Exception {
+        JenkinsRule.WebClient wc = j.createWebClient();
 
         // An extension using SimpleBuildSelectorDescriptorSelector
         {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("UsingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            FreeStyleProject p = j.jenkins.getItemByFullName("UsingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
             assertNotNull(p);
             wc.getPage(p, "configure");
         }
 
         // An extension using SimpleBuildSelectorDescriptorSelector without configuration pages.
         {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("NoConfigPageSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            FreeStyleProject p = j.jenkins.getItemByFullName("NoConfigPageSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
             assertNotNull(p);
             wc.getPage(p, "configure");
         }
@@ -62,7 +69,7 @@ public class SimpleBuildSelectorDescriptorTest {
         // An extension extending SimpleBuildSelectorDescriptorSelector.
         // (Even though generally it is useless)
         {
-            FreeStyleProject p = rule.jenkins.getItemByFullName("ExtendingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
+            FreeStyleProject p = j.jenkins.getItemByFullName("ExtendingSimpleBuildSelectorDescriptorSelector", FreeStyleProject.class);
             assertNotNull(p);
             wc.getPage(p, "configure");
         }
