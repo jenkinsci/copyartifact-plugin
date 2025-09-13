@@ -26,18 +26,20 @@ package hudson.plugins.copyartifact;
 
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.RealJenkinsRule;
 import org.jvnet.hudson.test.TailLog;
+import org.jvnet.hudson.test.junit.jupiter.RealJenkinsExtension;
 
 /** Verifies that basic functionality works without optional plugin dependencies. */
-public final class OptionalDepsTest {
+class OptionalDepsTest {
 
-    @Rule public RealJenkinsRule r = new RealJenkinsRule().omitPlugins("maven-plugin", "matrix-project");
+    @RegisterExtension
+    private final RealJenkinsExtension r = new RealJenkinsExtension().omitPlugins("maven-plugin", "matrix-project");
 
-    @Test public void usePipeline() throws Throwable {
+    @Test
+    void usePipeline() throws Throwable {
         r.then(OptionalDepsTest::_usePipeline);
     }
 
@@ -54,5 +56,4 @@ public final class OptionalDepsTest {
             r.assertLogContains("upstream content", r.buildAndAssertSuccess(downstream));
         }
     }
-
 }
