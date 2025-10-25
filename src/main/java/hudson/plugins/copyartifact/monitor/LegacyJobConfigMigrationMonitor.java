@@ -109,10 +109,6 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(
-        value="CWO_CLOSED_WITHOUT_OPENED",
-        justification="TODO: Remove when https://github.com/spotbugs/spotbugs/issues/3616 is released"
-    )
     public boolean isActivated() {
         // Note: activated even in Production mode.
         // Administrators may want to update configurations
@@ -211,10 +207,6 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @param lastBuildDate the build timestamp.
      * @param username the user name the destination job ran as.
      */
-    @SuppressFBWarnings(
-        value="CWO_CLOSED_WITHOUT_OPENED",
-        justification="TODO: Remove when https://github.com/spotbugs/spotbugs/issues/3616 is released"
-    )
     public void addLegacyJob(@NonNull Job<?, ?> jobTryingToCopy,
                              @NonNull Job<?, ?> jobToBeCopiedFrom,
                              @NonNull Date lastBuildDate,
@@ -238,10 +230,6 @@ public class LegacyJobConfigMigrationMonitor extends AdministrativeMonitor imple
      * @param jobTryingToCopy the destination job.
      * @param jobToBeCopiedFrom the source job.
      */
-    @SuppressFBWarnings(
-        value="CWO_CLOSED_WITHOUT_OPENED",
-        justification="TODO: Remove when https://github.com/spotbugs/spotbugs/issues/3616 is released"
-    )
     public void removeLegacyJob(
         @NonNull Job<?, ?> jobTryingToCopy,
         @NonNull Job<?, ?> jobToBeCopiedFrom
