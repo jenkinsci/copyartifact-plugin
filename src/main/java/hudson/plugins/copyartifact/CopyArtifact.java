@@ -490,8 +490,22 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
         if (job == null) {
             throw new AbortException(Messages.CopyArtifact_MissingProject(expandedProject));
         }
-        Run src = selector.getBuild(job, env, parameters != null ? new ParametersBuildFilter(env.expand(parameters)) : new BuildFilter(), build);
+
+        // Debug logging for build selection
+        String expandedParameters = parameters != null ? env.expand(parameters) : null;
+        BuildFilter buildFilter = parameters != null ? new ParametersBuildFilter(expandedParameters) : new BuildFilter();
+
+        LOGGER.log(Level.FINE, "CopyArtifact.perform: Looking for build in job ''{0}'' with selector ''{1}'' and filter ''{2}''",
+                new Object[]{job.getFullName(), selector.getClass().getSimpleName(), buildFilter.getClass().getSimpleName()});
+
+        if (expandedParameters != null) {
+            LOGGER.log(Level.FINE, "CopyArtifact.perform: Using parameter filter: {0}", expandedParameters);
+        }
+
+        Run src = selector.getBuild(job, env, buildFilter, build);
+
         if (src == null) {
+            LOGGER.log(Level.FINE, "CopyArtifact.perform: No build found for job ''{0}'' with the specified criteria", job.getFullName());
             String message = Messages.CopyArtifact_MissingBuild(expandedProject);
             if (isOptional()) {
                 // just return without an error
@@ -502,6 +516,9 @@ public class CopyArtifact extends Builder implements SimpleBuildStep {
                 throw new AbortException(message);
             }
         }
+
+        LOGGER.log(Level.FINE, "CopyArtifact.perform: Selected build #{0} from job ''{1}'' for artifact copy",
+                new Object[]{src.getNumber(), job.getFullName()});
         if (!CopyArtifactConfiguration.get().isMigrationMode()) {
             if (!canReadArtifact(src, build)) {
                 throw new AbortException(
