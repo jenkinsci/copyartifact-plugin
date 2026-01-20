@@ -1310,6 +1310,9 @@ class CopyArtifactTest {
         // Create build with VERSION=9
         rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause(),
                 new ParametersAction(new StringParameterValue("VERSION", "9"))).get());
+        // Create build with VERSION=8.0.0 (to test regex matching)
+        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause(),
+                new ParametersAction(new StringParameterValue("VERSION", "8.0.0"))).get());
 
         // Test filtering by VERSION=8 should find build #1
         FreeStyleProject p = createProject(other.getName(), "VERSION=8", "*.txt", "", true, false, false, true);
@@ -1325,6 +1328,13 @@ class CopyArtifactTest {
         b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
         rule.assertBuildStatusSuccess(b);
         assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SOURCE_JOB"));
+
+        // Test filtering by VERSION=8.* (regex) should find build #3 (VERSION=8.0.0)
+        p = createProject(other.getName(), "VERSION=8.*", "*.txt", "", true, false, false, true);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        rule.assertBuildStatusSuccess(b);
+        assertEquals("3", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SOURCE_JOB"));
 
         // Test filtering by non-existent VERSION should fail
         p = createProject(other.getName(), "VERSION=10", "*.txt", "", true, false, false, true);

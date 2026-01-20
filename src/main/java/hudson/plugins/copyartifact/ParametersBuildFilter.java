@@ -40,6 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * Filter to find builds matching particular parameters.
@@ -50,6 +51,43 @@ public class ParametersBuildFilter extends BuildFilter {
     private List<StringParameterValue> filters;
 
     private static final Pattern PARAMVAL_PATTERN = Pattern.compile("(.*?)=([^,]*)(,|$)");
+    // Pattern to detect if a value contains regex special characters
+    private static final Pattern REGEX_PATTERN = Pattern.compile("[.*+?^$()\\[\\]{}|\\\\]");
+
+    /**
+     * Check if an actual parameter value matches the expected value.
+     * Supports both exact string matching and regex matching.
+     * If the expected value contains regex special characters, it's treated as a regex pattern.
+     * Otherwise, exact string matching is used.
+     *
+     * @param expectedValue the expected parameter value (may contain regex)
+     * @param actualValue the actual parameter value from the build
+     * @return true if values match
+     */
+    private boolean matchesParameterValue(String expectedValue, String actualValue) {
+        if (actualValue == null) {
+            return false;
+        }
+
+        // If expected value contains regex special characters, treat it as regex
+        if (REGEX_PATTERN.matcher(expectedValue).find()) {
+            try {
+                Pattern pattern = Pattern.compile(expectedValue);
+                boolean matches = pattern.matcher(actualValue).matches();
+                LOGGER.log(Level.FINE, "ParametersBuildFilter.matchesParameterValue: Regex match - pattern: ''{0}'', value: ''{1}'', matches: {2}",
+                        new Object[]{expectedValue, actualValue, matches});
+                return matches;
+            } catch (PatternSyntaxException e) {
+                LOGGER.log(Level.FINE, "ParametersBuildFilter.matchesParameterValue: Invalid regex pattern ''{0}'', falling back to exact match",
+                        expectedValue);
+                // Fall back to exact match if regex is invalid
+                return Objects.equals(expectedValue, actualValue);
+            }
+        } else {
+            // Exact string match
+            return Objects.equals(expectedValue, actualValue);
+        }
+    }
 
     public ParametersBuildFilter(String paramsToMatch) {
         // Initialize.. parse out the given parameters/values.
@@ -141,13 +179,15 @@ public class ParametersBuildFilter extends BuildFilter {
         for (StringParameterValue spv : filters) {
             String expectedValue = spv.getValue();
             String actualValue = otherEnv.get(spv.getName());
-            if (!Objects.equals(expectedValue, actualValue)) {
-                LOGGER.log(Level.FINE, "ParametersBuildFilter.isSelectable: Build #{0} parameter mismatch - {1}: expected ''{2}'', got ''{3}''",
-                        new Object[]{run.getNumber(), spv.getName(), expectedValue, actualValue});
+            if (!matchesParameterValue(expectedValue, actualValue)) {
+                String matchType = REGEX_PATTERN.matcher(expectedValue).find() ? "regex" : "exact";
+                LOGGER.log(Level.FINE, "ParametersBuildFilter.isSelectable: Build #{0} parameter mismatch ({4}) - {1}: expected ''{2}'', got ''{3}''",
+                        new Object[]{run.getNumber(), spv.getName(), expectedValue, actualValue, matchType});
                 return false;
             }
-            LOGGER.log(Level.FINE, "ParametersBuildFilter.isSelectable: Build #{0} parameter match - {1}=''${2}''",
-                    new Object[]{run.getNumber(), spv.getName(), actualValue});
+            String matchType = REGEX_PATTERN.matcher(expectedValue).find() ? "regex" : "exact";
+            LOGGER.log(Level.FINE, "ParametersBuildFilter.isSelectable: Build #{0} parameter match ({4}) - {1}=''{2}''",
+                    new Object[]{run.getNumber(), spv.getName(), actualValue, null, matchType});
         }
 
         LOGGER.log(Level.FINE, "ParametersBuildFilter.isSelectable: Build #{0} selected - all parameters match",
