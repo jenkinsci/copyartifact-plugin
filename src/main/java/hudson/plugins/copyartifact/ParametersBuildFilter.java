@@ -86,26 +86,26 @@ public class ParametersBuildFilter extends BuildFilter {
     public boolean isSelectable(Run<?,?> run, EnvVars env) {
         EnvVars otherEnv;
         try {
+            // First, try to get environment variables directly
+            // This maintains backward compatibility and handles build variables like BUILD_NUMBER
             otherEnv = run.getEnvironment(TaskListener.NULL);
         } catch (Exception ex) {
-            return false;
-        }
-        if(!(run instanceof AbstractBuild)) {
-            // Abstract#getEnvironment(TaskListener) put build parameters to
-            // environments, but Run#getEnvironment(TaskListener) doesn't.
-            // That means we can't retrieve build parameters from WorkflowRun
-            // as it is a subclass of Run, not of AbstractBuild.
-            // We need expand build parameters manually.
-            // See JENKINS-26694 for details.
-            for(ParametersAction pa: run.getActions(ParametersAction.class)) {
-                // We have to extract parameters manually as ParametersAction#buildEnvVars
-                // (overrides EnvironmentContributingAction#buildEnvVars)
-                // is applicable only for AbstractBuild.
-                for(ParameterValue pv: pa.getParameters()) {
-                    pv.buildEnvironment(run, otherEnv);
+            // If getEnvironment fails due to permission restrictions,
+            // try to get parameters from ParametersAction as a fallback
+            otherEnv = new EnvVars();
+            try {
+                for(ParametersAction pa: run.getActions(ParametersAction.class)) {
+                    for(ParameterValue pv: pa.getParameters()) {
+                        pv.buildEnvironment(run, otherEnv);
+                    }
                 }
+            } catch (Exception ex2) {
+                // If we can't access parameters at all, the build is not selectable
+                return false;
             }
         }
+
+        // Check if all filter parameters match
         for (StringParameterValue spv : filters) {
             if (!Objects.equals(spv.getValue(), otherEnv.get(spv.getName()))) {
                 return false;
