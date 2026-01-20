@@ -1294,6 +1294,54 @@ class CopyArtifactTest {
         assertTrue(ok);
     }
 
+    /**
+     * Test filtering by parameters when build environment access is restricted.
+     * This tests the fix for the issue where parameters filtering fails when
+     * getEnvironment() throws exceptions due to permission restrictions.
+     */
+    @Test
+    void testFilterByParametersWithRestrictedAccess() throws Exception {
+        FreeStyleProject other = createArtifactProject("Source job");
+        other.addProperty(new ParametersDefinitionProperty(
+                new StringParameterDefinition("VERSION", "")));
+        // Create build with VERSION=8
+        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause(),
+                new ParametersAction(new StringParameterValue("VERSION", "8"))).get());
+        // Create build with VERSION=9
+        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause(),
+                new ParametersAction(new StringParameterValue("VERSION", "9"))).get());
+        // Create build with VERSION=8.0.0 (to test regex matching)
+        rule.assertBuildStatusSuccess(other.scheduleBuild2(0, new Cause.UserIdCause(),
+                new ParametersAction(new StringParameterValue("VERSION", "8.0.0"))).get());
+
+        // Test filtering by VERSION=8 should find build #1
+        FreeStyleProject p = createProject(other.getName(), "VERSION=8", "*.txt", "", true, false, false, true);
+        CaptureEnvironmentBuilder envStep = new CaptureEnvironmentBuilder();
+        p.getBuildersList().add(envStep);
+        FreeStyleBuild b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        rule.assertBuildStatusSuccess(b);
+        assertEquals("1", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SOURCE_JOB"));
+
+        // Test filtering by VERSION=9 should find build #2
+        p = createProject(other.getName(), "VERSION=9", "*.txt", "", true, false, false, true);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        rule.assertBuildStatusSuccess(b);
+        assertEquals("2", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SOURCE_JOB"));
+
+        // Test filtering by VERSION=8.* (regex) should find build #3 (VERSION=8.0.0)
+        p = createProject(other.getName(), "VERSION=8.*", "*.txt", "", true, false, false, true);
+        p.getBuildersList().add(envStep);
+        b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        rule.assertBuildStatusSuccess(b);
+        assertEquals("3", envStep.getEnvVars().get("COPYARTIFACT_BUILD_NUMBER_SOURCE_JOB"));
+
+        // Test filtering by non-existent VERSION should fail
+        p = createProject(other.getName(), "VERSION=10", "*.txt", "", true, false, false, true);
+        b = p.scheduleBuild2(0, new Cause.UserIdCause()).get();
+        rule.assertBuildStatus(Result.FAILURE, b);
+    }
+
     @Test
     void testFilterByMetaParameters() throws Exception {
         FreeStyleProject other = createArtifactProject("Foo job");

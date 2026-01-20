@@ -28,6 +28,8 @@ import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import hudson.model.Result;
 import hudson.model.Job;
 import hudson.model.Run;
@@ -44,6 +46,7 @@ import jenkins.util.VirtualFile;
  * @author Alan Harder
  */
 public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelector> implements ExtensionPoint {
+    private static final Logger LOGGER = Logger.getLogger(BuildSelector.class.getName());
 
     /**
      * Find a build to copy artifacts from.
@@ -54,19 +57,45 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @return Build to use, or null if no appropriate build was found
      */
     public Run<?,?> getBuild(Job<?,?> job, EnvVars env, BuildFilter filter, Run<?,?> parent) {
+        LOGGER.log(Level.FINE, "BuildSelector.getBuild: Starting build selection for job {0} using selector {1}",
+                new Object[]{job.getFullName(), this.getClass().getSimpleName()});
+
         // Backward compatibility:
         if (Util.isOverridden(BuildSelector.class, getClass(), "getBuild",
                               Job.class, EnvVars.class, BuildFilter.class)) {
+            LOGGER.log(Level.FINE, "BuildSelector.getBuild: Using backward compatibility path");
             Run<?,?> run = getBuild(job, env, filter);
-            return (run != null && filter.isSelectable(run, env)) ? run : null;
-        }
-
-        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) {
-            if (isSelectable(run, env) && filter.isSelectable(run, env)) {
+            if (run != null && filter.isSelectable(run, env)) {
+                LOGGER.log(Level.FINE, "BuildSelector.getBuild: Selected build #{0} via backward compatibility",
+                        run.getNumber());
                 return run;
+            } else {
+                LOGGER.log(Level.FINE, "BuildSelector.getBuild: No build selected via backward compatibility");
+                return null;
             }
         }
 
+        int checkedBuilds = 0;
+        for (Run<?,?> run = job.getLastCompletedBuild(); run != null; run = run.getPreviousCompletedBuild()) {
+            checkedBuilds++;
+            LOGGER.log(Level.FINE, "BuildSelector.getBuild: Checking build #{0} (selector: {1}, filter: {2})",
+                    new Object[]{run.getNumber(), isSelectable(run, env), filter.isSelectable(run, env)});
+
+            if (isSelectable(run, env) && filter.isSelectable(run, env)) {
+                LOGGER.log(Level.FINE, "BuildSelector.getBuild: Selected build #{0} after checking {1} builds",
+                        new Object[]{run.getNumber(), checkedBuilds});
+                return run;
+            }
+
+            if (checkedBuilds >= 20) { // Limit log spam for jobs with many builds
+                LOGGER.log(Level.FINE, "BuildSelector.getBuild: Checked {0} builds for job {1}, stopping search to avoid spam",
+                        new Object[]{checkedBuilds, job.getFullName()});
+                break;
+            }
+        }
+
+        LOGGER.log(Level.FINE, "BuildSelector.getBuild: No suitable build found for job {0} after checking {1} builds",
+                new Object[]{job.getFullName(), checkedBuilds});
         return null;
     }
 
