@@ -89,7 +89,7 @@ public class DownstreamBuildSelector extends BuildSelector {
     }
     
     @Override
-    protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
+    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
         if (!(run instanceof AbstractBuild<?,?>)) {
             // As this feature depends on `AbstractBuild#getUpstreamRelationshipBuild(AbstractProject<?,?>)`
             LOGGER.log(

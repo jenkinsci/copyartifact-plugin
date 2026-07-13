@@ -37,7 +37,7 @@ public class LastBuildWithArtifactSelector extends BuildSelector {
     }
 
     @Override
-    protected boolean isSelectable(Run<?, ?> run, EnvVars env) {
+    public boolean isSelectable(Run<?, ?> run, EnvVars env) {
         return run.getHasArtifacts();
     }
 
