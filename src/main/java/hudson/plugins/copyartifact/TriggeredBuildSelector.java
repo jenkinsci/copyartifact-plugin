@@ -260,7 +260,7 @@ public class TriggeredBuildSelector extends BuildSelector {
     }
     
     @Override
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return isFallbackToLastSuccessful() && isBuildResultBetterOrEqualTo(run, Result.SUCCESS);
     }
 

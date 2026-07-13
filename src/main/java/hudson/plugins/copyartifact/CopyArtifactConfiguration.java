@@ -36,7 +36,6 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
@@ -68,10 +67,6 @@ public class CopyArtifactConfiguration extends GlobalConfiguration {
      * {@inheritDoc}
      */
     @Override
-    @SuppressFBWarnings(
-        value="USO_UNSAFE_METHOD_SYNCHRONIZATION",
-        justification="Synchronization is not unsafe here"
-    )
     public synchronized void load() {
         boolean firstLoadOfConfiguration = isFirstLoad();
         

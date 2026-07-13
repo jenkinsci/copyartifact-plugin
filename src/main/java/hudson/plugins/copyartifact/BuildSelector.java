@@ -89,7 +89,7 @@ public abstract class BuildSelector extends AbstractDescribableImpl<BuildSelecto
      * @param env Environment for build that is copying artifacts
      * @return True to select this build
      */
-    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
+    public boolean isSelectable(Run<?,?> run, EnvVars env) {
         return false;
     }
 
