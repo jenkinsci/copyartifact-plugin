@@ -41,7 +41,7 @@ public class LastCompletedBuildSelector extends BuildSelector {
     public LastCompletedBuildSelector() { }
 
     @Override
-    public boolean isSelectable(Run<?,?> run, EnvVars env) {
+    protected boolean isSelectable(Run<?,?> run, EnvVars env) {
         return true;
     }
 
