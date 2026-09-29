@@ -25,7 +25,6 @@
     </licenses>
 
     <properties>
-        <revision>1.49</revision>
         <changelist>999999-SNAPSHOT</changelist>
         <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
         <jenkins.baseline>2.479</jenkins.baseline>
