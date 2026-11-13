@@ -8,7 +8,10 @@
     <!-- Common Jenkins pattern to call overridable methods from a constructor -->
     <Bug pattern="MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR"/>
     <Or>
+      <Class name="hudson.plugins.copyartifact.CopyArtifact"/>
       <Class name="hudson.plugins.copyartifact.CopyArtifactConfiguration"/>
+      <Class name="hudson.plugins.copyartifact.StatusBuildSelector"/>
+      <Class name="hudson.plugins.copyartifact.TriggeredBuildSelector"/>
       <Class name="hudson.plugins.copyartifact.TriggeredBuildSelector$DescriptorImpl"/>
       <Class name="hudson.plugins.copyartifact.monitor.LegacyJobConfigMigrationMonitor"/>
     </Or>
